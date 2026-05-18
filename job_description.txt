@@ -1,0 +1,4 @@
+Position: Software Engineer (Backend)
+Skills: Python, FastAPI, Django, PostgreSQL, MySQL, Docker, Git, REST API
+Experience: 2+ years as Backend Developer or Software Engineer
+Education: Bachelor degree in Computer Science or related field
