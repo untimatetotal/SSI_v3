@@ -2,7 +2,7 @@ import argparse
 import sys
 from models import Config, ResumeScreener
 
-print("=== โปรแกรมเริ่มทำงาน ===")
+print("=== Start Program ===")
 print(f"Python version: {sys.version}")
 
 def main():

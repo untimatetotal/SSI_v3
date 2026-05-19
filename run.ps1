@@ -1,0 +1,1 @@
+C:\Users\suwan\AppData\Local\Python\pythoncore-3.14-64\python.exe main_oop.py --jd .\job_description.txt --resumes resume_nida.pdf "resume_somchai (2).pdf" resume_arthit.pdf --bonus react typescript javascript tailwind redux jest figma nextjs webpack vite

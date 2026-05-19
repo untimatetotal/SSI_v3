@@ -1,13 +1,31 @@
 [
   {
-    "name": "Somchai Jaidee",
-    "file": "resume_somchai (1).pdf",
-    "score": 50.0,
-    "recommendation": "พิจารณาเพิ่มเติม",
-    "tfidf": 29.2,
-    "keyword": 70.0,
+    "name": "Nida Mana",
+    "file": "resume_nida.pdf",
+    "score": 60.0,
+    "recommendation": "ผ่าน",
+    "tfidf": 37.6,
+    "keyword": 90.0,
     "struct": 100.0,
-    "experience": "3 ปี",
+    "experience": "5 ปี",
+    "error": null,
+    "struct_checks": {
+      "มี Email": true,
+      "มี เบอร์โทร": true,
+      "มี ประสบการณ์": true,
+      "มี การศึกษา": true,
+      "มี ทักษะ": true
+    }
+  },
+  {
+    "name": "Somchai Jaidee",
+    "file": "resume_somchai (2).pdf",
+    "score": 24.7,
+    "recommendation": "ไม่ผ่าน",
+    "tfidf": 16.2,
+    "keyword": 0.0,
+    "struct": 100.0,
+    "experience": "4 ปี",
     "error": null,
     "struct_checks": {
       "มี Email": true,

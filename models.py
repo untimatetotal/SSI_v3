@@ -9,42 +9,47 @@
 #   ResumeScreener — ประสานงานทุกอย่าง
 # ============================================================
 
-import re
-import json
+import re # find
+import json # transfer to json 
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional
 
+
+
+# Exceptin for user (about tool of program)
 try:
     import fitz
 except ImportError:
-    raise ImportError("กรุณาติดตั้ง: python -m pip install pymupdf")
+    raise ImportError("please install : python -m pip install pymupdf")
 
 try:
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.metrics.pairwise import cosine_similarity
 except ImportError:
-    raise ImportError("กรุณาติดตั้ง: python -m pip install scikit-learn")
+    raise ImportError("please install : python -m pip install scikit-learn")
 
 
 # ============================================================
-#  1. ResumeResult — เก็บผลลัพธ์ resume 1 ไฟล์
+#  1. ResumeResult — contain resume 1 file
 # ============================================================
 
 @dataclass
 class ResumeResult:
+    # set constructor  start value = 0 
     name: str
     file: str
     score: float = 0.0
-    recommendation: str = ""
+    recommendation: str = "" # ข้อความแนะนำ 
     tfidf: float = 0.0
     keyword: float = 0.0
-    struct: float = 0.0
+    struct: float = 0.0  # โครงสร้าง resume (หัวข้อ)
     experience: str = "ไม่ระบุ"
     error: Optional[str] = None
     struct_checks: dict = field(default_factory=dict)
 
-    def to_dict(self) -> dict:
+
+    def to_dict(self) -> dict: # dict : contain data form key , value
         return {
             "name": self.name, "file": self.file,
             "score": self.score, "recommendation": self.recommendation,
@@ -53,27 +58,34 @@ class ResumeResult:
             "error": self.error, "struct_checks": self.struct_checks,
         }
 
+
     def passed(self) -> bool:
         return self.recommendation == "ผ่าน"
 
 
 # ============================================================
-#  2. Config — เก็บการตั้งค่าทั้งหมด
+#  2. Config — contain setting program
 # ============================================================
+
 
 class Config:
     def __init__(
         self,
+
         required_keywords=None,
         bonus_keywords=None,
-        pass_threshold=65,
+        pass_threshold=60,
         review_threshold=45,
         weight_tfidf=0.60,
         weight_keyword=0.25,
         weight_struct=0.15,
     ):
+        
+
+    # set keyword
         self.required_keywords = required_keywords or []
         self.bonus_keywords    = bonus_keywords or []
+
         self.pass_threshold    = pass_threshold
         self.review_threshold  = review_threshold
         self.weight_tfidf      = weight_tfidf
@@ -88,6 +100,8 @@ class Config:
             raise ValueError("threshold ต้องอยู่ในช่วง 0-100")
         return True
 
+ 
+
     def __repr__(self):
         return (f"Config(pass={self.pass_threshold}, "
                 f"review={self.review_threshold}, "
@@ -95,15 +109,17 @@ class Config:
                 f"{self.weight_keyword}/{self.weight_struct}])")
 
 
+
+# ============================================================ 
+#  3. PDFReader — read text from PDF file 
 # ============================================================
-#  3. PDFReader — อ่านข้อความจาก PDF
-# ============================================================
+
 
 class PDFReader:
     def read(self, path: str) -> str:
         text = ""
         try:
-            doc = fitz.open(path)
+            doc = fitz.open(path) # open pdf file
             for page in doc:
                 t = page.get_text()
                 if t:
@@ -118,7 +134,7 @@ class PDFReader:
 
 
 # ============================================================
-#  4. Analyzer — คำนวณคะแนน
+#  4. Analyzer — calculate point
 # ============================================================
 
 class Analyzer:
@@ -187,6 +203,8 @@ class Analyzer:
                     if kw.lower() in text)
         return (found / len(self.config.bonus_keywords)) * 100
 
+
+ # define field 
     def _struct_score(self, text):
         checks = {
             "มี Email":
@@ -206,6 +224,8 @@ class Analyzer:
         return {"checks": checks,
                 "score": (sum(checks.values()) / len(checks)) * 100}
 
+
+
     def _extract_name(self, text):
         for line in text.strip().split('\n')[:5]:
             line = line.strip()
@@ -213,6 +233,7 @@ class Analyzer:
                     c in line for c in ['@', ':', '/', 'http', '.']):
                 return line.title()
         return "ไม่ทราบชื่อ"
+
 
     def _extract_exp(self, text):
         for p in [r'(\d+)\s*\+?\s*years?\s*(?:of\s*)?experience',
@@ -224,8 +245,9 @@ class Analyzer:
         return "ไม่ระบุ"
 
 
+
 # ============================================================
-#  5. ResumeScreener — ประสานงานทุกอย่าง
+#  5. ResumeScreener — connect all 
 # ============================================================
 
 class ResumeScreener:
@@ -265,9 +287,9 @@ class ResumeScreener:
         review = sum(1 for r in results if r.recommendation == "พิจารณาเพิ่มเติม")
         failed = sum(1 for r in results if r.recommendation == "ไม่ผ่าน")
         print(f"\n{'='*55}\n  สรุปผล\n{'='*55}")
-        print(f"  ✓ ผ่าน              : {passed} คน")
-        print(f"  ~ พิจารณาเพิ่มเติม : {review} คน")
-        print(f"  ✗ ไม่ผ่าน           : {failed} คน")
+        print(f"  ✓ ผ่าน              : {passed} คน") # คุณสมบัติตรง
+        print(f"  ~ พิจารณาเพิ่มเติม : {review} คน")  # ส่งให้ HR พิจารณาเพิ่มเติมเอง
+        print(f"  ✗ ไม่ผ่าน           : {failed} คน") # คุณสมบัติไม่ตรง 
         print(f"  ค่าใช้จ่าย AI       : 0 บาท")
 
     def save_json(self, results, output="results.json"):

@@ -1,0 +1,26 @@
+Responsibilities:
+- Develop and maintain responsive web applications using React and TypeScript
+- Implement UI components from Figma designs with pixel-perfect accuracy
+- Integrate RESTful APIs using Axios and manage application state
+- Write unit tests and ensure code quality with Jest and React Testing Library
+- Collaborate with design team and backend developers
+- Optimize web application performance (bundle size, lazy loading, code splitting)
+ 
+Required Skills:
+- React (v17+), TypeScript, JavaScript
+- HTML5, CSS3, Tailwind CSS
+- State management with Redux Toolkit
+- Git version control
+- Experience with Figma or similar design tools
+- REST API integration
+ 
+Experience: 1+ years as Frontend Developer
+Education: Bachelor degree in Information Technology, Computer Science, or related field
+Language: English conversational level
+ 
+Nice to have:
+- Next.js experience
+- Webpack or Vite configuration
+- Unit testing with Jest
+- UI/UX design sense
+ 
