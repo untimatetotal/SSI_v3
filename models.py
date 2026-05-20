@@ -151,6 +151,8 @@ class Analyzer:
             return ResumeResult(name=filename, file=filename,
                                 error="อ่าน PDF ไม่ได้ (อาจเป็น scanned image)")
 
+       # check require keyword ก่อน (กรองชั้นแรก)
+       # ถ้สคำ keyword หายตัดออกเลย 
         missing = self._check_required(text)
         if missing:
             return ResumeResult(
@@ -159,12 +161,15 @@ class Analyzer:
                 error=f"ขาด keyword บังคับ: {', '.join(missing)}",
                 experience=self._extract_exp(text),
             )
+       # calculate point 3 section 
 
-        tfidf   = self._tfidf_score(jd_text, text)
-        keyword = self._keyword_score(text)
-        struct  = self._struct_score(text)
+        tfidf   = self._tfidf_score(jd_text, text) # point JD
+        keyword = self._keyword_score(text) # kw bonus 
+        struct  = self._struct_score(text) 
         c       = self.config
 
+
+        # รวมคะแนนตาม weight
         total = round(
             tfidf   * c.weight_tfidf   +
             keyword * c.weight_keyword +
@@ -185,10 +190,12 @@ class Analyzer:
         )
 
     def _check_required(self, text):
+        # ถ้า list [] = pass 
         return [kw for kw in self.config.required_keywords
                 if kw.lower() not in text]
 
     def _tfidf_score(self, jd_text, resume_text):
+        # ตรวจสอบความคล้ายกัน ระหว่าง JD , Resume ด้วย TF-IDF (แบ่งตรวจสอบทั้งคำเดี่ยวและคู่คำ)
         try:
             vec = TfidfVectorizer(ngram_range=(1, 2), min_df=1)
             mat = vec.fit_transform([jd_text, resume_text])
@@ -197,8 +204,8 @@ class Analyzer:
             return 0.0
 
     def _keyword_score(self, text):
-        if not self.config.bonus_keywords:
-            return 70.0
+        if not self.config.bonus_keywords: # bonus kw คือ ไม่มีก็ได้แต่คะแนนจะลดลง  ถ้าไม่ได้กำหนด bonus kw ไว้คะแนนจะไม่ลดลง 
+            return 70.0 # return default value
         found = sum(1 for kw in self.config.bonus_keywords
                     if kw.lower() in text)
         return (found / len(self.config.bonus_keywords)) * 100
@@ -206,6 +213,8 @@ class Analyzer:
 
  # define field 
     def _struct_score(self, text):
+
+        # check pattern 
         checks = {
             "มี Email":
                 bool(re.search(r'[\w.-]+@[\w.-]+\.\w+', text)),
@@ -264,6 +273,7 @@ class ResumeScreener:
         print(f"Resume ทั้งหมด  : {len(resume_paths)} ไฟล์")
         print("=" * 55)
 
+    # analyze each file save at list 
         results = []
         for path in resume_paths:
             if not Path(path).exists():
@@ -273,8 +283,9 @@ class ResumeScreener:
             result = self.analyzer.analyze(jd_text, path)
             results.append(result)
             print("Error" if result.error else f"คะแนน {result.score}")
-
+        # sort resume most point before
         results.sort(key=lambda r: r.score, reverse=True)
+        #กรองตาม min score และ pass only
         return [r for r in results
                 if r.score >= min_score and (not pass_only or r.passed())]
 
@@ -308,7 +319,10 @@ class ResumeScreener:
             "พิจารณาเพิ่มเติม": ("\033[93m", "REVIEW"),
             "ไม่ผ่าน":           ("\033[91m", "FAIL"),
         }
+
         color, symbol = colors.get(r.recommendation, ("\033[0m", "?"))
+        # progress bar: score=50 → 10 █ + 10 ░
+        # int(score/5) = จำนวนบล็อก █
         bar = "█" * int(r.score / 5) + "░" * (20 - int(r.score / 5))
         print(f"\n{'='*55}")
         print(f"อันดับ #{rank}  |  {r.name}")
