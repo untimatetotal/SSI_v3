@@ -1,26 +1,31 @@
-Responsibilities:
-- Develop and maintain responsive web applications using React and TypeScript
-- Implement UI components from Figma designs with pixel-perfect accuracy
-- Integrate RESTful APIs using Axios and manage application state
-- Write unit tests and ensure code quality with Jest and React Testing Library
-- Collaborate with design team and backend developers
-- Optimize web application performance (bundle size, lazy loading, code splitting)
+Position Frontend Developer Web Application Developer
  
-Required Skills:
-- React (v17+), TypeScript, JavaScript
-- HTML5, CSS3, Tailwind CSS
-- State management with Redux Toolkit
-- Git version control
-- Experience with Figma or similar design tools
-- REST API integration
+Responsibilities
+Develop maintain responsive web applications React React18 TypeScript JavaScript
+Implement UI components Figma designs pixel perfect accuracy
+Integrate RESTful APIs Axios manage application state Redux Toolkit
+Write unit tests code quality Jest React Testing Library Vitest
+Collaborate design team backend developers API integration REST API
+Optimize web application performance bundle size lazy loading code splitting Webpack Vite
+Responsive design HTML5 CSS3 Tailwind CSS styled components
+State management Redux Toolkit React Context Zustand
+Git version control GitHub Actions CI CD
  
-Experience: 1+ years as Frontend Developer
-Education: Bachelor degree in Information Technology, Computer Science, or related field
-Language: English conversational level
+Required Skills
+React v17 v18 TypeScript JavaScript HTML5 CSS3 Tailwind CSS
+Redux Toolkit state management React Context
+Git version control Figma design tools
+REST API integration Axios RESTful
+Frontend Developer web application developer
  
-Nice to have:
-- Next.js experience
-- Webpack or Vite configuration
-- Unit testing with Jest
-- UI/UX design sense
+Experience
+1 years Frontend Developer web application developer
+Bachelor degree Information Technology Computer Science Software Engineering related field
+English conversational professional
+ 
+Nice to Have
+Next.js NextJS experience
+Webpack Vite build configuration
+Jest React Testing Library Vitest unit testing
+UI UX design sense pixel perfect figma
  

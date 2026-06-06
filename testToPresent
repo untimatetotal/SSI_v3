@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Nida Mana",
+    "file": "resume_nida.pdf",
+    "score": 0.0,
+    "recommendation": "ไม่ผ่าน",
+    "tfidf": 0.0,
+    "keyword": 0.0,
+    "struct": 0.0,
+    "experience": "5 ปี",
+    "error": "ขาด keyword บังคับ: ปริญญาตรี, degree, engineering",
+    "struct_checks": {}
+  },
+  {
+    "name": "Somchai Jaidee",
+    "file": "resume_somchai.pdf",
+    "score": 0.0,
+    "recommendation": "ไม่ผ่าน",
+    "tfidf": 0.0,
+    "keyword": 0.0,
+    "struct": 0.0,
+    "experience": "3 ปี",
+    "error": "ขาด keyword บังคับ: react, typescript, ปริญญาตรี, degree",
+    "struct_checks": {}
+  },
+  {
+    "name": "Tanakrit Phromma",
+    "file": "resume_tanakrit.pdf",
+    "score": 0.0,
+    "recommendation": "ไม่ผ่าน",
+    "tfidf": 0.0,
+    "keyword": 0.0,
+    "struct": 0.0,
+    "experience": "5 ปี",
+    "error": "ขาด keyword บังคับ: ปริญญาตรี, degree",
+    "struct_checks": {}
+  }
+]

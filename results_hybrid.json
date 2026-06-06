@@ -1,0 +1,123 @@
+[
+  {
+    "name": "Nida Mana",
+    "file": "resume_nida.pdf",
+    "score": 71.1,
+    "recommendation": "ผ่าน",
+    "tfidf": 0.0,
+    "keyword": 0.0,
+    "struct": 0.0,
+    "experience": "1.5 ปี",
+    "error": null,
+    "struct_checks": {
+      "matched_skills": [
+        "React",
+        "TypeScript",
+        "JavaScript",
+        "HTML5",
+        "CSS3",
+        "Redux Toolkit",
+        "Git",
+        "Webpack",
+        "Vite",
+        "Jest",
+        "React Testing Library"
+      ],
+      "missing_skills": [
+        "React Context",
+        "Zustand",
+        "Vitest",
+        "Tailwind CSS (although listed, experience is not mentioned)",
+        "Backend fundamentals (although mentioned, not directly related to frontend development)"
+      ],
+      "strengths": [
+        "Experience with React 18 and TypeScript",
+        "Implementation of responsive UI components with pixel-perfect accuracy",
+        "Code splitting and lazy loading techniques for performance optimization"
+      ],
+      "weaknesses": [
+        "Limited experience with backend fundamentals",
+        "No direct experience with React Context and Zustand"
+      ],
+      "summary": "ผู้สมัครที่มีประสบการณ์ 1.5 ปีในการพัฒนาเว็บแอปพลิเคชันที่มีความรับผิดชอบสูง"
+    }
+  },
+  {
+    "name": "Somchai Jaidee",
+    "file": "resume_somchai.pdf",
+    "score": 53.1,
+    "recommendation": "พิจารณาเพิ่มเติม",
+    "tfidf": 0.0,
+    "keyword": 0.0,
+    "struct": 0.0,
+    "experience": "4 ปี",
+    "error": null,
+    "struct_checks": {
+      "matched_skills": [
+        "typescript",
+        "javascript",
+        "react",
+        "axios",
+        "git version control"
+      ],
+      "missing_skills": [
+        "react18",
+        "redux toolkit",
+        "jest",
+        "react testing library",
+        "vite",
+        "tailwind css",
+        "styled components",
+        "zustand"
+      ],
+      "strengths": [
+        "experience with backend systems and database design",
+        "basic experience with frontend development"
+      ],
+      "weaknesses": [
+        "limited experience with frontend development and modern tools",
+        "primary expertise remains in backend systems"
+      ],
+      "summary": "ผู้สมัครมีประสบการณ์ 4 ปีในฐานะ Backend Developer และมีความสามารถพื้นฐานใน Frontend Development"
+    }
+  },
+  {
+    "name": "Tanakrit Phromma",
+    "file": "resume_tanakrit.pdf",
+    "score": 52.0,
+    "recommendation": "พิจารณาเพิ่มเติม",
+    "tfidf": 0.0,
+    "keyword": 0.0,
+    "struct": 0.0,
+    "experience": "2.5 ปี",
+    "error": null,
+    "struct_checks": {
+      "matched_skills": [
+        "React",
+        "Typescript",
+        "JavaScript",
+        "Figma",
+        "Git",
+        "Redux Toolkit"
+      ],
+      "missing_skills": [
+        "React 18",
+        "Web Application Development",
+        "Vite",
+        "Webpack",
+        "Tailwind CSS",
+        "Styled Components",
+        "Zustand"
+      ],
+      "strengths": [
+        "Mobile UI Development",
+        "Rest API Integration",
+        "Cross-platform Mobile App Development"
+      ],
+      "weaknesses": [
+        "Limited Web Frontend Experience"
+      ],
+      "summary": "ผู้สมัครมีประสบการณ์ 2.5 ปีในการพัฒนาแอปพลิเคชันบนมือถือ และมีความสามารถในการพัฒนา UI และการผสานรวม API"
+    }
+  }
+]

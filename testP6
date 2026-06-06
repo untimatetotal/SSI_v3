@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Nida Mana",
+    "file": "resume_nida.pdf",
+    "score": 59.4,
+    "recommendation": "ผ่าน",
+    "tfidf": 37.6,
+    "keyword": 87.5,
+    "struct": 100.0,
+    "experience": "5 ปี",
+    "error": null,
+    "struct_checks": {
+      "มี Email": true,
+      "มี เบอร์โทร": true,
+      "มี ประสบการณ์": true,
+      "มี การศึกษา": true,
+      "มี ทักษะ": true
+    }
+  },
+  {
+    "name": "Somchai Jaidee",
+    "file": "resume_somchai.pdf",
+    "score": 34.4,
+    "recommendation": "ไม่ผ่าน",
+    "tfidf": 27.2,
+    "keyword": 12.5,
+    "struct": 100.0,
+    "experience": "4 ปี",
+    "error": null,
+    "struct_checks": {
+      "มี Email": true,
+      "มี เบอร์โทร": true,
+      "มี ประสบการณ์": true,
+      "มี การศึกษา": true,
+      "มี ทักษะ": true
+    }
+  }
+]
