@@ -267,7 +267,17 @@ class ResumeScreener:
         jd_file = Path(jd_path)
         if not jd_file.exists():
             raise FileNotFoundError(f"ไม่พบไฟล์ JD: {jd_path}")
-        jd_text = jd_file.read_text(encoding="utf-8").lower()
+       # jd_text = jd_file.read_text(encoding="utf-8").lower()#
+
+       #====== fix read text of pdf OR file Text
+        if jd_path.lower().endswith(".pdf") :
+            import pdfplumber
+            with pdfplumber.open(jd_path) as pdf:
+                jd_text = "\n".join(p.extract_text() or "" for p in pdf.pages).lower()
+        else: 
+               # ถ้าเป็น .txt หรือไฟล์อื่น → อ่านแบบ text ปกติ
+              jd_text = open(jd_path, encoding="utf-8").read().lower()
+           
 
         print(f"\nJob Description : {jd_path}")
         print(f"Resume ทั้งหมด  : {len(resume_paths)} ไฟล์")
