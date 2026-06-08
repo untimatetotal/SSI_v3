@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Other Activities",
+    "file": "resume_Areeya.pdf",
+    "score": 0.0,
+    "recommendation": "ไม่ผ่าน",
+    "tfidf": 0.0,
+    "keyword": 0.0,
+    "struct": 0.0,
+    "experience": "ไม่ระบุ",
+    "error": "ขาด keyword บังคับ: master, ปริญญาโท, graduate",
+    "struct_checks": {}
+  }
+]

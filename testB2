@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Education",
+    "file": "resume_Nutjaree.pdf",
+    "score": 62.3,
+    "recommendation": "ผ่าน",
+    "tfidf": 5.8,
+    "keyword": 100.0,
+    "struct": 100.0,
+    "experience": "ไม่ระบุ",
+    "error": null,
+    "struct_checks": {
+      "มี Email": true,
+      "มี เบอร์โทร": true,
+      "มี ประสบการณ์": true,
+      "มี การศึกษา": true,
+      "มี ทักษะ": true
+    }
+  },
+  {
+    "name": "Other Activities",
+    "file": "resume_Areeya.pdf",
+    "score": 59.8,
+    "recommendation": "ผ่าน",
+    "tfidf": 6.9,
+    "keyword": 100.0,
+    "struct": 80.0,
+    "experience": "ไม่ระบุ",
+    "error": null,
+    "struct_checks": {
+      "มี Email": false,
+      "มี เบอร์โทร": true,
+      "มี ประสบการณ์": true,
+      "มี การศึกษา": true,
+      "มี ทักษะ": true
+    }
+  }
+]

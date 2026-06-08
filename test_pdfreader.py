@@ -6,9 +6,9 @@ from models import PDFReader
 reader = PDFReader()
 
 pdf_files = [
-    "resume_nida.pdf",
-    "resume_somchai (2).pdf",
-    "resume_arthit.pdf",
+    
+     "resume_Areeya.pdf",
+     "resume_Nutjaree.pdf"
 ]
 
 for pdf in pdf_files:

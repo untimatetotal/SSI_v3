@@ -163,6 +163,8 @@ def main():
 
     required_keywords = ask_keywords("keyword บังคับ เช่น: python docker")
 
+    
+
     # วุฒิการศึกษาขั้นต่ำ
     print("\n  วุฒิการศึกษาขั้นต่ำ:")
     print("  1 = ปวส./อนุปริญญา")
@@ -170,14 +172,21 @@ def main():
     print("  3 = ปริญญาโท")
     print("  Enter = ไม่กำหนด")
     edu_map = {
-        "1": ["diploma", "ปวส", "associate"],
-        "2": ["bachelor" ],
-        "3": ["master", "ปริญญาโท", "graduate"],
+         "1": ["diploma", "ปวส", "associate", "อนุปริญญา", "ประกาศนียบัตร"],
+    "2": ["bachelor", "ปริญญาตรี", "บัณฑิต", "วศ.บ", "บธ.บ", "วท.บ"],
+    "3": ["master", "ปริญญาโท", "graduate", "มหาบัณฑิต", "วศ.ม", "วท.ม"],
     }
-    edu_choice = input("  เลือก: ").strip()
-    if edu_choice in edu_map:
-        required_keywords.extend(edu_map[edu_choice])
-        print(f"  ✓ เพิ่ม keyword การศึกษา: {edu_map[edu_choice]}")
+
+    edu_keywords = []
+    edu_choice = input(" เลือก หมายเลข 1 2 3: ").strip()
+    if edu_choice in edu_map: 
+        edu_keywords = edu_map[edu_choice]
+        print(f"  ✓ เพิ่ม keyword การศึกษา: {edu_keywords}")
+
+   # edu_choice = input("  เลือก: ").strip()
+   # if edu_choice in edu_map:
+       # required_keywords.extend(edu_map[edu_choice])
+       # print(f"  ✓ เพิ่ม keyword การศึกษา: {edu_map[edu_choice]}")
 
     if required_keywords:
         print(f"\n  สรุป keyword บังคับ: {required_keywords}")
@@ -242,6 +251,7 @@ def main():
     # ── รันระบบ ──────────────────────────────────────────────
     config = Config(
         required_keywords=required_keywords,
+        edu_keywords = edu_keywords, 
         bonus_keywords=bonus_keywords,
         pass_threshold=pass_threshold,
         review_threshold=review_threshold,

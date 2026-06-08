@@ -73,17 +73,19 @@ class Config:
         self,
 
         required_keywords=None,
+        edu_keywords = None, 
         bonus_keywords=None,
         pass_threshold=60,
         review_threshold=45,
-        weight_tfidf=0.60,
-        weight_keyword=0.25,
+        weight_tfidf=0.40,
+        weight_keyword=0.45,
         weight_struct=0.15,
     ):
         
 
     # set keyword
         self.required_keywords = required_keywords or []
+        self.edu_keywords =      required_keywords or[]
         self.bonus_keywords    = bonus_keywords or []
 
         self.pass_threshold    = pass_threshold
@@ -190,9 +192,16 @@ class Analyzer:
         )
 
     def _check_required(self, text):
-        # ถ้า list [] = pass 
-        return [kw for kw in self.config.required_keywords
-                if kw.lower() not in text]
+     missing =  [kw for kw in self.config.required_keywords 
+                 if  kw.lower() not in text]
+     if self.config.edu_keywords:
+         has_edu = any(kw.lower()in text
+                       for kw in self.config.edu_keywords)
+         if not has_edu:
+             misssing.append(f"วุฒิการศึกษา (ต้องมีอย่างน้อยหนึ่งใน: {self.config.edu_keywords})")
+             return missing
+         
+
 
     def _tfidf_score(self, jd_text, resume_text):
         # ตรวจสอบความคล้ายกัน ระหว่าง JD , Resume ด้วย TF-IDF (แบ่งตรวจสอบทั้งคำเดี่ยวและคู่คำ)
