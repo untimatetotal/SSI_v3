@@ -172,8 +172,13 @@ def main():
     print("  3 = ปริญญาโท")
     print("  Enter = ไม่กำหนด")
     edu_map = {
-         "1": ["diploma", "ปวส", "associate", "อนุปริญญา", "ประกาศนียบัตร"],
-    "2": ["bachelor", "ปริญญาตรี", "บัณฑิต", "วศ.บ", "บธ.บ", "วท.บ"],
+         "1": ["diploma", "ปวส", "associate", "อนุปริญญา", "ประกาศนียบัตร",
+          "bachelor", "bachalor", "ปริญญาตรี", "บัณฑิต", "วศ.บ", "บธ.บ", "วท.บ",
+          "master", "ปริญญาโท", "graduate", "มหาบัณฑิต", "วศ.ม", "วท.ม"],
+
+    "2": ["bachelor", "bachalor", "ปริญญาตรี", "บัณฑิต", "วศ.บ", "บธ.บ", "วท.บ",
+          "master", "ปริญญาโท", "graduate", "มหาบัณฑิต", "วศ.ม", "วท.ม"],
+          
     "3": ["master", "ปริญญาโท", "graduate", "มหาบัณฑิต", "วศ.ม", "วท.ม"],
     }
 
@@ -181,6 +186,7 @@ def main():
     edu_choice = input(" เลือก หมายเลข 1 2 3: ").strip()
     if edu_choice in edu_map: 
         edu_keywords = edu_map[edu_choice]
+       
         print(f"  ✓ เพิ่ม keyword การศึกษา: {edu_keywords}")
 
    # edu_choice = input("  เลือก: ").strip()
@@ -236,6 +242,8 @@ def main():
     print(f"  JD            : {jd_path}")
     print(f"  Resume        : {resume_paths}")
     print(f"  Required      : {required_keywords or 'ไม่กำหนด'}")
+    print(f"  วุฒิขั้นต่ำ   : {edu_keywords or 'ไม่กำหนด'}")
+    print(f"  Bonus         : {bonus_keywords or 'ไม่กำหนด'}")
     print(f"  Bonus         : {bonus_keywords or 'ไม่กำหนด'}")
     print(f"  ผ่านที่คะแนน  : {pass_threshold}")
     print(f"  พิจารณาที่    : {review_threshold}")

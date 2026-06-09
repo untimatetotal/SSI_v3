@@ -85,7 +85,7 @@ class Config:
 
     # set keyword
         self.required_keywords = required_keywords or []
-        self.edu_keywords =      required_keywords or[]
+        self.edu_keywords = edu_keywords or []
         self.bonus_keywords    = bonus_keywords or []
 
         self.pass_threshold    = pass_threshold
@@ -198,8 +198,8 @@ class Analyzer:
          has_edu = any(kw.lower()in text
                        for kw in self.config.edu_keywords)
          if not has_edu:
-             misssing.append(f"วุฒิการศึกษา (ต้องมีอย่างน้อยหนึ่งใน: {self.config.edu_keywords})")
-             return missing
+             missing.append(f"วุฒิการศึกษา (ต้องมีอย่างน้อยหนึ่งใน: {self.config.edu_keywords})")
+     return missing
          
 
 
