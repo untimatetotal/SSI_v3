@@ -1,0 +1,206 @@
+# ============================================================
+# app_flask.py — CVScreener Flask Web App
+# ============================================================
+# ติดตั้ง: pip install flask
+# รัน:     python app_flask.py
+# เปิด:    http://localhost:5000
+# ============================================================
+
+import os, json, tempfile, gc
+from pathlib import Path
+from flask import Flask, render_template, request, jsonify
+import sys
+sys.path.append(".")
+from models import Config, ResumeScreener
+
+app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max
+
+EDU_MAP = {
+    "1": ["diploma","ปวส","associate","อนุปริญญา",
+          "bachelor","bachalor","ปริญญาตรี","บัณฑิต",
+          "master","ปริญญาโท","graduate","มหาบัณฑิต"],
+    "2": ["bachelor","bachalor","ปริญญาตรี","บัณฑิต","วศ.บ","บธ.บ","วท.บ",
+          "master","ปริญญาโท","graduate","มหาบัณฑิต"],
+    "3": ["master","ปริญญาโท","graduate","มหาบัณฑิต","วศ.ม","วท.ม"],
+}
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/analyze", methods=["POST"])
+def analyze():
+    jd_tmp_path   = None
+    resume_tmp    = []
+
+    try:
+        import fitz
+
+        # ── รับ JD ────────────────────────────────────────
+        jd_text = ""
+        if "jd_file" in request.files and request.files["jd_file"].filename:
+            jd_file = request.files["jd_file"]
+            if jd_file.filename.lower().endswith(".pdf"):
+                # บันทึกไฟล์ก่อน แล้วค่อยเปิด fitz หลัง file handle ปิดแล้ว
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f:
+                    jd_file.save(f.name)
+                    jd_tmp_path = f.name
+                doc = fitz.open(jd_tmp_path)
+                jd_text = " ".join(p.get_text() for p in doc).lower()
+                doc.close()
+                doc = None
+                try: os.unlink(jd_tmp_path)
+                except: pass
+                jd_tmp_path = None
+            else:
+                jd_text = jd_file.read().decode("utf-8", errors="ignore").lower()
+        elif request.form.get("jd_text"):
+            jd_text = request.form["jd_text"].lower()
+
+        if not jd_text.strip():
+            return jsonify({"error": "กรุณาใส่ Job Description"}), 400
+
+        # ── รับ Resume ────────────────────────────────────
+        resume_files = request.files.getlist("resumes")
+        if not resume_files or not resume_files[0].filename:
+            return jsonify({"error": "กรุณาอัปโหลด Resume"}), 400
+
+        for rf in resume_files:
+            # บันทึกไฟล์หลัง file handle ปิดแล้ว
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp_path = tmp.name
+            rf.save(tmp_path)
+            resume_tmp.append((rf.filename, tmp_path))
+
+        # ── รับ Config ────────────────────────────────────
+        req_kws  = [k.lower() for k in request.form.get("required","").split() if k]
+        bon_kws  = [k.lower() for k in request.form.get("bonus","").split() if k]
+        edu_kws  = EDU_MAP.get(request.form.get("edu",""), [])
+        pass_thr = int(request.form.get("pass_threshold", 60))
+        rev_thr  = int(request.form.get("review_threshold", 40))
+        ai_mode  = request.form.get("ai_mode", "tfidf")
+        groq_key = request.form.get("groq_key", "")
+
+        # ── Save JD temp (txt) ────────────────────────────
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=".txt", mode="w", encoding="utf-8"
+        ) as jd_tmp:
+            jd_tmp.write(jd_text)
+            jd_txt_path = jd_tmp.name
+
+        # ── Run TF-IDF ────────────────────────────────────
+        config = Config(
+            required_keywords=req_kws,
+            edu_keywords=edu_kws,
+            bonus_keywords=bon_kws,
+            pass_threshold=pass_thr,
+            review_threshold=rev_thr,
+        )
+        screener = ResumeScreener(config=config)
+        results  = screener.screen(
+            jd_path=jd_txt_path,
+            resume_paths=[p for _, p in resume_tmp],
+        )
+
+        # ── Run Groq AI (optional) ────────────────────────
+        ai_insights = {}
+        if ai_mode == "hybrid" and groq_key:
+            from groq import Groq
+            client = Groq(api_key=groq_key)
+
+            for r in results:
+                if r.score < 30:
+                    continue
+
+                tmp_path = next(
+                    (p for _, p in resume_tmp
+                     if r.file == Path(p).name or r.file in p),
+                    None
+                )
+                if not tmp_path:
+                    continue
+
+                # อ่าน resume text — ปิด doc ก่อนทำอย่างอื่น
+                doc = fitz.open(tmp_path)
+                resume_text = " ".join(
+                    page.get_text() for page in doc
+                )[:1500]
+                doc.close()
+                doc = None
+
+                try:
+                    resp = client.chat.completions.create(
+                        model="llama-3.1-8b-instant",
+                        messages=[
+                            {"role":"system",
+                             "content":"Respond only with valid JSON."},
+                            {"role":"user",
+                             "content":(
+                                 f"Analyze resume vs JD. JSON only.\n"
+                                 f"JD: {jd_text[:600]}\n"
+                                 f"Resume: {resume_text}\n"
+                                 f'Return: {{"ai_score":<0-100>,'
+                                 f'"matched_skills":[],'
+                                 f'"missing_skills":[],'
+                                 f'"summary":"Thai 1-sentence summary"}}'
+                             )}
+                        ],
+                        temperature=0.1,
+                        max_tokens=300,
+                    )
+                    raw  = resp.choices[0].message.content.strip()
+                    raw  = raw.replace("```json","").replace("```","")
+                    data = json.loads(raw)
+
+                    combined = round(r.score * 0.4 + data["ai_score"] * 0.6, 1)
+                    ai_insights[r.file] = {**data, "combined": combined}
+                    r.score = combined
+
+                    if combined >= pass_thr:
+                        r.recommendation = "ผ่าน"
+                    elif combined >= rev_thr:
+                        r.recommendation = "พิจารณาเพิ่มเติม"
+                    else:
+                        r.recommendation = "ไม่ผ่าน"
+
+                except Exception as e:
+                    ai_insights[r.file] = {"error": str(e)}
+
+            results.sort(key=lambda r: r.score, reverse=True)
+
+        # ── Build response ────────────────────────────────
+        output = []
+        for rank, r in enumerate(results, 1):
+            d = r.to_dict()
+            d["rank"]    = rank
+            d["insight"] = ai_insights.get(r.file, {})
+            output.append(d)
+
+        summary = {
+            "total":   len(output),
+            "passed":  sum(1 for r in results if r.recommendation == "ผ่าน"),
+            "review":  sum(1 for r in results if r.recommendation == "พิจารณาเพิ่มเติม"),
+            "failed":  sum(1 for r in results if r.recommendation == "ไม่ผ่าน"),
+            "ai_used": len(ai_insights),
+        }
+
+        return jsonify({"results": output, "summary": summary})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        # ── Cleanup temp files ────────────────────────────
+        gc.collect()  # release fitz file handles
+        if jd_tmp_path:
+            try: os.unlink(jd_tmp_path)
+            except: pass
+        try: os.unlink(jd_txt_path)
+        except: pass
+        for _, p in resume_tmp:
+            try: os.unlink(p)
+            except: pass
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)

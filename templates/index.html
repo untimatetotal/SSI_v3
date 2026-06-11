@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CVScreener — SSI v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a14; --nav:#12122a; --card:#16162a; --border:rgba(255,255,255,0.08);
+  --blue:#378add; --blue2:#85b7eb; --green:#1db954; --amber:#fac775;
+  --red:#f09595; --purple:#7f77dd; --teal:#5dcaa5;
+  --text:#f0f0f5; --muted:rgba(255,255,255,0.4); --sub:rgba(255,255,255,0.25);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* NAV */
+nav{background:var(--nav);border-bottom:1px solid var(--border);padding:0 28px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:8px;font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
+.mark{width:28px;height:28px;background:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff}
+.nav-links{display:flex;gap:20px}
+.nav-links a{font-size:13px;color:var(--muted);text-decoration:none;cursor:pointer}
+.nav-links a:hover{color:var(--text)}
+.cost-chip{display:flex;align-items:center;gap:5px;padding:4px 12px;background:rgba(29,185,84,0.12);border:1px solid rgba(29,185,84,0.25);border-radius:100px;font-size:12px;color:var(--teal)}
+
+/* LAYOUT */
+.app{display:grid;grid-template-columns:280px 1fr;height:calc(100vh - 52px)}
+
+/* SIDEBAR */
+.sidebar{background:var(--nav);border-right:1px solid var(--border);padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.sec-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.seg{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.seg-btn{flex:1;padding:7px;background:transparent;color:var(--muted);border:none;cursor:pointer;font-size:12px;transition:all .15s}
+.seg-btn.on{background:var(--blue);color:#fff}
+.upload-area{border:1px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:all .15s}
+.upload-area:hover{border-color:var(--blue);background:rgba(55,138,221,0.05)}
+.upload-area i{font-size:22px;color:var(--muted);display:block;margin-bottom:6px}
+.upload-area p{font-size:12px;color:var(--muted)}
+.file-list{display:flex;flex-direction:column;gap:4px}
+.file-chip{display:flex;align-items:center;gap:7px;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:7px;border:1px solid var(--border);font-size:12px}
+.file-chip span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-chip button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px}
+.file-chip button:hover{color:var(--red)}
+.form-label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+input[type=text],input[type=password],select,textarea{
+  width:100%;padding:8px 10px;background:rgba(255,255,255,0.05);
+  border:1px solid var(--border);border-radius:8px;color:var(--text);
+  font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s
+}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+select option{background:#1a1a30}
+.slider-wrap{display:flex;align-items:center;gap:8px}
+input[type=range]{flex:1;accent-color:var(--blue)}
+.sv{font-size:12px;font-weight:500;color:var(--text);width:24px;text-align:right}
+.ai-box{background:rgba(55,138,221,0.08);border:1px solid rgba(55,138,221,0.2);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.run-btn{width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;margin-top:auto}
+.run-btn:hover{background:#185fa5;transform:translateY(-1px)}
+.run-btn:disabled{background:#2a3a5a;cursor:not-allowed;transform:none}
+
+/* MAIN */
+.main{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.result-header{display:flex;align-items:flex-start;justify-content:space-between}
+.result-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700}
+.result-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.export-btn{padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;cursor:pointer;transition:all .15s}
+.export-btn:hover{border-color:var(--blue);color:var(--blue2)}
+.stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+.stat-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;line-height:1}
+.stat-lbl{font-size:10px;color:var(--muted);margin-top:3px}
+.pills{display:flex;gap:6px}
+.pill{padding:4px 12px;border-radius:100px;font-size:12px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:transparent;transition:all .15s}
+.pill.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.rcard{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .15s}
+.rcard:hover{border-color:rgba(255,255,255,0.15)}
+.rcard-header{display:grid;grid-template-columns:32px 1fr auto 120px;gap:12px;align-items:center;padding:12px 16px;cursor:pointer}
+.rank{font-size:18px;font-weight:500;color:rgba(255,255,255,0.15);text-align:center}
+.rname{font-size:14px;font-weight:500}
+.rmeta{font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:10px}
+.bars{display:flex;flex-direction:column;gap:4px}
+.brow{display:flex;align-items:center;gap:5px}
+.blbl{font-size:9px;color:var(--muted);width:42px}
+.btrack{flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+.bfill{height:100%;border-radius:2px;transition:width 1s ease}
+.bval{font-size:9px;font-weight:500;width:20px;text-align:right}
+.score-col{text-align:right}
+.score-big{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;line-height:1}
+.score-lbl{font-size:9px;color:var(--muted);margin-top:1px}
+.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:600;margin-top:4px;border:1px solid}
+.b-pass  {background:rgba(29,185,84,0.12);color:var(--green);border-color:rgba(29,185,84,0.3)}
+.b-review{background:rgba(250,199,117,0.12);color:var(--amber);border-color:rgba(250,199,117,0.3)}
+.b-fail  {background:rgba(240,149,149,0.12);color:var(--red);border-color:rgba(240,149,149,0.3)}
+.rcard-detail{padding:0 16px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s}
+.rcard-detail.open{max-height:300px;padding:12px 16px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.detail-label{font-size:11px;color:var(--muted);margin-bottom:3px}
+.struct-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.struct-tag{font-size:10px;padding:2px 7px;border-radius:100px;background:rgba(255,255,255,0.05)}
+.ai-insight-box{background:rgba(55,138,221,0.08);border-left:2px solid var(--blue);padding:8px 12px;border-radius:0 6px 6px 0;font-size:12px;color:var(--blue2);margin-top:8px}
+.warn-box{background:rgba(240,149,149,0.08);border-left:2px solid var(--red);padding:8px 12px;border-radius:0 6px 6px 0;font-size:12px;color:var(--red);margin-top:8px}
+.loading{display:none;text-align:center;padding:40px;color:var(--muted)}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-icon{font-size:40px;margin-bottom:12px}
+
+@media(max-width:768px){
+  .app{grid-template-columns:1fr}
+  .sidebar{height:auto}
+  .stat-row{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo"><div class="mark">C</div> CVScreener</div>
+  <div class="nav-links">
+    <a>วิธีใช้</a><a>Algorithm</a><a>เอกสาร</a>
+  </div>
+  <div class="cost-chip">💰 ค่า AI: 0 บาท</div>
+</nav>
+
+<div class="app">
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+
+  <div>
+    <div class="sec-label">โหมดการวิเคราะห์</div>
+    <div class="seg">
+      <button class="seg-btn on" id="btn-tfidf" onclick="setMode('tfidf')">TF-IDF เท่านั้น</button>
+      <button class="seg-btn"   id="btn-hybrid" onclick="setMode('hybrid')">+ Groq AI</button>
+    </div>
+  </div>
+
+  <div id="ai-section" style="display:none">
+    <div class="ai-box">
+      <label class="form-label">Groq API Key</label>
+      <input type="password" id="groq-key" placeholder="gsk_..." />
+      <label class="form-label" style="margin-top:4px">ส่ง AI เฉพาะคะแนน TF-IDF ≥ <span id="thr-val">30</span></label>
+      <input type="range" min="0" max="100" value="30" oninput="document.getElementById('thr-val').textContent=this.value" id="ai-thr" />
+    </div>
+  </div>
+
+  <div>
+    <div class="sec-label">Job Description</div>
+    <div class="seg" style="margin-bottom:8px">
+      <button class="seg-btn on" id="btn-jd-file" onclick="setJdMode('file')">อัปโหลดไฟล์</button>
+      <button class="seg-btn"   id="btn-jd-type" onclick="setJdMode('type')">พิมพ์เอง</button>
+    </div>
+    <div id="jd-file-area">
+      <input type="file" id="jd-input" accept=".txt,.pdf" style="display:none" onchange="showJdFile()">
+      <div class="upload-area" onclick="document.getElementById('jd-input').click()">
+        <i>📋</i>
+        <p id="jd-label">คลิกเพื่อเลือกไฟล์ .txt หรือ .pdf</p>
+      </div>
+    </div>
+    <div id="jd-type-area" style="display:none">
+      <textarea id="jd-text" rows="5" placeholder="Position: Marketing Officer&#10;Skills: ..."></textarea>
+    </div>
+  </div>
+
+  <div>
+    <div class="sec-label">Resume PDF</div>
+    <input type="file" id="resume-input" accept=".pdf" multiple style="display:none" onchange="addResumes()">
+    <div class="upload-area" onclick="document.getElementById('resume-input').click()">
+      <i>📁</i>
+      <p>คลิกเพื่ออัปโหลด Resume (หลายไฟล์ได้)</p>
+    </div>
+    <div class="file-list" id="resume-list" style="margin-top:6px"></div>
+  </div>
+
+  <div>
+    <div class="sec-label">Required Keywords</div>
+    <input type="text" id="req-kw" placeholder="python data (คั่นช่องว่าง)">
+    <label class="form-label" style="margin-top:8px">วุฒิการศึกษาขั้นต่ำ</label>
+    <select id="edu">
+      <option value="">ไม่กำหนด</option>
+      <option value="1">ปวส./อนุปริญญา</option>
+      <option value="2">ปริญญาตรี</option>
+      <option value="3">ปริญญาโท</option>
+    </select>
+  </div>
+
+  <div>
+    <div class="sec-label">Bonus Keywords</div>
+    <input type="text" id="bon-kw" placeholder="react tailwind jest figma">
+  </div>
+
+  <div>
+    <div class="sec-label">เกณฑ์คะแนน</div>
+    <div style="margin-bottom:8px">
+      <label class="form-label">ผ่าน ≥ <span id="pass-val">60</span></label>
+      <div class="slider-wrap">
+        <input type="range" min="0" max="100" value="60" id="pass-slider"
+               oninput="document.getElementById('pass-val').textContent=this.value">
+      </div>
+    </div>
+    <div>
+      <label class="form-label">พิจารณา ≥ <span id="rev-val">40</span></label>
+      <div class="slider-wrap">
+        <input type="range" min="0" max="100" value="40" id="rev-slider"
+               oninput="document.getElementById('rev-val').textContent=this.value">
+      </div>
+    </div>
+  </div>
+
+  <button class="run-btn" id="run-btn" onclick="runAnalyze()">▶  วิเคราะห์ Resume</button>
+
+</aside>
+
+<!-- ── MAIN ── -->
+<main class="main">
+  <div class="result-header">
+    <div>
+      <div class="result-title">ผลการคัดกรอง</div>
+      <div class="result-sub" id="result-sub">รอการวิเคราะห์...</div>
+    </div>
+    <button class="export-btn" onclick="exportJSON()">⬇ Export JSON</button>
+  </div>
+
+  <!-- stats -->
+  <div class="stat-row" id="stat-row" style="display:none">
+    <div class="stat-card"><div class="stat-num" id="s-total">0</div><div class="stat-lbl">ทั้งหมด</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--green)"  id="s-pass">0</div><div class="stat-lbl">✓ ผ่าน</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--amber)"  id="s-rev">0</div><div class="stat-lbl">~ พิจารณา</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--red)"    id="s-fail">0</div><div class="stat-lbl">✗ ไม่ผ่าน</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--purple)" id="s-ai">0</div><div class="stat-lbl">🤖 AI</div></div>
+  </div>
+
+  <!-- filter pills -->
+  <div class="pills" id="filter-pills" style="display:none">
+    <button class="pill on" onclick="filterResults('all',this)">ทั้งหมด</button>
+    <button class="pill" onclick="filterResults('ผ่าน',this)">ผ่าน</button>
+    <button class="pill" onclick="filterResults('พิจารณาเพิ่มเติม',this)">พิจารณา</button>
+    <button class="pill" onclick="filterResults('ไม่ผ่าน',this)">ไม่ผ่าน</button>
+  </div>
+
+  <!-- loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p>กำลังวิเคราะห์ Resume...</p>
+  </div>
+
+  <!-- empty -->
+  <div class="empty" id="empty-state">
+    <div class="empty-icon">📋</div>
+    <p>กรอกข้อมูลด้านซ้ายแล้วกด <strong>วิเคราะห์ Resume</strong></p>
+  </div>
+
+  <!-- results -->
+  <div id="results-container"></div>
+</main>
+</div>
+
+<script>
+let allResults = [];
+let currentFilter = 'all';
+let jdMode = 'file';
+let aiMode = 'tfidf';
+
+// ── mode toggles ────────────────────────────────────────────
+function setMode(m) {
+  aiMode = m;
+  document.getElementById('btn-tfidf').className = 'seg-btn' + (m==='tfidf'?' on':'');
+  document.getElementById('btn-hybrid').className = 'seg-btn' + (m==='hybrid'?' on':'');
+  document.getElementById('ai-section').style.display = m==='hybrid'?'block':'none';
+}
+function setJdMode(m) {
+  jdMode = m;
+  document.getElementById('btn-jd-file').className = 'seg-btn'+(m==='file'?' on':'');
+  document.getElementById('btn-jd-type').className = 'seg-btn'+(m==='type'?' on':'');
+  document.getElementById('jd-file-area').style.display = m==='file'?'block':'none';
+  document.getElementById('jd-type-area').style.display = m==='type'?'block':'none';
+}
+function showJdFile() {
+  const f = document.getElementById('jd-input').files[0];
+  if(f) document.getElementById('jd-label').textContent = '✓ ' + f.name;
+}
+
+// ── resume file list ─────────────────────────────────────────
+let resumeFiles = [];
+function addResumes() {
+  const files = Array.from(document.getElementById('resume-input').files);
+  files.forEach(f => { if(!resumeFiles.find(x=>x.name===f.name)) resumeFiles.push(f); });
+  renderResumeList();
+}
+function removeResume(name) {
+  resumeFiles = resumeFiles.filter(f=>f.name!==name);
+  renderResumeList();
+}
+function renderResumeList() {
+  const el = document.getElementById('resume-list');
+  el.innerHTML = resumeFiles.map(f=>`
+    <div class="file-chip">
+      <span>📄 ${f.name}</span>
+      <button onclick="removeResume('${f.name}')">×</button>
+    </div>`).join('');
+}
+
+// ── run ──────────────────────────────────────────────────────
+async function runAnalyze() {
+  const fd = new FormData();
+
+  // JD
+  if(jdMode==='file') {
+    const jdf = document.getElementById('jd-input').files[0];
+    if(!jdf) return alert('กรุณาเลือกไฟล์ JD');
+    fd.append('jd_file', jdf);
+  } else {
+    const txt = document.getElementById('jd-text').value.trim();
+    if(!txt) return alert('กรุณากรอก Job Description');
+    fd.append('jd_text', txt);
+  }
+
+  if(resumeFiles.length===0) return alert('กรุณาอัปโหลด Resume');
+  resumeFiles.forEach(f=>fd.append('resumes',f));
+
+  fd.append('required',   document.getElementById('req-kw').value);
+  fd.append('bonus',      document.getElementById('bon-kw').value);
+  fd.append('edu',        document.getElementById('edu').value);
+  fd.append('pass_threshold',   document.getElementById('pass-slider').value);
+  fd.append('review_threshold', document.getElementById('rev-slider').value);
+  fd.append('ai_mode',    aiMode);
+  fd.append('groq_key',   document.getElementById('groq-key')?.value||'');
+
+  // UI
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('results-container').innerHTML = '';
+  document.getElementById('stat-row').style.display = 'none';
+  document.getElementById('filter-pills').style.display = 'none';
+
+  try {
+    const resp = await fetch('/analyze', {method:'POST', body:fd});
+    const data = await resp.json();
+    if(data.error) { alert('Error: '+data.error); return; }
+    allResults = data.results;
+    showSummary(data.summary);
+    renderResults(allResults);
+  } catch(e) {
+    alert('Connection error: '+e.message);
+  } finally {
+    document.getElementById('run-btn').disabled = false;
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+// ── summary ──────────────────────────────────────────────────
+function showSummary(s) {
+  document.getElementById('result-sub').textContent =
+    `${s.total} resume · ผ่าน ${s.passed} · พิจารณา ${s.review} · ไม่ผ่าน ${s.failed}`;
+  ['total','pass','rev','fail','ai'].forEach((k,i)=>{
+    document.getElementById('s-'+k).textContent = [s.total,s.passed,s.review,s.failed,s.ai_used][i];
+  });
+  document.getElementById('stat-row').style.display = 'grid';
+  document.getElementById('filter-pills').style.display = 'flex';
+}
+
+// ── render ───────────────────────────────────────────────────
+function filterResults(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('on'));
+  btn.classList.add('on');
+  const filtered = f==='all' ? allResults
+    : allResults.filter(r=>r.recommendation===f);
+  renderResults(filtered);
+}
+
+function renderResults(results) {
+  const c = {'ผ่าน':'green','พิจารณาเพิ่มเติม':'amber','ไม่ผ่าน':'red'};
+  const lbl = {'ผ่าน':'✓ ผ่าน','พิจารณาเพิ่มเติม':'~ พิจารณา','ไม่ผ่าน':'✗ ไม่ผ่าน'};
+
+  document.getElementById('results-container').innerHTML = results.map((r,i)=>{
+    const col = c[r.recommendation]||'muted';
+    const sym = lbl[r.recommendation]||'?';
+    const ai  = r.insight && !r.insight.error;
+    const struct = r.struct_checks||{};
+
+    return `
+<div class="rcard" data-rec="${r.recommendation}">
+  <div class="rcard-header" onclick="toggle(${i})">
+    <div class="rank">#${r.rank}</div>
+    <div>
+      <div class="rname">${r.name} ${ai?'<span style="font-size:11px;color:var(--purple)">🤖</span>':''}</div>
+      <div class="rmeta"><span>📄 ${r.file}</span><span>⏱ ${r.experience}</span></div>
+    </div>
+    <div class="bars">
+      <div class="brow"><span class="blbl">TF-IDF</span><div class="btrack"><div class="bfill" style="width:${r.tfidf}%;background:var(--blue)"></div></div><span class="bval" style="color:var(--blue2)">${r.tfidf}</span></div>
+      <div class="brow"><span class="blbl">Keyword</span><div class="btrack"><div class="bfill" style="width:${r.keyword}%;background:var(--purple)"></div></div><span class="bval" style="color:var(--purple)">${r.keyword}</span></div>
+      <div class="brow"><span class="blbl">Struct</span><div class="btrack"><div class="bfill" style="width:${r.struct}%;background:var(--teal)"></div></div><span class="bval" style="color:var(--teal)">${r.struct}</span></div>
+    </div>
+    <div class="score-col">
+      <div class="score-big" style="color:var(--${col})">${r.score}</div>
+      <div class="score-lbl">/ 100</div>
+      <div class="badge b-${r.recommendation==='ผ่าน'?'pass':r.recommendation==='พิจารณาเพิ่มเติม'?'review':'fail'}">${sym}</div>
+    </div>
+  </div>
+  <div class="rcard-detail" id="detail-${i}">
+    <div class="detail-grid">
+      <div>
+        <div class="detail-label">โครงสร้าง Resume</div>
+        <div class="struct-list">
+          ${Object.entries(struct).map(([k,v])=>`<span class="struct-tag" style="color:${v?'var(--teal)':'var(--red)'}">${v?'✓':'✗'} ${k}</span>`).join('')}
+        </div>
+        ${r.error?`<div class="warn-box">⚠ ${r.error}</div>`:''}
+      </div>
+      ${ai?`
+      <div>
+        <div class="detail-label">🤖 Groq AI Insights</div>
+        ${r.insight.summary?`<div class="ai-insight-box">💬 ${r.insight.summary}</div>`:''}
+        ${r.insight.matched_skills?.length?`<div style="font-size:11px;color:var(--muted);margin-top:6px">✓ ตรงกับ JD: <span style="color:var(--teal)">${r.insight.matched_skills.slice(0,5).join(', ')}</span></div>`:''}
+        ${r.insight.missing_skills?.length?`<div style="font-size:11px;color:var(--muted);margin-top:4px">✗ ขาด: <span style="color:var(--red)">${r.insight.missing_skills.slice(0,4).join(', ')}</span></div>`:''}
+        ${r.insight.combined?`<div style="font-size:11px;color:var(--muted);margin-top:4px">AI Score: ${r.insight.ai_score} → Combined: ${r.insight.combined}</div>`:''}
+      </div>`:`<div><div class="detail-label">หมายเหตุ</div><p style="font-size:12px;color:var(--muted)">${aiMode==='hybrid'?'คะแนน TF-IDF ต่ำเกินเกณฑ์ ไม่ส่ง AI':'ใช้ TF-IDF เท่านั้น'}</p></div>`}
+    </div>
+  </div>
+</div>`;
+  }).join('');
+}
+
+function toggle(i) {
+  const d = document.getElementById('detail-'+i);
+  d.classList.toggle('open');
+}
+
+// ── export ───────────────────────────────────────────────────
+function exportJSON() {
+  if(!allResults.length) return alert('ยังไม่มีผลลัพธ์');
+  const blob = new Blob([JSON.stringify(allResults,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'results.json';
+  a.click();
+}
+</script>
+</body>
+</html>
