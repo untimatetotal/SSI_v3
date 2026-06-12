@@ -3,129 +3,175 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CVScreener — SSI v3</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>CV-Screener — SSI v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0a0a14; --nav:#12122a; --card:#16162a; --border:rgba(255,255,255,0.08);
-  --blue:#378add; --blue2:#85b7eb; --green:#1db954; --amber:#fac775;
-  --red:#f09595; --purple:#7f77dd; --teal:#5dcaa5;
-  --text:#f0f0f5; --muted:rgba(255,255,255,0.4); --sub:rgba(255,255,255,0.25);
+  --bg:#ffffff; --surface:#f7f7f8; --surface2:#f0f1f3;
+  --border:#e7e7ea; --border-strong:#d4d4d9;
+  --ink:#18181b; --sub:#71717a; --faint:#a1a1aa;
+  --accent:#4338ca; --accent-soft:#eef0fd; --accent-hover:#3730a3;
+  --green:#16a34a; --green-soft:#eafaf0;
+  --amber:#d97706; --amber-soft:#fef6e7;
+  --red:#dc2626; --red-soft:#fdeded;
+  --purple:#7c3aed; --purple-soft:#f4eefd;
+  --radius:14px; --radius-sm:9px;
 }
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.font-display{font-family:'Sora',sans-serif}
 
 /* NAV */
-nav{background:var(--nav);border-bottom:1px solid var(--border);padding:0 28px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.logo{display:flex;align-items:center;gap:8px;font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
-.mark{width:28px;height:28px;background:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff}
-.nav-links{display:flex;gap:20px}
-.nav-links a{font-size:13px;color:var(--muted);text-decoration:none;cursor:pointer}
-.nav-links a:hover{color:var(--text)}
-.cost-chip{display:flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(127,119,221,0.12);border:1px solid rgba(127,119,221,0.25);border-radius:100px;font-size:12px;color:var(--purple);font-family:'DM Sans',monospace;cursor:default;transition:all .15s}
-.cost-chip.tfidf{background:rgba(29,185,84,0.12);border-color:rgba(29,185,84,0.25);color:var(--teal)}
-.cost-chip.warn{background:rgba(250,199,117,0.12);border-color:rgba(250,199,117,0.3);color:var(--amber)}
-.cost-chip.danger{background:rgba(240,149,149,0.12);border-color:rgba(240,149,149,0.3);color:var(--red)}
+nav{border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.85);backdrop-filter:blur(8px)}
+.logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;font-family:'Sora',sans-serif;letter-spacing:-.2px}
+.mark{width:30px;height:30px;background:var(--ink);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;font-family:'Sora',sans-serif}
+.nav-links{display:flex;gap:28px}
+.nav-links a{font-size:13px;color:var(--sub);text-decoration:none;cursor:pointer;transition:color .15s}
+.nav-links a:hover{color:var(--ink)}
+.cost-chip{display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--green-soft);border:1px solid #d3f0dd;border-radius:100px;font-size:12px;color:var(--green);font-weight:500;font-variant-numeric:tabular-nums;transition:all .2s}
+.cost-chip.ai{background:var(--purple-soft);border-color:#e6dafb;color:var(--purple)}
+.cost-chip.warn{background:var(--amber-soft);border-color:#fae3bd;color:var(--amber)}
+.cost-chip.danger{background:var(--red-soft);border-color:#fad4d4;color:var(--red)}
 
-/* LAYOUT */
-.app{display:grid;grid-template-columns:280px 1fr;height:calc(100vh - 52px)}
+/* LAYOUT — centered single column */
+.page{max-width:880px;margin:0 auto;padding:40px 24px 80px}
+.hero{margin-bottom:32px}
+.hero-eyebrow{font-size:12px;font-weight:600;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
+.hero h1{font-size:30px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
+.hero p{font-size:14px;color:var(--sub)}
 
-/* SIDEBAR */
-.sidebar{background:var(--nav);border-right:1px solid var(--border);padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
-.sec-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
-.seg{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
-.seg-btn{flex:1;padding:7px;background:transparent;color:var(--muted);border:none;cursor:pointer;font-size:12px;transition:all .15s}
-.seg-btn.on{background:var(--blue);color:#fff}
-.upload-area{border:1px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:all .15s}
-.upload-area:hover{border-color:var(--blue);background:rgba(55,138,221,0.05)}
-.upload-area.dragover{border-color:var(--blue);background:rgba(55,138,221,0.12);border-style:solid}
-.upload-area i{font-size:22px;color:var(--muted);display:block;margin-bottom:6px}
-.upload-area p{font-size:12px;color:var(--muted)}
-.file-list{display:flex;flex-direction:column;gap:4px}
-.file-chip{display:flex;align-items:center;gap:7px;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:7px;border:1px solid var(--border);font-size:12px}
-.file-chip span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.file-chip button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px}
+/* SETUP CARD */
+.setup{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;display:flex;flex-direction:column;gap:24px;margin-bottom:28px}
+.setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.field{display:flex;flex-direction:column;gap:8px}
+.field-full{grid-column:1/-1}
+.field-label{font-size:12px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:6px}
+.field-label .opt{font-size:11px;font-weight:400;color:var(--faint)}
+.field-hint{font-size:11px;color:var(--faint)}
+
+/* Upload areas */
+.upload-area{border:1.5px dashed var(--border-strong);border-radius:var(--radius-sm);padding:22px 16px;text-align:center;cursor:pointer;transition:all .15s;background:#fff}
+.upload-area:hover{border-color:var(--accent);background:var(--accent-soft)}
+.upload-area.dragover{border-color:var(--accent);background:var(--accent-soft);border-style:solid}
+.upload-area .icon{font-size:24px;display:block;margin-bottom:6px;opacity:.7}
+.upload-area p{font-size:12.5px;color:var(--sub);line-height:1.4}
+.upload-area p b{color:var(--ink)}
+
+.file-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.file-chip{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;border-radius:var(--radius-sm);border:1px solid var(--border);font-size:12.5px}
+.file-chip span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.file-chip button{background:none;border:none;color:var(--faint);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;transition:color .15s}
 .file-chip button:hover{color:var(--red)}
-.form-label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+
+/* Inputs */
 input[type=text],input[type=password],select,textarea{
-  width:100%;padding:8px 10px;background:rgba(255,255,255,0.05);
-  border:1px solid var(--border);border-radius:8px;color:var(--text);
-  font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s
+  width:100%;padding:10px 12px;background:#fff;
+  border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);
+  font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border-color .15s
 }
-input:focus,select:focus,textarea:focus{border-color:var(--blue)}
-select option{background:#1a1a30}
-.slider-wrap{display:flex;align-items:center;gap:8px}
-input[type=range]{flex:1;accent-color:var(--blue)}
-.sv{font-size:12px;font-weight:500;color:var(--text);width:24px;text-align:right}
-.ai-box{background:rgba(55,138,221,0.08);border:1px solid rgba(55,138,221,0.2);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px}
-.run-btn{width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;margin-top:auto}
-.run-btn:hover{background:#185fa5;transform:translateY(-1px)}
-.run-btn:disabled{background:#2a3a5a;cursor:not-allowed;transform:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input::placeholder,textarea::placeholder{color:var(--faint)}
+select{cursor:pointer}
+textarea{resize:vertical;min-height:90px}
 
-/* MAIN */
-.main{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
-.result-header{display:flex;align-items:flex-start;justify-content:space-between}
-.result-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700}
-.result-sub{font-size:12px;color:var(--muted);margin-top:2px}
-.export-btn{padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;cursor:pointer;transition:all .15s}
-.export-btn:hover{border-color:var(--blue);color:var(--blue2)}
-.stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
-.stat-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;line-height:1}
-.stat-lbl{font-size:10px;color:var(--muted);margin-top:3px}
+/* Segmented control */
+.seg{display:inline-flex;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;padding:3px;gap:2px}
+.seg-btn{padding:6px 16px;background:transparent;color:var(--sub);border:none;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:500;font-family:'Inter',sans-serif;transition:all .15s}
+.seg-btn.on{background:var(--ink);color:#fff}
 
-/* TOKEN PANEL */
-.token-panel{display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 16px}
+/* AI box */
+.ai-box{background:var(--purple-soft);border:1px solid #e6dafb;border-radius:var(--radius-sm);padding:16px;display:flex;flex-direction:column;gap:12px}
+.ai-box .field-label{color:var(--purple)}
+
+/* Sliders */
+.slider-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.slider-row{display:flex;align-items:center;gap:10px}
+input[type=range]{flex:1;accent-color:var(--accent);height:4px}
+.sv{font-size:13px;font-weight:600;color:var(--ink);min-width:28px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* Run button */
+.run-btn{width:100%;padding:14px;background:var(--ink);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;font-family:'Sora',sans-serif;cursor:pointer;transition:all .15s;letter-spacing:.2px}
+.run-btn:hover{background:var(--accent)}
+.run-btn:disabled{background:var(--faint);cursor:not-allowed}
+
+/* RESULTS SECTION */
+.results-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+.results-title{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.results-sub{font-size:12.5px;color:var(--sub);margin-top:3px}
+.export-btn{padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--sub);font-size:12.5px;cursor:pointer;transition:all .15s;font-weight:500}
+.export-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Stats */
+.stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;text-align:center}
+.stat-num{font-family:'Sora',sans-serif;font-size:24px;font-weight:700;line-height:1;letter-spacing:-.5px}
+.stat-lbl{font-size:11px;color:var(--sub);margin-top:4px}
+
+/* Token panel */
+.token-panel{display:none;background:var(--purple-soft);border:1px solid #e6dafb;border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:16px}
 .token-panel.show{display:block}
-.token-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.token-title{font-size:12px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px}
-.token-nums{font-size:11px;color:var(--muted);font-family:monospace}
-.token-bar{height:8px;border-radius:4px;background:rgba(255,255,255,0.06);overflow:hidden;display:flex}
-.token-bar-fill{height:100%;transition:width .6s ease}
-.token-detail{display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--muted)}
-.token-detail span b{color:var(--text);font-family:monospace}
+.token-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.token-title{font-size:12.5px;font-weight:600;color:var(--purple);display:flex;align-items:center;gap:6px}
+.token-nums{font-size:12px;color:var(--purple);font-variant-numeric:tabular-nums;font-weight:600}
+.token-bar{height:6px;border-radius:4px;background:#fff;overflow:hidden}
+.token-bar-fill{height:100%;border-radius:4px;background:var(--purple);transition:width .6s ease}
+.token-detail{display:flex;gap:18px;margin-top:10px;font-size:11.5px;color:var(--sub)}
+.token-detail span b{color:var(--ink);font-variant-numeric:tabular-nums}
 
-.pills{display:flex;gap:6px}
-.pill{padding:4px 12px;border-radius:100px;font-size:12px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:transparent;transition:all .15s}
-.pill.on{background:var(--blue);color:#fff;border-color:var(--blue)}
-.rcard{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .15s}
-.rcard:hover{border-color:rgba(255,255,255,0.15)}
-.rcard-header{display:grid;grid-template-columns:32px 1fr auto 120px;gap:12px;align-items:center;padding:12px 16px;cursor:pointer}
-.rank{font-size:18px;font-weight:500;color:rgba(255,255,255,0.15);text-align:center}
-.rname{font-size:14px;font-weight:500}
-.rmeta{font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:10px}
-.bars{display:flex;flex-direction:column;gap:4px}
-.brow{display:flex;align-items:center;gap:5px}
-.blbl{font-size:9px;color:var(--muted);width:42px}
-.btrack{flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
-.bfill{height:100%;border-radius:2px;transition:width 1s ease}
-.bval{font-size:9px;font-weight:500;width:20px;text-align:right}
+/* Filter pills */
+.pills{display:flex;gap:6px;margin-bottom:14px}
+.pill{padding:6px 16px;border-radius:100px;font-size:12.5px;border:1px solid var(--border);color:var(--sub);cursor:pointer;background:#fff;transition:all .15s;font-weight:500}
+.pill.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* Result cards */
+.rcard{background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .15s;margin-bottom:10px}
+.rcard:hover{border-color:var(--border-strong);box-shadow:0 2px 12px rgba(0,0,0,0.04)}
+.rcard-header{display:grid;grid-template-columns:30px 1fr auto 120px;gap:16px;align-items:center;padding:16px 20px;cursor:pointer}
+.rank{font-size:16px;font-weight:600;color:var(--faint);text-align:center;font-family:'Sora',sans-serif}
+.rname{font-size:14.5px;font-weight:600;letter-spacing:-.1px}
+.rmeta{font-size:11.5px;color:var(--sub);margin-top:3px;display:flex;gap:12px}
+.bars{display:flex;flex-direction:column;gap:5px;min-width:140px}
+.brow{display:flex;align-items:center;gap:6px}
+.blbl{font-size:10px;color:var(--faint);width:44px;font-weight:500}
+.btrack{flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.bfill{height:100%;border-radius:2px;transition:width .8s ease}
+.bval{font-size:10px;font-weight:600;width:22px;text-align:right;font-variant-numeric:tabular-nums}
 .score-col{text-align:right}
-.score-big{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;line-height:1}
-.score-lbl{font-size:9px;color:var(--muted);margin-top:1px}
-.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:600;margin-top:4px;border:1px solid}
-.b-pass  {background:rgba(29,185,84,0.12);color:var(--green);border-color:rgba(29,185,84,0.3)}
-.b-review{background:rgba(250,199,117,0.12);color:var(--amber);border-color:rgba(250,199,117,0.3)}
-.b-fail  {background:rgba(240,149,149,0.12);color:var(--red);border-color:rgba(240,149,149,0.3)}
-.rcard-detail{padding:0 16px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s}
-.rcard-detail.open{max-height:320px;padding:12px 16px}
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.detail-label{font-size:11px;color:var(--muted);margin-bottom:3px}
-.struct-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.struct-tag{font-size:10px;padding:2px 7px;border-radius:100px;background:rgba(255,255,255,0.05)}
-.ai-insight-box{background:rgba(55,138,221,0.08);border-left:2px solid var(--blue);padding:8px 12px;border-radius:0 6px 6px 0;font-size:12px;color:var(--blue2);margin-top:8px}
-.warn-box{background:rgba(240,149,149,0.08);border-left:2px solid var(--red);padding:8px 12px;border-radius:0 6px 6px 0;font-size:12px;color:var(--red);margin-top:8px}
-.token-mini{font-size:10px;color:var(--purple);margin-top:6px;font-family:monospace}
-.loading{display:none;text-align:center;padding:40px;color:var(--muted)}
-.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.empty{text-align:center;padding:60px 20px;color:var(--muted)}
-.empty-icon{font-size:40px;margin-bottom:12px}
+.score-big{font-family:'Sora',sans-serif;font-size:26px;font-weight:700;line-height:1;letter-spacing:-.5px}
+.score-lbl{font-size:9.5px;color:var(--faint);margin-top:1px}
+.badge{display:inline-block;padding:3px 10px;border-radius:100px;font-size:10.5px;font-weight:600;margin-top:5px}
+.b-pass  {background:var(--green-soft);color:var(--green)}
+.b-review{background:var(--amber-soft);color:var(--amber)}
+.b-fail  {background:var(--red-soft);color:var(--red)}
 
-@media(max-width:768px){
-  .app{grid-template-columns:1fr}
-  .sidebar{height:auto}
-  .stat-row{grid-template-columns:repeat(3,1fr)}
+.rcard-detail{padding:0 20px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s;border-top:1px solid transparent}
+.rcard-detail.open{max-height:340px;padding:16px 20px;border-top-color:var(--border)}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.detail-label{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.struct-list{display:flex;flex-wrap:wrap;gap:6px}
+.struct-tag{font-size:11px;padding:3px 9px;border-radius:100px;background:var(--surface);font-weight:500}
+.ai-insight-box{background:var(--accent-soft);border-left:2px solid var(--accent);padding:10px 14px;border-radius:0 8px 8px 0;font-size:12.5px;color:var(--ink);line-height:1.5}
+.warn-box{background:var(--red-soft);border-left:2px solid var(--red);padding:10px 14px;border-radius:0 8px 8px 0;font-size:12.5px;color:var(--red)}
+.token-mini{font-size:11px;color:var(--purple);margin-top:8px;font-variant-numeric:tabular-nums;font-weight:500}
+.skill-line{font-size:12px;color:var(--sub);margin-top:8px;line-height:1.6}
+.skill-line b{color:var(--ink)}
+
+/* Loading / empty */
+.loading{display:none;text-align:center;padding:60px 20px;color:var(--sub)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:60px 20px;color:var(--sub);border:1px dashed var(--border);border-radius:var(--radius)}
+.empty-icon{font-size:32px;margin-bottom:10px;opacity:.5}
+.empty p{font-size:13px}
+.empty p b{color:var(--ink)}
+
+@media(max-width:720px){
+  .setup-grid,.slider-grid,.detail-grid{grid-template-columns:1fr}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+  .rcard-header{grid-template-columns:24px 1fr;grid-template-rows:auto auto;gap:8px}
+  .bars,.score-col{grid-column:2}
+  nav{padding:0 16px}
+  .nav-links{display:none}
 }
 </style>
 </head>
@@ -136,134 +182,148 @@ input[type=range]{flex:1;accent-color:var(--blue)}
   <div class="nav-links">
     <a>วิธีใช้</a><a>Algorithm</a><a>เอกสาร</a>
   </div>
-  <div class="cost-chip tfidf" id="cost-chip">💰 TF-IDF · ฟรี 100%</div>
+  <div class="cost-chip" id="cost-chip">TF-IDF · ฟรี 100%</div>
 </nav>
 
-<div class="app">
-<!-- ── SIDEBAR ── -->
-<aside class="sidebar">
+<div class="page">
 
-  <div>
-    <div class="sec-label">โหมดการวิเคราะห์</div>
-    <div class="seg">
-      <button class="seg-btn on" id="btn-tfidf" onclick="setMode('tfidf')">TF-IDF เท่านั้น</button>
-      <button class="seg-btn"   id="btn-hybrid" onclick="setMode('hybrid')">+ Groq AI</button>
-    </div>
+  <div class="hero">
+    <div class="hero-eyebrow">Resume Screening</div>
+    <h1>คัดกรอง Resume อัตโนมัติ</h1>
+    <p>อัปโหลด Job Description และ Resume แล้วให้ระบบจัดอันดับด้วย TF-IDF — เสริม Groq AI ได้ถ้าต้องการ</p>
   </div>
 
-  <div id="ai-section" style="display:none">
-    <div class="ai-box">
-      <label class="form-label">Groq API Key</label>
-      <input type="password" id="groq-key" placeholder="gsk_..." />
-      <label class="form-label" style="margin-top:4px">ส่ง AI เฉพาะคะแนน TF-IDF ≥ <span id="thr-val">30</span></label>
-      <input type="range" min="0" max="100" value="30" oninput="document.getElementById('thr-val').textContent=this.value" id="ai-thr" />
-    </div>
-  </div>
+  <!-- ── SETUP CARD ── -->
+  <div class="setup">
 
-  <div>
-    <div class="sec-label">Job Description</div>
-    <div class="seg" style="margin-bottom:8px">
-      <button class="seg-btn on" id="btn-jd-file" onclick="setJdMode('file')">อัปโหลดไฟล์</button>
-      <button class="seg-btn"   id="btn-jd-type" onclick="setJdMode('type')">พิมพ์เอง</button>
-    </div>
-    <div id="jd-file-area">
-      <input type="file" id="jd-input" accept=".txt,.pdf" style="display:none" onchange="showJdFile()">
-      <div class="upload-area" id="jd-drop">
-        <i>📋</i>
-        <p id="jd-label">คลิกหรือลากไฟล์ .txt / .pdf มาวาง</p>
+    <div class="setup-grid">
+      <!-- JD -->
+      <div class="field field-full">
+        <div class="field-label">Job Description</div>
+        <div class="seg" style="align-self:flex-start;margin-bottom:4px">
+          <button class="seg-btn on" id="btn-jd-file" onclick="setJdMode('file')">อัปโหลดไฟล์</button>
+          <button class="seg-btn"   id="btn-jd-type" onclick="setJdMode('type')">พิมพ์เอง</button>
+        </div>
+        <div id="jd-file-area">
+          <input type="file" id="jd-input" accept=".txt,.pdf" style="display:none" onchange="showJdFile()">
+          <div class="upload-area" id="jd-drop">
+            <span class="icon">📋</span>
+            <p id="jd-label">คลิกหรือลากไฟล์ <b>.txt / .pdf</b> มาวาง</p>
+          </div>
+        </div>
+        <div id="jd-type-area" style="display:none">
+          <textarea id="jd-text" rows="4" placeholder="Position: Marketing Officer&#10;Required Skills: Excel, Data Analysis&#10;Education: Bachelor degree"></textarea>
+        </div>
+      </div>
+
+      <!-- Resume -->
+      <div class="field field-full">
+        <div class="field-label">Resume (PDF)</div>
+        <input type="file" id="resume-input" accept=".pdf" multiple style="display:none" onchange="addResumes()">
+        <div class="upload-area" id="resume-drop">
+          <span class="icon">📁</span>
+          <p>คลิกหรือลากไฟล์ <b>Resume PDF</b> มาวาง — เลือกได้หลายไฟล์</p>
+        </div>
+        <div class="file-list" id="resume-list"></div>
+      </div>
+
+      <!-- Required keywords -->
+      <div class="field">
+        <div class="field-label">Required Keywords <span class="opt">(บังคับ)</span></div>
+        <input type="text" id="req-kw" placeholder="เช่น python data excel">
+        <div class="field-hint">ขาดคำใดคำหนึ่ง = ตัดออกทันที</div>
+      </div>
+
+      <!-- Education -->
+      <div class="field">
+        <div class="field-label">วุฒิการศึกษาขั้นต่ำ</div>
+        <select id="edu">
+          <option value="">ไม่กำหนด</option>
+          <option value="1">ปวส. / อนุปริญญา</option>
+          <option value="2">ปริญญาตรี</option>
+          <option value="3">ปริญญาโท</option>
+        </select>
+        <div class="field-hint">วุฒิที่สูงกว่าก็ผ่านเช่นกัน</div>
+      </div>
+
+      <!-- Bonus keywords -->
+      <div class="field field-full">
+        <div class="field-label">Bonus Keywords <span class="opt">(ไม่บังคับ — มีแล้วได้คะแนนเพิ่ม)</span></div>
+        <input type="text" id="bon-kw" placeholder="เช่น excel powerbi crm english">
+      </div>
+
+      <!-- Thresholds -->
+      <div class="field field-full">
+        <div class="field-label">เกณฑ์คะแนน</div>
+        <div class="slider-grid">
+          <div class="slider-row">
+            <span style="font-size:12px;color:var(--sub);min-width:54px">ผ่าน ≥</span>
+            <input type="range" min="0" max="100" value="60" id="pass-slider"
+                   oninput="document.getElementById('pass-val').textContent=this.value">
+            <span class="sv" id="pass-val">60</span>
+          </div>
+          <div class="slider-row">
+            <span style="font-size:12px;color:var(--sub);min-width:54px">พิจารณา ≥</span>
+            <input type="range" min="0" max="100" value="40" id="rev-slider"
+                   oninput="document.getElementById('rev-val').textContent=this.value">
+            <span class="sv" id="rev-val">40</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI mode -->
+      <div class="field field-full">
+        <div class="field-label">โหมดการวิเคราะห์</div>
+        <div class="seg">
+          <button class="seg-btn on" id="btn-tfidf" onclick="setMode('tfidf')">TF-IDF เท่านั้น (ฟรี 100%)</button>
+          <button class="seg-btn"   id="btn-hybrid" onclick="setMode('hybrid')">+ Groq AI</button>
+        </div>
+      </div>
+
+      <div class="field field-full" id="ai-section" style="display:none">
+        <div class="ai-box">
+          <div class="field-label">Groq API Key</div>
+          <input type="password" id="groq-key" placeholder="gsk_...">
+          <div class="field-label">ส่ง AI เฉพาะคะแนน TF-IDF ≥ <span id="thr-val">30</span></div>
+          <input type="range" min="0" max="100" value="30" oninput="document.getElementById('thr-val').textContent=this.value" id="ai-thr">
+        </div>
       </div>
     </div>
-    <div id="jd-type-area" style="display:none">
-      <textarea id="jd-text" rows="5" placeholder="Position: Marketing Officer&#10;Skills: ..."></textarea>
-    </div>
+
+    <button class="run-btn" id="run-btn" onclick="runAnalyze()">วิเคราะห์ Resume</button>
   </div>
 
-  <div>
-    <div class="sec-label">Resume PDF</div>
-    <input type="file" id="resume-input" accept=".pdf" multiple style="display:none" onchange="addResumes()">
-    <div class="upload-area" id="resume-drop">
-      <i>📁</i>
-      <p>คลิกหรือลากไฟล์ Resume มาวาง (หลายไฟล์ได้)</p>
-    </div>
-    <div class="file-list" id="resume-list" style="margin-top:6px"></div>
-  </div>
-
-  <div>
-    <div class="sec-label">Required Keywords</div>
-    <input type="text" id="req-kw" placeholder="python data (คั่นช่องว่าง)">
-    <label class="form-label" style="margin-top:8px">วุฒิการศึกษาขั้นต่ำ</label>
-    <select id="edu">
-      <option value="">ไม่กำหนด</option>
-      <option value="1">ปวส./อนุปริญญา</option>
-      <option value="2">ปริญญาตรี</option>
-      <option value="3">ปริญญาโท</option>
-    </select>
-  </div>
-
-  <div>
-    <div class="sec-label">Bonus Keywords</div>
-    <input type="text" id="bon-kw" placeholder="react tailwind jest figma">
-  </div>
-
-  <div>
-    <div class="sec-label">เกณฑ์คะแนน</div>
-    <div style="margin-bottom:8px">
-      <label class="form-label">ผ่าน ≥ <span id="pass-val">60</span></label>
-      <div class="slider-wrap">
-        <input type="range" min="0" max="100" value="60" id="pass-slider"
-               oninput="document.getElementById('pass-val').textContent=this.value">
-      </div>
-    </div>
+  <!-- ── RESULTS ── -->
+  <div class="results-head">
     <div>
-      <label class="form-label">พิจารณา ≥ <span id="rev-val">40</span></label>
-      <div class="slider-wrap">
-        <input type="range" min="0" max="100" value="40" id="rev-slider"
-               oninput="document.getElementById('rev-val').textContent=this.value">
-      </div>
-    </div>
-  </div>
-
-  <button class="run-btn" id="run-btn" onclick="runAnalyze()">▶  วิเคราะห์ Resume</button>
-
-</aside>
-
-<!-- ── MAIN ── -->
-<main class="main">
-  <div class="result-header">
-    <div>
-      <div class="result-title">ผลการคัดกรอง</div>
-      <div class="result-sub" id="result-sub">รอการวิเคราะห์...</div>
+      <div class="results-title">ผลการคัดกรอง</div>
+      <div class="results-sub" id="result-sub">รอการวิเคราะห์...</div>
     </div>
     <button class="export-btn" onclick="exportJSON()">⬇ Export JSON</button>
   </div>
 
-  <!-- stats -->
   <div class="stat-row" id="stat-row" style="display:none">
     <div class="stat-card"><div class="stat-num" id="s-total">0</div><div class="stat-lbl">ทั้งหมด</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--green)"  id="s-pass">0</div><div class="stat-lbl">✓ ผ่าน</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--amber)"  id="s-rev">0</div><div class="stat-lbl">~ พิจารณา</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--red)"    id="s-fail">0</div><div class="stat-lbl">✗ ไม่ผ่าน</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--purple)" id="s-ai">0</div><div class="stat-lbl">🤖 AI</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--green)"  id="s-pass">0</div><div class="stat-lbl">ผ่าน</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--amber)"  id="s-rev">0</div><div class="stat-lbl">พิจารณา</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--red)"    id="s-fail">0</div><div class="stat-lbl">ไม่ผ่าน</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--purple)" id="s-ai">0</div><div class="stat-lbl">AI ใช้</div></div>
   </div>
 
-  <!-- token usage panel -->
   <div class="token-panel" id="token-panel">
     <div class="token-row">
-      <div class="token-title">🔢 Groq Token Usage (ต่อ 1 นาที)</div>
+      <div class="token-title">Groq Token Usage <span style="color:var(--sub);font-weight:400">(ต่อ 1 นาที)</span></div>
       <div class="token-nums" id="token-nums">0 / 6,000</div>
     </div>
-    <div class="token-bar">
-      <div class="token-bar-fill" id="token-bar-fill" style="width:0%;background:var(--purple)"></div>
-    </div>
+    <div class="token-bar"><div class="token-bar-fill" id="token-bar-fill" style="width:0%"></div></div>
     <div class="token-detail">
-      <span>Input: <b id="tok-in">0</b></span>
-      <span>Output: <b id="tok-out">0</b></span>
-      <span>ใช้ไป: <b id="tok-used">0</b></span>
-      <span>คงเหลือ: <b id="tok-remain">6,000</b></span>
+      <span>Input <b id="tok-in">0</b></span>
+      <span>Output <b id="tok-out">0</b></span>
+      <span>ใช้ไป <b id="tok-used">0</b></span>
+      <span>คงเหลือ <b id="tok-remain">6,000</b></span>
     </div>
   </div>
 
-  <!-- filter pills -->
   <div class="pills" id="filter-pills" style="display:none">
     <button class="pill on" onclick="filterResults('all',this)">ทั้งหมด</button>
     <button class="pill" onclick="filterResults('ผ่าน',this)">ผ่าน</button>
@@ -271,21 +331,18 @@ input[type=range]{flex:1;accent-color:var(--blue)}
     <button class="pill" onclick="filterResults('ไม่ผ่าน',this)">ไม่ผ่าน</button>
   </div>
 
-  <!-- loading -->
   <div class="loading" id="loading">
     <div class="spinner"></div>
     <p>กำลังวิเคราะห์ Resume...</p>
   </div>
 
-  <!-- empty -->
   <div class="empty" id="empty-state">
     <div class="empty-icon">📋</div>
-    <p>กรอกข้อมูลด้านซ้ายแล้วกด <strong>วิเคราะห์ Resume</strong></p>
+    <p>กรอกข้อมูลด้านบนแล้วกด <b>วิเคราะห์ Resume</b></p>
   </div>
 
-  <!-- results -->
   <div id="results-container"></div>
-</main>
+
 </div>
 
 <script>
@@ -303,12 +360,12 @@ function setMode(m) {
 
   const chip = document.getElementById('cost-chip');
   if(m==='tfidf') {
-    chip.className = 'cost-chip tfidf';
-    chip.textContent = '💰 TF-IDF · ฟรี 100%';
+    chip.className = 'cost-chip';
+    chip.textContent = 'TF-IDF · ฟรี 100%';
     document.getElementById('token-panel').classList.remove('show');
   } else {
-    chip.className = 'cost-chip';
-    chip.textContent = '🔢 Groq Token: 0 / 6,000';
+    chip.className = 'cost-chip ai';
+    chip.textContent = 'Groq Token: 0 / 6,000';
   }
 }
 function setJdMode(m) {
@@ -320,7 +377,7 @@ function setJdMode(m) {
 }
 function showJdFile() {
   const f = document.getElementById('jd-input').files[0];
-  if(f) document.getElementById('jd-label').textContent = '✓ ' + f.name;
+  if(f) document.getElementById('jd-label').innerHTML = '✓ ' + f.name;
 }
 
 // ── ป้องกัน browser เปิดไฟล์เองตอนลากวางทั้งหน้า ───────────────
@@ -332,7 +389,6 @@ function showJdFile() {
 function setupDropZone(zoneId, onFiles) {
   const zone = document.getElementById(zoneId);
   if (!zone) return;
-
   let dragCounter = 0;
 
   zone.addEventListener('dragenter', e => {
@@ -340,29 +396,26 @@ function setupDropZone(zoneId, onFiles) {
     dragCounter++;
     zone.classList.add('dragover');
   });
-
-  zone.addEventListener('dragover', e => {
-    e.preventDefault(); // จำเป็นเพื่อให้ drop event ทำงาน
-  });
-
+  zone.addEventListener('dragover', e => e.preventDefault());
   zone.addEventListener('dragleave', e => {
     e.preventDefault();
     dragCounter--;
-    if (dragCounter <= 0) {
-      dragCounter = 0;
-      zone.classList.remove('dragover');
-    }
+    if (dragCounter <= 0) { dragCounter = 0; zone.classList.remove('dragover'); }
   });
-
   zone.addEventListener('drop', e => {
     e.preventDefault();
     e.stopPropagation();
     dragCounter = 0;
     zone.classList.remove('dragover');
-
     const files = e.dataTransfer && e.dataTransfer.files
       ? Array.from(e.dataTransfer.files) : [];
     if (files.length) onFiles(files);
+  });
+  zone.addEventListener('click', () => {
+    const input = zoneId === 'jd-drop'
+      ? document.getElementById('jd-input')
+      : document.getElementById('resume-input');
+    input.click();
   });
 }
 
@@ -377,33 +430,19 @@ setupDropZone('jd-drop', (files) => {
   const dt = new DataTransfer();
   dt.items.add(file);
   document.getElementById('jd-input').files = dt.files;
-  document.getElementById('jd-label').textContent = '✓ ' + file.name;
+  document.getElementById('jd-label').innerHTML = '✓ ' + file.name;
 });
 
 // ── Resume drop zone ─────────────────────────────────────────────
 setupDropZone('resume-drop', (files) => {
   const pdfs   = files.filter(f => f.name.toLowerCase().endsWith('.pdf'));
   const others = files.length - pdfs.length;
-
-  if (pdfs.length === 0) {
-    alert('รองรับเฉพาะไฟล์ .pdf');
-    return;
-  }
-  if (others > 0) {
-    alert(`ข้ามไฟล์ที่ไม่ใช่ .pdf จำนวน ${others} ไฟล์`);
-  }
+  if (pdfs.length === 0) { alert('รองรับเฉพาะไฟล์ .pdf'); return; }
+  if (others > 0) alert(`ข้ามไฟล์ที่ไม่ใช่ .pdf จำนวน ${others} ไฟล์`);
   pdfs.forEach(f => {
     if (!resumeFiles.find(x => x.name === f.name)) resumeFiles.push(f);
   });
   renderResumeList();
-});
-
-// ── ทำให้คลิกที่กล่องเปิด file picker ─────────────────────────────
-document.getElementById('jd-drop').addEventListener('click', () => {
-  document.getElementById('jd-input').click();
-});
-document.getElementById('resume-drop').addEventListener('click', () => {
-  document.getElementById('resume-input').click();
 });
 
 // ── resume file list ─────────────────────────────────────────
@@ -430,7 +469,6 @@ function renderResumeList() {
 async function runAnalyze() {
   const fd = new FormData();
 
-  // JD
   if(jdMode==='file') {
     const jdf = document.getElementById('jd-input').files[0];
     if(!jdf) return alert('กรุณาเลือกไฟล์ JD');
@@ -452,7 +490,6 @@ async function runAnalyze() {
   fd.append('ai_mode',    aiMode);
   fd.append('groq_key',   document.getElementById('groq-key')?.value||'');
 
-  // UI
   document.getElementById('run-btn').disabled = true;
   document.getElementById('loading').style.display = 'block';
   document.getElementById('empty-state').style.display = 'none';
@@ -476,10 +513,7 @@ async function runAnalyze() {
   }
 }
 
-// ── format number with comma ─────────────────────────────────
-function fmt(n) {
-  return Math.round(n||0).toLocaleString('en-US');
-}
+function fmt(n) { return Math.round(n||0).toLocaleString('en-US'); }
 
 // ── summary ──────────────────────────────────────────────────
 function showSummary(s) {
@@ -491,21 +525,18 @@ function showSummary(s) {
   document.getElementById('stat-row').style.display = 'grid';
   document.getElementById('filter-pills').style.display = 'flex';
 
-  // ── Token usage ──
   const chip = document.getElementById('cost-chip');
   if(aiMode === 'hybrid' && s.tokens_used !== undefined) {
-    const used    = s.tokens_used;
-    const limit   = s.tokens_limit || 6000;
-    const remain  = s.tokens_remaining ?? Math.max(0, limit-used);
-    const pct     = Math.min(100, Math.round((used/limit)*100));
+    const used   = s.tokens_used;
+    const limit  = s.tokens_limit || 6000;
+    const remain = s.tokens_remaining ?? Math.max(0, limit-used);
+    const pct    = Math.min(100, Math.round((used/limit)*100));
 
-    // top-right chip
-    chip.textContent = `🔢 Token: ${fmt(used)} / ${fmt(limit)}`;
+    chip.textContent = `Token: ${fmt(used)} / ${fmt(limit)}`;
     if(pct >= 90)      chip.className = 'cost-chip danger';
     else if(pct >= 60) chip.className = 'cost-chip warn';
-    else               chip.className = 'cost-chip';
+    else               chip.className = 'cost-chip ai';
 
-    // detail panel
     document.getElementById('token-panel').classList.add('show');
     document.getElementById('token-nums').textContent = `${fmt(used)} / ${fmt(limit)}`;
     const fill = document.getElementById('token-bar-fill');
@@ -525,17 +556,22 @@ function filterResults(f, btn) {
   currentFilter = f;
   document.querySelectorAll('.pill').forEach(p=>p.classList.remove('on'));
   btn.classList.add('on');
-  const filtered = f==='all' ? allResults
-    : allResults.filter(r=>r.recommendation===f);
+  const filtered = f==='all' ? allResults : allResults.filter(r=>r.recommendation===f);
   renderResults(filtered);
 }
 
 function renderResults(results) {
-  const c = {'ผ่าน':'green','พิจารณาเพิ่มเติม':'amber','ไม่ผ่าน':'red'};
-  const lbl = {'ผ่าน':'✓ ผ่าน','พิจารณาเพิ่มเติม':'~ พิจารณา','ไม่ผ่าน':'✗ ไม่ผ่าน'};
+  const c   = {'ผ่าน':'green','พิจารณาเพิ่มเติม':'amber','ไม่ผ่าน':'red'};
+  const lbl = {'ผ่าน':'ผ่าน','พิจารณาเพิ่มเติม':'พิจารณา','ไม่ผ่าน':'ไม่ผ่าน'};
+
+  if (results.length === 0) {
+    document.getElementById('results-container').innerHTML =
+      `<div class="empty"><div class="empty-icon">🗂</div><p>ไม่มีรายการในหมวดนี้</p></div>`;
+    return;
+  }
 
   document.getElementById('results-container').innerHTML = results.map((r,i)=>{
-    const col = c[r.recommendation]||'muted';
+    const col = c[r.recommendation]||'sub';
     const sym = lbl[r.recommendation]||'?';
     const ai  = r.insight && !r.insight.error;
     const struct = r.struct_checks||{};
@@ -543,15 +579,15 @@ function renderResults(results) {
     return `
 <div class="rcard" data-rec="${r.recommendation}">
   <div class="rcard-header" onclick="toggle(${i})">
-    <div class="rank">#${r.rank}</div>
+    <div class="rank">${r.rank}</div>
     <div>
-      <div class="rname">${r.name} ${ai?'<span style="font-size:11px;color:var(--purple)">🤖</span>':''}</div>
+      <div class="rname">${r.name} ${ai?'<span style="font-size:11px;color:var(--purple)">· AI</span>':''}</div>
       <div class="rmeta"><span>📄 ${r.file}</span><span>⏱ ${r.experience}</span></div>
     </div>
     <div class="bars">
-      <div class="brow"><span class="blbl">TF-IDF</span><div class="btrack"><div class="bfill" style="width:${r.tfidf}%;background:var(--blue)"></div></div><span class="bval" style="color:var(--blue2)">${r.tfidf}</span></div>
+      <div class="brow"><span class="blbl">TF-IDF</span><div class="btrack"><div class="bfill" style="width:${r.tfidf}%;background:var(--accent)"></div></div><span class="bval" style="color:var(--accent)">${r.tfidf}</span></div>
       <div class="brow"><span class="blbl">Keyword</span><div class="btrack"><div class="bfill" style="width:${r.keyword}%;background:var(--purple)"></div></div><span class="bval" style="color:var(--purple)">${r.keyword}</span></div>
-      <div class="brow"><span class="blbl">Struct</span><div class="btrack"><div class="bfill" style="width:${r.struct}%;background:var(--teal)"></div></div><span class="bval" style="color:var(--teal)">${r.struct}</span></div>
+      <div class="brow"><span class="blbl">Struct</span><div class="btrack"><div class="bfill" style="width:${r.struct}%;background:var(--green)"></div></div><span class="bval" style="color:var(--green)">${r.struct}</span></div>
     </div>
     <div class="score-col">
       <div class="score-big" style="color:var(--${col})">${r.score}</div>
@@ -564,19 +600,19 @@ function renderResults(results) {
       <div>
         <div class="detail-label">โครงสร้าง Resume</div>
         <div class="struct-list">
-          ${Object.entries(struct).map(([k,v])=>`<span class="struct-tag" style="color:${v?'var(--teal)':'var(--red)'}">${v?'✓':'✗'} ${k}</span>`).join('')}
+          ${Object.entries(struct).map(([k,v])=>`<span class="struct-tag" style="color:${v?'var(--green)':'var(--red)'}">${v?'✓':'✗'} ${k}</span>`).join('')}
         </div>
-        ${r.error?`<div class="warn-box">⚠ ${r.error}</div>`:''}
+        ${r.error?`<div class="warn-box" style="margin-top:10px">${r.error}</div>`:''}
       </div>
       ${ai?`
       <div>
-        <div class="detail-label">🤖 Groq AI Insights</div>
-        ${r.insight.summary?`<div class="ai-insight-box">💬 ${r.insight.summary}</div>`:''}
-        ${r.insight.matched_skills?.length?`<div style="font-size:11px;color:var(--muted);margin-top:6px">✓ ตรงกับ JD: <span style="color:var(--teal)">${r.insight.matched_skills.slice(0,5).join(', ')}</span></div>`:''}
-        ${r.insight.missing_skills?.length?`<div style="font-size:11px;color:var(--muted);margin-top:4px">✗ ขาด: <span style="color:var(--red)">${r.insight.missing_skills.slice(0,4).join(', ')}</span></div>`:''}
-        ${r.insight.combined?`<div style="font-size:11px;color:var(--muted);margin-top:4px">AI Score: ${r.insight.ai_score} → Combined: ${r.insight.combined}</div>`:''}
-        ${r.insight.tokens_used?`<div class="token-mini">🔢 ${fmt(r.insight.tokens_input)} in + ${fmt(r.insight.tokens_output)} out = ${fmt(r.insight.tokens_used)} tokens</div>`:''}
-      </div>`:`<div><div class="detail-label">หมายเหตุ</div><p style="font-size:12px;color:var(--muted)">${aiMode==='hybrid'?'คะแนน TF-IDF ต่ำเกินเกณฑ์ ไม่ส่ง AI':'ใช้ TF-IDF เท่านั้น'}</p></div>`}
+        <div class="detail-label">Groq AI Insights</div>
+        ${r.insight.summary?`<div class="ai-insight-box">${r.insight.summary}</div>`:''}
+        ${r.insight.matched_skills?.length?`<div class="skill-line">✓ ตรงกับ JD: <b>${r.insight.matched_skills.slice(0,5).join(', ')}</b></div>`:''}
+        ${r.insight.missing_skills?.length?`<div class="skill-line">✗ ขาด: <b>${r.insight.missing_skills.slice(0,4).join(', ')}</b></div>`:''}
+        ${r.insight.combined?`<div class="skill-line">AI Score <b>${r.insight.ai_score}</b> → Combined <b>${r.insight.combined}</b></div>`:''}
+        ${r.insight.tokens_used?`<div class="token-mini">${fmt(r.insight.tokens_input)} in + ${fmt(r.insight.tokens_output)} out = ${fmt(r.insight.tokens_used)} tokens</div>`:''}
+      </div>`:`<div><div class="detail-label">หมายเหตุ</div><p style="font-size:12.5px;color:var(--sub)">${aiMode==='hybrid'?'คะแนน TF-IDF ต่ำเกินเกณฑ์ ไม่ส่ง AI':'ใช้ TF-IDF เท่านั้น'}</p></div>`}
     </div>
   </div>
 </div>`;
@@ -584,8 +620,7 @@ function renderResults(results) {
 }
 
 function toggle(i) {
-  const d = document.getElementById('detail-'+i);
-  d.classList.toggle('open');
+  document.getElementById('detail-'+i).classList.toggle('open');
 }
 
 // ── export ───────────────────────────────────────────────────
