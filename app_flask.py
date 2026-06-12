@@ -1,7 +1,7 @@
 # ============================================================
 # app_flask.py — CVScreener Flask Web App
 # ============================================================
-# ติดตั้ง: pip install flask
+# ติดตั้ง: pip install flask groq pymupdf
 # รัน:     python app_flask.py
 # เปิด:    http://localhost:5000
 # ============================================================
@@ -15,6 +15,9 @@ from models import Config, ResumeScreener
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max
+
+# Groq llama-3.1-8b-instant rate limit (tokens per minute, free tier)
+TOKEN_LIMIT_PER_MIN = 6000
 
 EDU_MAP = {
     "1": ["diploma","ปวส","associate","อนุปริญญา",
@@ -31,8 +34,8 @@ def index():
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    jd_tmp_path   = None
-    resume_tmp    = []
+    jd_tmp_path = None
+    resume_tmp  = []
 
     try:
         import fitz
@@ -42,7 +45,6 @@ def analyze():
         if "jd_file" in request.files and request.files["jd_file"].filename:
             jd_file = request.files["jd_file"]
             if jd_file.filename.lower().endswith(".pdf"):
-                # บันทึกไฟล์ก่อน แล้วค่อยเปิด fitz หลัง file handle ปิดแล้ว
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f:
                     jd_file.save(f.name)
                     jd_tmp_path = f.name
@@ -67,7 +69,6 @@ def analyze():
             return jsonify({"error": "กรุณาอัปโหลด Resume"}), 400
 
         for rf in resume_files:
-            # บันทึกไฟล์หลัง file handle ปิดแล้ว
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                 tmp_path = tmp.name
             rf.save(tmp_path)
@@ -105,6 +106,10 @@ def analyze():
 
         # ── Run Groq AI (optional) ────────────────────────
         ai_insights = {}
+        total_input_tokens  = 0
+        total_output_tokens = 0
+        total_tokens_used   = 0
+
         if ai_mode == "hybrid" and groq_key:
             from groq import Groq
             client = Groq(api_key=groq_key)
@@ -121,7 +126,6 @@ def analyze():
                 if not tmp_path:
                     continue
 
-                # อ่าน resume text — ปิด doc ก่อนทำอย่างอื่น
                 doc = fitz.open(tmp_path)
                 resume_text = " ".join(
                     page.get_text() for page in doc
@@ -149,12 +153,32 @@ def analyze():
                         temperature=0.1,
                         max_tokens=300,
                     )
+
+                    # ── เก็บ token usage จาก Groq ────────────
+                    usage = getattr(resp, "usage", None)
+                    if usage:
+                        in_tok  = getattr(usage, "prompt_tokens", 0) or 0
+                        out_tok = getattr(usage, "completion_tokens", 0) or 0
+                        tot_tok = getattr(usage, "total_tokens", in_tok + out_tok)
+                    else:
+                        in_tok = out_tok = tot_tok = 0
+
+                    total_input_tokens  += in_tok
+                    total_output_tokens += out_tok
+                    total_tokens_used   += tot_tok
+
                     raw  = resp.choices[0].message.content.strip()
                     raw  = raw.replace("```json","").replace("```","")
                     data = json.loads(raw)
 
                     combined = round(r.score * 0.4 + data["ai_score"] * 0.6, 1)
-                    ai_insights[r.file] = {**data, "combined": combined}
+                    ai_insights[r.file] = {
+                        **data,
+                        "combined": combined,
+                        "tokens_used": tot_tok,
+                        "tokens_input": in_tok,
+                        "tokens_output": out_tok,
+                    }
                     r.score = combined
 
                     if combined >= pass_thr:
@@ -177,12 +201,19 @@ def analyze():
             d["insight"] = ai_insights.get(r.file, {})
             output.append(d)
 
+        tokens_remaining = max(0, TOKEN_LIMIT_PER_MIN - total_tokens_used)
+
         summary = {
             "total":   len(output),
             "passed":  sum(1 for r in results if r.recommendation == "ผ่าน"),
             "review":  sum(1 for r in results if r.recommendation == "พิจารณาเพิ่มเติม"),
             "failed":  sum(1 for r in results if r.recommendation == "ไม่ผ่าน"),
             "ai_used": len(ai_insights),
+            "tokens_input":     total_input_tokens,
+            "tokens_output":    total_output_tokens,
+            "tokens_used":      total_tokens_used,
+            "tokens_limit":     TOKEN_LIMIT_PER_MIN,
+            "tokens_remaining": tokens_remaining,
         }
 
         return jsonify({"results": output, "summary": summary})
@@ -191,8 +222,7 @@ def analyze():
         return jsonify({"error": str(e)}), 500
 
     finally:
-        # ── Cleanup temp files ────────────────────────────
-        gc.collect()  # release fitz file handles
+        gc.collect()
         if jd_tmp_path:
             try: os.unlink(jd_tmp_path)
             except: pass

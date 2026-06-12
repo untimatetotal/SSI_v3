@@ -22,7 +22,10 @@ nav{background:var(--nav);border-bottom:1px solid var(--border);padding:0 28px;h
 .nav-links{display:flex;gap:20px}
 .nav-links a{font-size:13px;color:var(--muted);text-decoration:none;cursor:pointer}
 .nav-links a:hover{color:var(--text)}
-.cost-chip{display:flex;align-items:center;gap:5px;padding:4px 12px;background:rgba(29,185,84,0.12);border:1px solid rgba(29,185,84,0.25);border-radius:100px;font-size:12px;color:var(--teal)}
+.cost-chip{display:flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(127,119,221,0.12);border:1px solid rgba(127,119,221,0.25);border-radius:100px;font-size:12px;color:var(--purple);font-family:'DM Sans',monospace;cursor:default;transition:all .15s}
+.cost-chip.tfidf{background:rgba(29,185,84,0.12);border-color:rgba(29,185,84,0.25);color:var(--teal)}
+.cost-chip.warn{background:rgba(250,199,117,0.12);border-color:rgba(250,199,117,0.3);color:var(--amber)}
+.cost-chip.danger{background:rgba(240,149,149,0.12);border-color:rgba(240,149,149,0.3);color:var(--red)}
 
 /* LAYOUT */
 .app{display:grid;grid-template-columns:280px 1fr;height:calc(100vh - 52px)}
@@ -35,6 +38,7 @@ nav{background:var(--nav);border-bottom:1px solid var(--border);padding:0 28px;h
 .seg-btn.on{background:var(--blue);color:#fff}
 .upload-area{border:1px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:all .15s}
 .upload-area:hover{border-color:var(--blue);background:rgba(55,138,221,0.05)}
+.upload-area.dragover{border-color:var(--blue);background:rgba(55,138,221,0.12);border-style:solid}
 .upload-area i{font-size:22px;color:var(--muted);display:block;margin-bottom:6px}
 .upload-area p{font-size:12px;color:var(--muted)}
 .file-list{display:flex;flex-direction:column;gap:4px}
@@ -69,6 +73,18 @@ input[type=range]{flex:1;accent-color:var(--blue)}
 .stat-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
 .stat-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;line-height:1}
 .stat-lbl{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* TOKEN PANEL */
+.token-panel{display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 16px}
+.token-panel.show{display:block}
+.token-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.token-title{font-size:12px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px}
+.token-nums{font-size:11px;color:var(--muted);font-family:monospace}
+.token-bar{height:8px;border-radius:4px;background:rgba(255,255,255,0.06);overflow:hidden;display:flex}
+.token-bar-fill{height:100%;transition:width .6s ease}
+.token-detail{display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--muted)}
+.token-detail span b{color:var(--text);font-family:monospace}
+
 .pills{display:flex;gap:6px}
 .pill{padding:4px 12px;border-radius:100px;font-size:12px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:transparent;transition:all .15s}
 .pill.on{background:var(--blue);color:#fff;border-color:var(--blue)}
@@ -92,13 +108,14 @@ input[type=range]{flex:1;accent-color:var(--blue)}
 .b-review{background:rgba(250,199,117,0.12);color:var(--amber);border-color:rgba(250,199,117,0.3)}
 .b-fail  {background:rgba(240,149,149,0.12);color:var(--red);border-color:rgba(240,149,149,0.3)}
 .rcard-detail{padding:0 16px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s}
-.rcard-detail.open{max-height:300px;padding:12px 16px}
+.rcard-detail.open{max-height:320px;padding:12px 16px}
 .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .detail-label{font-size:11px;color:var(--muted);margin-bottom:3px}
 .struct-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .struct-tag{font-size:10px;padding:2px 7px;border-radius:100px;background:rgba(255,255,255,0.05)}
 .ai-insight-box{background:rgba(55,138,221,0.08);border-left:2px solid var(--blue);padding:8px 12px;border-radius:0 6px 6px 0;font-size:12px;color:var(--blue2);margin-top:8px}
 .warn-box{background:rgba(240,149,149,0.08);border-left:2px solid var(--red);padding:8px 12px;border-radius:0 6px 6px 0;font-size:12px;color:var(--red);margin-top:8px}
+.token-mini{font-size:10px;color:var(--purple);margin-top:6px;font-family:monospace}
 .loading{display:none;text-align:center;padding:40px;color:var(--muted)}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -119,7 +136,7 @@ input[type=range]{flex:1;accent-color:var(--blue)}
   <div class="nav-links">
     <a>วิธีใช้</a><a>Algorithm</a><a>เอกสาร</a>
   </div>
-  <div class="cost-chip">💰 ค่า AI: 0 บาท</div>
+  <div class="cost-chip tfidf" id="cost-chip">💰 TF-IDF · ฟรี 100%</div>
 </nav>
 
 <div class="app">
@@ -151,9 +168,9 @@ input[type=range]{flex:1;accent-color:var(--blue)}
     </div>
     <div id="jd-file-area">
       <input type="file" id="jd-input" accept=".txt,.pdf" style="display:none" onchange="showJdFile()">
-      <div class="upload-area" onclick="document.getElementById('jd-input').click()">
+      <div class="upload-area" id="jd-drop">
         <i>📋</i>
-        <p id="jd-label">คลิกเพื่อเลือกไฟล์ .txt หรือ .pdf</p>
+        <p id="jd-label">คลิกหรือลากไฟล์ .txt / .pdf มาวาง</p>
       </div>
     </div>
     <div id="jd-type-area" style="display:none">
@@ -164,9 +181,9 @@ input[type=range]{flex:1;accent-color:var(--blue)}
   <div>
     <div class="sec-label">Resume PDF</div>
     <input type="file" id="resume-input" accept=".pdf" multiple style="display:none" onchange="addResumes()">
-    <div class="upload-area" onclick="document.getElementById('resume-input').click()">
+    <div class="upload-area" id="resume-drop">
       <i>📁</i>
-      <p>คลิกเพื่ออัปโหลด Resume (หลายไฟล์ได้)</p>
+      <p>คลิกหรือลากไฟล์ Resume มาวาง (หลายไฟล์ได้)</p>
     </div>
     <div class="file-list" id="resume-list" style="margin-top:6px"></div>
   </div>
@@ -229,6 +246,23 @@ input[type=range]{flex:1;accent-color:var(--blue)}
     <div class="stat-card"><div class="stat-num" style="color:var(--purple)" id="s-ai">0</div><div class="stat-lbl">🤖 AI</div></div>
   </div>
 
+  <!-- token usage panel -->
+  <div class="token-panel" id="token-panel">
+    <div class="token-row">
+      <div class="token-title">🔢 Groq Token Usage (ต่อ 1 นาที)</div>
+      <div class="token-nums" id="token-nums">0 / 6,000</div>
+    </div>
+    <div class="token-bar">
+      <div class="token-bar-fill" id="token-bar-fill" style="width:0%;background:var(--purple)"></div>
+    </div>
+    <div class="token-detail">
+      <span>Input: <b id="tok-in">0</b></span>
+      <span>Output: <b id="tok-out">0</b></span>
+      <span>ใช้ไป: <b id="tok-used">0</b></span>
+      <span>คงเหลือ: <b id="tok-remain">6,000</b></span>
+    </div>
+  </div>
+
   <!-- filter pills -->
   <div class="pills" id="filter-pills" style="display:none">
     <button class="pill on" onclick="filterResults('all',this)">ทั้งหมด</button>
@@ -266,6 +300,16 @@ function setMode(m) {
   document.getElementById('btn-tfidf').className = 'seg-btn' + (m==='tfidf'?' on':'');
   document.getElementById('btn-hybrid').className = 'seg-btn' + (m==='hybrid'?' on':'');
   document.getElementById('ai-section').style.display = m==='hybrid'?'block':'none';
+
+  const chip = document.getElementById('cost-chip');
+  if(m==='tfidf') {
+    chip.className = 'cost-chip tfidf';
+    chip.textContent = '💰 TF-IDF · ฟรี 100%';
+    document.getElementById('token-panel').classList.remove('show');
+  } else {
+    chip.className = 'cost-chip';
+    chip.textContent = '🔢 Groq Token: 0 / 6,000';
+  }
 }
 function setJdMode(m) {
   jdMode = m;
@@ -278,6 +322,89 @@ function showJdFile() {
   const f = document.getElementById('jd-input').files[0];
   if(f) document.getElementById('jd-label').textContent = '✓ ' + f.name;
 }
+
+// ── ป้องกัน browser เปิดไฟล์เองตอนลากวางทั้งหน้า ───────────────
+['dragover','drop'].forEach(evt=>{
+  document.addEventListener(evt, e => e.preventDefault());
+});
+
+// ── Helper: ทำให้ element ใดๆ เป็น drop zone ──────────────────
+function setupDropZone(zoneId, onFiles) {
+  const zone = document.getElementById(zoneId);
+  if (!zone) return;
+
+  let dragCounter = 0;
+
+  zone.addEventListener('dragenter', e => {
+    e.preventDefault();
+    dragCounter++;
+    zone.classList.add('dragover');
+  });
+
+  zone.addEventListener('dragover', e => {
+    e.preventDefault(); // จำเป็นเพื่อให้ drop event ทำงาน
+  });
+
+  zone.addEventListener('dragleave', e => {
+    e.preventDefault();
+    dragCounter--;
+    if (dragCounter <= 0) {
+      dragCounter = 0;
+      zone.classList.remove('dragover');
+    }
+  });
+
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter = 0;
+    zone.classList.remove('dragover');
+
+    const files = e.dataTransfer && e.dataTransfer.files
+      ? Array.from(e.dataTransfer.files) : [];
+    if (files.length) onFiles(files);
+  });
+}
+
+// ── JD drop zone ───────────────────────────────────────────────
+setupDropZone('jd-drop', (files) => {
+  const file = files[0];
+  const name = file.name.toLowerCase();
+  if (!name.endsWith('.txt') && !name.endsWith('.pdf')) {
+    alert('รองรับเฉพาะไฟล์ .txt หรือ .pdf');
+    return;
+  }
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  document.getElementById('jd-input').files = dt.files;
+  document.getElementById('jd-label').textContent = '✓ ' + file.name;
+});
+
+// ── Resume drop zone ─────────────────────────────────────────────
+setupDropZone('resume-drop', (files) => {
+  const pdfs   = files.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+  const others = files.length - pdfs.length;
+
+  if (pdfs.length === 0) {
+    alert('รองรับเฉพาะไฟล์ .pdf');
+    return;
+  }
+  if (others > 0) {
+    alert(`ข้ามไฟล์ที่ไม่ใช่ .pdf จำนวน ${others} ไฟล์`);
+  }
+  pdfs.forEach(f => {
+    if (!resumeFiles.find(x => x.name === f.name)) resumeFiles.push(f);
+  });
+  renderResumeList();
+});
+
+// ── ทำให้คลิกที่กล่องเปิด file picker ─────────────────────────────
+document.getElementById('jd-drop').addEventListener('click', () => {
+  document.getElementById('jd-input').click();
+});
+document.getElementById('resume-drop').addEventListener('click', () => {
+  document.getElementById('resume-input').click();
+});
 
 // ── resume file list ─────────────────────────────────────────
 let resumeFiles = [];
@@ -332,6 +459,7 @@ async function runAnalyze() {
   document.getElementById('results-container').innerHTML = '';
   document.getElementById('stat-row').style.display = 'none';
   document.getElementById('filter-pills').style.display = 'none';
+  document.getElementById('token-panel').classList.remove('show');
 
   try {
     const resp = await fetch('/analyze', {method:'POST', body:fd});
@@ -348,6 +476,11 @@ async function runAnalyze() {
   }
 }
 
+// ── format number with comma ─────────────────────────────────
+function fmt(n) {
+  return Math.round(n||0).toLocaleString('en-US');
+}
+
 // ── summary ──────────────────────────────────────────────────
 function showSummary(s) {
   document.getElementById('result-sub').textContent =
@@ -357,6 +490,34 @@ function showSummary(s) {
   });
   document.getElementById('stat-row').style.display = 'grid';
   document.getElementById('filter-pills').style.display = 'flex';
+
+  // ── Token usage ──
+  const chip = document.getElementById('cost-chip');
+  if(aiMode === 'hybrid' && s.tokens_used !== undefined) {
+    const used    = s.tokens_used;
+    const limit   = s.tokens_limit || 6000;
+    const remain  = s.tokens_remaining ?? Math.max(0, limit-used);
+    const pct     = Math.min(100, Math.round((used/limit)*100));
+
+    // top-right chip
+    chip.textContent = `🔢 Token: ${fmt(used)} / ${fmt(limit)}`;
+    if(pct >= 90)      chip.className = 'cost-chip danger';
+    else if(pct >= 60) chip.className = 'cost-chip warn';
+    else               chip.className = 'cost-chip';
+
+    // detail panel
+    document.getElementById('token-panel').classList.add('show');
+    document.getElementById('token-nums').textContent = `${fmt(used)} / ${fmt(limit)}`;
+    const fill = document.getElementById('token-bar-fill');
+    fill.style.width = pct + '%';
+    fill.style.background = pct>=90 ? 'var(--red)' : pct>=60 ? 'var(--amber)' : 'var(--purple)';
+    document.getElementById('tok-in').textContent     = fmt(s.tokens_input);
+    document.getElementById('tok-out').textContent    = fmt(s.tokens_output);
+    document.getElementById('tok-used').textContent   = fmt(used);
+    document.getElementById('tok-remain').textContent = fmt(remain);
+  } else {
+    document.getElementById('token-panel').classList.remove('show');
+  }
 }
 
 // ── render ───────────────────────────────────────────────────
@@ -414,6 +575,7 @@ function renderResults(results) {
         ${r.insight.matched_skills?.length?`<div style="font-size:11px;color:var(--muted);margin-top:6px">✓ ตรงกับ JD: <span style="color:var(--teal)">${r.insight.matched_skills.slice(0,5).join(', ')}</span></div>`:''}
         ${r.insight.missing_skills?.length?`<div style="font-size:11px;color:var(--muted);margin-top:4px">✗ ขาด: <span style="color:var(--red)">${r.insight.missing_skills.slice(0,4).join(', ')}</span></div>`:''}
         ${r.insight.combined?`<div style="font-size:11px;color:var(--muted);margin-top:4px">AI Score: ${r.insight.ai_score} → Combined: ${r.insight.combined}</div>`:''}
+        ${r.insight.tokens_used?`<div class="token-mini">🔢 ${fmt(r.insight.tokens_input)} in + ${fmt(r.insight.tokens_output)} out = ${fmt(r.insight.tokens_used)} tokens</div>`:''}
       </div>`:`<div><div class="detail-label">หมายเหตุ</div><p style="font-size:12px;color:var(--muted)">${aiMode==='hybrid'?'คะแนน TF-IDF ต่ำเกินเกณฑ์ ไม่ส่ง AI':'ใช้ TF-IDF เท่านั้น'}</p></div>`}
     </div>
   </div>
