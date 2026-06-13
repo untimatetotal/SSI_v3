@@ -6,8 +6,9 @@
 # เปิด:    http://localhost:5000
 # ============================================================
 
-import os, json, tempfile, gc
+import os, json, tempfile, gc, uuid
 from pathlib import Path
+from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 import sys
 sys.path.append(".")
@@ -15,6 +16,10 @@ from models import Config, ResumeScreener
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max
+
+# ── History storage ──────────────────────────────────────────
+HISTORY_DIR = Path("history")
+HISTORY_DIR.mkdir(exist_ok=True)
 
 # Groq llama-3.1-8b-instant rate limit (tokens per minute, free tier)
 TOKEN_LIMIT_PER_MIN = 6000
@@ -41,9 +46,11 @@ def analyze():
         import fitz
 
         # ── รับ JD ────────────────────────────────────────
-        jd_text = ""
+        jd_text  = ""
+        jd_label = "Job Description"
         if "jd_file" in request.files and request.files["jd_file"].filename:
             jd_file = request.files["jd_file"]
+            jd_label = jd_file.filename
             if jd_file.filename.lower().endswith(".pdf"):
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f:
                     jd_file.save(f.name)
@@ -59,6 +66,7 @@ def analyze():
                 jd_text = jd_file.read().decode("utf-8", errors="ignore").lower()
         elif request.form.get("jd_text"):
             jd_text = request.form["jd_text"].lower()
+            jd_label = (request.form["jd_text"].strip().splitlines() or ["Job Description"])[0][:60]
 
         if not jd_text.strip():
             return jsonify({"error": "กรุณาใส่ Job Description"}), 400
@@ -216,7 +224,23 @@ def analyze():
             "tokens_remaining": tokens_remaining,
         }
 
-        return jsonify({"results": output, "summary": summary})
+        # ── บันทึกประวัติ ──────────────────────────────────
+        history_id = datetime.now().strftime("%Y%m%d_%H%M%S_") + uuid.uuid4().hex[:6]
+        history_entry = {
+            "id": history_id,
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "jd_label": jd_label,
+            "resume_count": len(resume_tmp),
+            "summary": summary,
+            "results": output,
+        }
+        try:
+            with open(HISTORY_DIR / f"{history_id}.json", "w", encoding="utf-8") as hf:
+                json.dump(history_entry, hf, ensure_ascii=False, indent=2)
+        except Exception:
+            pass  # ไม่ให้การบันทึก history ทำให้ request ล้มเหลว
+
+        return jsonify({"results": output, "summary": summary, "history_id": history_id})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -231,6 +255,57 @@ def analyze():
         for _, p in resume_tmp:
             try: os.unlink(p)
             except: pass
+
+@app.route("/history", methods=["GET"])
+def history_list():
+    """รายการประวัติทั้งหมด เรียงล่าสุดก่อน (ไม่รวม results เต็ม)"""
+    items = []
+    for f in HISTORY_DIR.glob("*.json"):
+        try:
+            with open(f, "r", encoding="utf-8") as hf:
+                data = json.load(hf)
+            items.append({
+                "id":            data.get("id", f.stem),
+                "timestamp":     data.get("timestamp", ""),
+                "jd_label":      data.get("jd_label", "Job Description"),
+                "resume_count":  data.get("resume_count", 0),
+                "summary":       data.get("summary", {}),
+            })
+        except Exception:
+            continue
+    items.sort(key=lambda x: x["timestamp"], reverse=True)
+    return jsonify({"history": items})
+
+
+@app.route("/history/<history_id>", methods=["GET"])
+def history_get(history_id):
+    """โหลดผลลัพธ์เต็มของรายการประวัติหนึ่งรายการ"""
+    # ป้องกัน path traversal
+    safe_id = "".join(c for c in history_id if c.isalnum() or c in "_-")
+    path = HISTORY_DIR / f"{safe_id}.json"
+    if not path.exists():
+        return jsonify({"error": "ไม่พบประวัตินี้"}), 404
+    try:
+        with open(path, "r", encoding="utf-8") as hf:
+            data = json.load(hf)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/history/<history_id>", methods=["DELETE"])
+def history_delete(history_id):
+    """ลบรายการประวัติ"""
+    safe_id = "".join(c for c in history_id if c.isalnum() or c in "_-")
+    path = HISTORY_DIR / f"{safe_id}.json"
+    if not path.exists():
+        return jsonify({"error": "ไม่พบประวัตินี้"}), 404
+    try:
+        path.unlink()
+        return jsonify({"deleted": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

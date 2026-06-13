@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CV-Screener — SSI v3</title>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@100..900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#ffffff; --surface:#f7f7f8; --surface2:#f0f1f3;
+  --bg:#ffffff; --surface:#eeeef0; --surface2:#eeeef0;
   --border:#e7e7ea; --border-strong:#d4d4d9;
   --ink:#18181b; --sub:#71717a; --faint:#a1a1aa;
   --accent:#4338ca; --accent-soft:#eef0fd; --accent-hover:#3730a3;
@@ -22,16 +22,17 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 h1,h2,h3,.font-display{font-family:'Sora',sans-serif}
 
 /* NAV */
-nav{border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.85);backdrop-filter:blur(8px)}
-.logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;font-family:'Sora',sans-serif;letter-spacing:-.2px}
+nav{border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;background:#c22731;backdrop-filter:blur(8px)}
+.logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;font-family:'Sora',sans-serif;letter-spacing:-.2px;margin-top: -6px;}
 .mark{width:30px;height:30px;background:var(--ink);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;font-family:'Sora',sans-serif}
 .nav-links{display:flex;gap:28px}
-.nav-links a{font-size:13px;color:var(--sub);text-decoration:none;cursor:pointer;transition:color .15s}
-.nav-links a:hover{color:var(--ink)}
+.nav-links a{color:rgba(255,255,255,0.7)}
+.nav-links a:hover{color:#fff}
 .cost-chip{display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--green-soft);border:1px solid #d3f0dd;border-radius:100px;font-size:12px;color:var(--green);font-weight:500;font-variant-numeric:tabular-nums;transition:all .2s}
 .cost-chip.ai{background:var(--purple-soft);border-color:#e6dafb;color:var(--purple)}
 .cost-chip.warn{background:var(--amber-soft);border-color:#fae3bd;color:var(--amber)}
 .cost-chip.danger{background:var(--red-soft);border-color:#fad4d4;color:var(--red)}
+
 
 /* LAYOUT — centered single column */
 .page{max-width:880px;margin:0 auto;padding:40px 24px 80px}
@@ -160,7 +161,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
 .loading{display:none;text-align:center;padding:60px 20px;color:var(--sub)}
 .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.empty{text-align:center;padding:60px 20px;color:var(--sub);border:1px dashed var(--border);border-radius:var(--radius)}
+.empty{text-align:center;padding:60px 20px;color:var(--sub);border:1px dashed var(--border);border-radius:var(--radius);background:var(--surface)}
 .empty-icon{font-size:32px;margin-bottom:10px;opacity:.5}
 .empty p{font-size:13px}
 .empty p b{color:var(--ink)}
@@ -173,24 +174,97 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
   nav{padding:0 16px}
   .nav-links{display:none}
 }
+
+/* HISTORY PANEL */
+.history-overlay{display:none;position:fixed;inset:0;background:rgba(24,24,27,0.35);backdrop-filter:blur(2px);z-index:200;justify-content:flex-end}
+.history-overlay.show{display:flex}
+.history-panel{width:380px;max-width:90vw;background:#fff;height:100%;box-shadow:-8px 0 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;animation:slidein .2s ease}
+@keyframes slidein{from{transform:translateX(100%)}to{transform:translateX(0)}}
+.history-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border)}
+.history-list{flex:1;overflow-y:auto;padding:12px}
+.history-item{border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .15s;position:relative}
+.history-item:hover{border-color:var(--accent);background:var(--accent-soft)}
+.history-item-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.history-jd{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.history-time{font-size:10.5px;color:var(--faint);white-space:nowrap;font-variant-numeric:tabular-nums}
+.history-stats{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.history-tag{font-size:10.5px;padding:2px 8px;border-radius:100px;font-weight:600}
+.history-del{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px;padding:4px;opacity:0;transition:opacity .15s}
+.history-item:hover .history-del{opacity:1}
+.history-del:hover{color:var(--red)}
+
+/* GUIDE PANEL */
+.guide-step{display:flex;gap:14px;padding:14px 8px;border-bottom:1px solid var(--border)}
+.guide-step:last-child{border-bottom:none}
+.guide-num{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif}
+.guide-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px}
+.guide-step p{font-size:12.5px;color:var(--sub);line-height:1.6}
+.guide-step code{background:var(--surface);padding:1px 6px;border-radius:5px;font-size:11.5px;color:var(--accent);font-family:monospace}
+
+
 </style>
 </head>
 <body>
 
 <nav>
-  <div class="logo"><div class="mark">C</div> CVScreener</div>
+  <div class="logo">
+     <img src="static/SSI-Group-logo-transparent.png" style="width:90px;height:90px;border-radius:8px"> CV-Screener</div>
   <div class="nav-links">
-    <a>วิธีใช้</a><a>Algorithm</a><a>เอกสาร</a>
+    <a onclick="openHistory()">ประวัติ</a>
+    <a onclick="openGuide()">วิธีใช้</a>
+    <!--<a>Algorithm</a> -->
   </div>
   <div class="cost-chip" id="cost-chip">TF-IDF · ฟรี 100%</div>
 </nav>
+
+<!-- ── HISTORY PANEL (overlay) ── -->
+<div id="history-overlay" class="history-overlay" onclick="if(event.target===this)closeHistory()">
+  <div class="history-panel">
+    <div class="history-head">
+      <div class="results-title" style="font-size:16px">ประวัติการวิเคราะห์</div>
+      <button class="export-btn" onclick="closeHistory()">ปิด ✕</button>
+    </div>
+    <div id="history-list" class="history-list">
+      <div class="empty" style="border:none;padding:40px 0">
+        <div class="empty-icon">⏳</div>
+        <p>กำลังโหลด...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── GUIDE PANEL (overlay) ── -->
+<div id="guide-overlay" class="history-overlay" onclick="if(event.target===this)closeGuide()">
+  <div class="history-panel">
+    <div class="history-head">
+      <div class="results-title" style="font-size:16px">วิธีใช้งาน CV-Screener</div>
+      <button class="export-btn" onclick="closeGuide()">ปิด ✕</button>
+    </div>
+    <div class="history-list">
+
+      <div class="guide-step">
+        <div class="guide-num">1</div>
+        <div>
+          <div class="guide-title">ใส่ Job Specification</div>
+          <p>อัปโหลดไฟล์ <b>.txt</b> หรือ <b>.pdf</b> โดยคลิกหรือลากไฟล์มาวาง...</p>
+        </div>
+      </div>
+
+      <!-- ... ขั้นที่ 2-9 รูปแบบเดียวกัน ... -->
+
+    </div>
+  </div>
+</div>
+
+
 
 <div class="page">
 
   <div class="hero">
     <div class="hero-eyebrow">Resume Screening</div>
-    <h1>คัดกรอง Resume อัตโนมัติ</h1>
-    <p>อัปโหลด Job Description และ Resume แล้วให้ระบบจัดอันดับด้วย TF-IDF — เสริม Groq AI ได้ถ้าต้องการ</p>
+    <h1>ALGORITHM & AI ANALYZER</h1>
+    <p>อัปโหลด Job Specification และ Resumes แล้วให้ระบบคัดกรองด้วย Algorithm และ ระบบ AI</p>
   </div>
 
   <!-- ── SETUP CARD ── -->
@@ -199,7 +273,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
     <div class="setup-grid">
       <!-- JD -->
       <div class="field field-full">
-        <div class="field-label">Job Description</div>
+        <div class="field-label">Job Specification (English only)</div>
         <div class="seg" style="align-self:flex-start;margin-bottom:4px">
           <button class="seg-btn on" id="btn-jd-file" onclick="setJdMode('file')">อัปโหลดไฟล์</button>
           <button class="seg-btn"   id="btn-jd-type" onclick="setJdMode('type')">พิมพ์เอง</button>
@@ -263,7 +337,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
             <span class="sv" id="pass-val">60</span>
           </div>
           <div class="slider-row">
-            <span style="font-size:12px;color:var(--sub);min-width:54px">พิจารณา ≥</span>
+            <span style="font-size:12px;color:var(--sub);min-width:54px">พิจารณาเพิ่มเติม ≥</span>
             <input type="range" min="0" max="100" value="40" id="rev-slider"
                    oninput="document.getElementById('rev-val').textContent=this.value">
             <span class="sv" id="rev-val">40</span>
@@ -475,7 +549,7 @@ async function runAnalyze() {
     fd.append('jd_file', jdf);
   } else {
     const txt = document.getElementById('jd-text').value.trim();
-    if(!txt) return alert('กรุณากรอก Job Description');
+    if(!txt) return alert('กรุณากรอก Job Specification');
     fd.append('jd_text', txt);
   }
 
@@ -631,6 +705,106 @@ function exportJSON() {
   a.href = URL.createObjectURL(blob);
   a.download = 'results.json';
   a.click();
+}
+
+
+
+// ── guide panel ──────────────────────────────────────────────
+function openGuide() {
+  document.getElementById('guide-overlay').classList.add('show');
+}
+function closeGuide() {
+  document.getElementById('guide-overlay').classList.remove('show');
+}
+
+// ── history ──────────────────────────────────────────────────
+function fmtTime(iso) {
+  if(!iso) return '';
+  const d = new Date(iso);
+  const today = new Date();
+  const sameDay = d.toDateString() === today.toDateString();
+  const time = d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
+  if (sameDay) return `วันนี้ ${time}`;
+  return d.toLocaleDateString('th-TH', {day:'numeric', month:'short'}) + ' ' + time;
+}
+
+async function openHistory() {
+  document.getElementById('history-overlay').classList.add('show');
+  const listEl = document.getElementById('history-list');
+  listEl.innerHTML = `<div class="empty" style="border:none;padding:40px 0"><div class="empty-icon">⏳</div><p>กำลังโหลด...</p></div>`;
+
+  try {
+    const resp = await fetch('/history');
+    const data = await resp.json();
+    renderHistoryList(data.history || []);
+  } catch(e) {
+    listEl.innerHTML = `<div class="empty" style="border:none;padding:40px 0"><p>โหลดประวัติไม่สำเร็จ</p></div>`;
+  }
+}
+
+function closeHistory() {
+  document.getElementById('history-overlay').classList.remove('show');
+}
+
+function renderHistoryList(items) {
+  const listEl = document.getElementById('history-list');
+  if (items.length === 0) {
+    listEl.innerHTML = `<div class="empty" style="border:none;padding:40px 0"><div class="empty-icon">🗂</div><p>ยังไม่มีประวัติการวิเคราะห์</p></div>`;
+    return;
+  }
+  listEl.innerHTML = items.map(it => {
+    const s = it.summary || {};
+    return `
+<div class="history-item" onclick="loadHistory('${it.id}')">
+  <button class="history-del" onclick="event.stopPropagation();deleteHistory('${it.id}')" title="ลบ">🗑</button>
+  <div class="history-item-top">
+    <div class="history-jd">${it.jd_label || 'Job Specification'}</div>
+    <div class="history-time">${fmtTime(it.timestamp)}</div>
+  </div>
+  <div class="history-stats">
+    <span class="history-tag" style="background:var(--surface);color:var(--sub)">${it.resume_count} resume</span>
+    <span class="history-tag" style="background:var(--green-soft);color:var(--green)">ผ่าน ${s.passed ?? 0}</span>
+    <span class="history-tag" style="background:var(--amber-soft);color:var(--amber)">พิจารณา ${s.review ?? 0}</span>
+    <span class="history-tag" style="background:var(--red-soft);color:var(--red)">ไม่ผ่าน ${s.failed ?? 0}</span>
+    ${s.ai_used ? `<span class="history-tag" style="background:var(--purple-soft);color:var(--purple)">AI ${s.ai_used}</span>` : ''}
+  </div>
+</div>`;
+  }).join('');
+}
+
+async function loadHistory(id) {
+  try {
+    const resp = await fetch('/history/' + id);
+    const data = await resp.json();
+    if (data.error) { alert('Error: ' + data.error); return; }
+
+    allResults = data.results || [];
+    aiMode = (data.summary && data.summary.tokens_used !== undefined) ? 'hybrid' : aiMode;
+
+    document.getElementById('empty-state').style.display = 'none';
+    showSummary(data.summary || {});
+    renderResults(allResults);
+
+    // reset filter pills to "ทั้งหมด"
+    document.querySelectorAll('.pill').forEach(p=>p.classList.remove('on'));
+    const allPill = document.querySelector('.pill');
+    if (allPill) allPill.classList.add('on');
+
+    closeHistory();
+    window.scrollTo({top: document.querySelector('.results-head').offsetTop - 80, behavior:'smooth'});
+  } catch(e) {
+    alert('โหลดประวัติไม่สำเร็จ: ' + e.message);
+  }
+}
+
+async function deleteHistory(id) {
+  if (!confirm('ลบประวัตินี้?')) return;
+  try {
+    await fetch('/history/' + id, {method:'DELETE'});
+    openHistory(); // refresh list
+  } catch(e) {
+    alert('ลบไม่สำเร็จ: ' + e.message);
+  }
 }
 </script>
 </body>
