@@ -112,6 +112,19 @@ def analyze():
             resume_paths=[p for _, p in resume_tmp],
         )
 
+        # ── แปลง r.file (temp path) ให้เป็นชื่อไฟล์จริงที่ผู้ใช้อัปโหลด ──
+        path_to_original = {p: orig for orig, p in resume_tmp}
+        for r in results:
+            matched = path_to_original.get(r.file)
+            if not matched:
+                # เผื่อกรณี r.file เป็นแค่ basename ไม่ใช่ full path
+                for orig, p in resume_tmp:
+                    if Path(p).name == Path(r.file).name:
+                        matched = orig
+                        break
+            if matched:
+                r.file = matched
+
         # ── Run Groq AI (optional) ────────────────────────
         ai_insights = {}
         total_input_tokens  = 0
@@ -126,9 +139,9 @@ def analyze():
                 if r.score < 30:
                     continue
 
+                # หา temp path จากชื่อไฟล์จริง (r.file ตอนนี้เป็นชื่อไฟล์จริงแล้ว)
                 tmp_path = next(
-                    (p for _, p in resume_tmp
-                     if r.file == Path(p).name or r.file in p),
+                    (p for orig, p in resume_tmp if orig == r.file),
                     None
                 )
                 if not tmp_path:
@@ -206,7 +219,7 @@ def analyze():
         for rank, r in enumerate(results, 1):
             d = r.to_dict()
             d["rank"]    = rank
-            d["insight"] = ai_insights.get(r.file, {})
+            d["insight"] = ai_insights.get(r.file, None)
             output.append(d)
 
         tokens_remaining = max(0, TOKEN_LIMIT_PER_MIN - total_tokens_used)

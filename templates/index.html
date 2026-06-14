@@ -204,6 +204,10 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
 
 </style>
 </head>
+<!--  libary PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
 <body>
 
 <nav>
@@ -211,10 +215,10 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
      <img src="static/SSI-Group-logo-transparent.png" style="width:90px;height:90px;border-radius:8px"> CV-Screener</div>
   <div class="nav-links">
     <a onclick="openHistory()">ประวัติ</a>
-    <a onclick="openGuide()">วิธีใช้</a>
+    <a onclick="openGuide()">คู่มือการใช้งาน</a>
     <!--<a>Algorithm</a> -->
   </div>
-  <div class="cost-chip" id="cost-chip">TF-IDF · ฟรี 100%</div>
+  <div class="cost-chip" id="cost-chip">Algorithm (Free Mode)</div>
 </nav>
 
 <!-- ── HISTORY PANEL (overlay) ── -->
@@ -243,15 +247,88 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
     </div>
     <div class="history-list">
 
-      <div class="guide-step">
-        <div class="guide-num">1</div>
-        <div>
-          <div class="guide-title">ใส่ Job Specification</div>
-          <p>อัปโหลดไฟล์ <b>.txt</b> หรือ <b>.pdf</b> โดยคลิกหรือลากไฟล์มาวาง...</p>
-        </div>
-      </div>
+     <div class="guide-step">
+  <div class="guide-num">2</div>
+  <div>
+    <div class="guide-title">อัปโหลด Resume</div>
+    <p>ลากไฟล์ <b>PDF</b> ของผู้สมัครมาวางได้ทีละหลายไฟล์ ระบบจะวิเคราะห์ทุกไฟล์พร้อมกันและจัดอันดับให้</p>
+  </div>
+</div>
 
-      <!-- ... ขั้นที่ 2-9 รูปแบบเดียวกัน ... -->
+<div class="guide-step">
+  <div class="guide-num">3</div>
+  <div>
+    <div class="guide-title">Required Keywords</div>
+    <p>คำที่ <b>ต้องมี</b> ใน resume เช่น <code>python data excel</code> — ถ้า resume ขาดคำใดคำหนึ่งจะถูกตัดออกทันที (คะแนน 0)</p>
+  </div>
+</div>
+
+<div class="guide-step">
+  <div class="guide-num">4</div>
+  <div>
+    <div class="guide-title">วุฒิการศึกษาขั้นต่ำ</div>
+    <p>เลือกวุฒิที่ต้องการ เช่น <b>ปริญญาตรี</b> — ผู้สมัครที่จบ ป.ตรี หรือสูงกว่า (ป.โท) จะผ่านเกณฑ์นี้ด้วย</p>
+  </div>
+</div>
+
+<div class="guide-step">
+  <div class="guide-num">5</div>
+  <div>
+    <div class="guide-title">Bonus Keywords</div>
+    <p>คำที่ <b>มีก็ดี ไม่มีก็ไม่ตัด</b> เช่น <code>excel powerbi crm</code> — ยิ่งมีตรงมาก คะแนนยิ่งสูง</p>
+  </div>
+</div>
+
+<div class="guide-step">
+  <div class="guide-num">6</div>
+  <div>
+    <div class="guide-title">เกณฑ์คะแนน</div>
+    <p>ตั้งค่าคะแนนขั้นต่ำที่ <b>"ผ่าน"</b> และ <b>"พิจารณา"</b> — คะแนนต่ำกว่าเกณฑ์พิจารณาจะถูกจัดเป็น <b>"ไม่ผ่าน"</b></p>
+  </div>
+</div>
+
+<div class="guide-step">
+  <div class="guide-num">7</div>
+  <div>
+    <div class="guide-title">โหมดการวิเคราะห์</div>
+    <p><b>TF-IDF เท่านั้น</b> — ฟรี 100% วิเคราะห์ด้วยอัลกอริทึมเปรียบเทียบคำ<br>
+    <b>+ Groq AI</b> — ใส่ Groq API Key เพื่อให้ AI ช่วยวิเคราะห์เชิงลึกเพิ่ม (resume ที่คะแนน TF-IDF ต่ำเกินไปจะไม่ถูกส่งให้ AI เพื่อประหยัด token)</p>
+  </div>
+</div>
+
+<div class="guide-step">
+  <div class="guide-num">8</div>
+  <div>
+    <div class="guide-title">ดูผลลัพธ์</div>
+    <p>คลิกที่การ์ดผู้สมัครเพื่อดูรายละเอียดคะแนน โครงสร้าง resume และ AI insights (ถ้าใช้) ใช้ตัวกรองด้านบนเพื่อดูเฉพาะ <b>ผ่าน / พิจารณา / ไม่ผ่าน</b></p>
+  </div>
+</div>
+
+<div class="guide-step">
+  <div class="guide-num">9</div>
+  <div>
+    <div class="guide-title">ประวัติและ Export</div>
+    <p>ผลการวิเคราะห์แต่ละครั้งจะถูกบันทึกอัตโนมัติ ดูย้อนหลังได้ที่เมนู <b>"ประวัติ"</b> หรือกด <b>"Export JSON"</b> เพื่อดาวน์โหลดผลลัพธ์</p>
+  </div>
+</div>
+
+
+<div class="guide-step">
+  <div class="guide-num">10</div>
+  <div>
+    <div class="guide-title">วิธีขอ Groq API Key (ฟรี)</div>
+    <p>
+      1. ไปที่ <code>console.groq.com</code><br>
+      2. สมัครสมาชิก / เข้าสู่ระบบด้วย Google หรือ GitHub<br>
+      3. ไปที่เมนู <b>API Keys</b> ด้านบน<br>
+      4. กด <b>Create API Key</b> ตั้งชื่อ แล้วกดสร้าง<br>
+      5. คัดลอกคีย์ที่ขึ้นต้นด้วย <code>gsk_...</code> (จะเห็นครั้งเดียว เก็บไว้ให้ดี)<br>
+      6. นำมาใส่ในช่อง <b>Groq API Key</b> ที่โหมด "+ Groq AI"
+    </p>
+    <p style="margin-top:6px">Free tier ให้โควต้า 6,000 token/นาที และ 14,400 requests/วัน — เพียงพอสำหรับใช้งานทั่วไป ไม่มีค่าใช้จ่าย</p>
+  </div>
+</div>
+
 
     </div>
   </div>
@@ -373,7 +450,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
       <div class="results-title">ผลการคัดกรอง</div>
       <div class="results-sub" id="result-sub">รอการวิเคราะห์...</div>
     </div>
-    <button class="export-btn" onclick="exportJSON()">⬇ Export JSON</button>
+   <!--<button class="export-btn" onclick="exportPDF()">⬇ Export PDF</button>--> 
   </div>
 
   <div class="stat-row" id="stat-row" style="display:none">
@@ -655,7 +732,7 @@ function renderResults(results) {
   <div class="rcard-header" onclick="toggle(${i})">
     <div class="rank">${r.rank}</div>
     <div>
-      <div class="rname">${r.name} ${ai?'<span style="font-size:11px;color:var(--purple)">· AI</span>':''}</div>
+      <div class="rname">${r.file} ${ai?'<span style="font-size:11px;color:var(--purple)">· AI</span>':''}</div>
       <div class="rmeta"><span>📄 ${r.file}</span><span>⏱ ${r.experience}</span></div>
     </div>
     <div class="bars">
@@ -697,16 +774,49 @@ function toggle(i) {
   document.getElementById('detail-'+i).classList.toggle('open');
 }
 
-// ── export ───────────────────────────────────────────────────
-function exportJSON() {
-  if(!allResults.length) return alert('ยังไม่มีผลลัพธ์');
-  const blob = new Blob([JSON.stringify(allResults,null,2)],{type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'results.json';
-  a.click();
-}
+// ── export PDF ─
+async function exportPDF() {
+  if (!allResults.length) return alert('ยังไม่มีผลลัพธ์');
 
+  const btn = document.getElementById('export-pdf-btn');
+  btn.textContent = 'กำลังสร้าง PDF...';
+  btn.disabled = true;
+
+  try {
+    const target = document.getElementById('pdf-capture-area');
+
+    // ถ่ายภาพหน้าเว็บ (scale สูงเพื่อความชัด)
+    const canvas = await html2canvas(target, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+
+    // คำนวณขนาดให้พอดีกับ A4
+    const pdfWidth = 595;
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    const doc = new jsPDF({
+      unit: 'pt',
+      format: [pdfWidth, pdfHeight > 842 ? pdfHeight : 842],
+    });
+
+    doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+    const now = new Date();
+    const fname = `cv-screener-results-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.pdf`;
+    doc.save(fname);
+
+  } catch (e) {
+    alert('สร้าง PDF ไม่สำเร็จ: ' + e.message);
+  } finally {
+    btn.textContent = '⬇ Export PDF';
+    btn.disabled = false;
+  }
+}
 
 
 // ── guide panel ──────────────────────────────────────────────

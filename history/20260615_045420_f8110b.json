@@ -1,0 +1,74 @@
+{
+  "id": "20260615_045420_f8110b",
+  "timestamp": "2026-06-15T04:54:20",
+  "jd_label": "JD_Marketing_Officer_EN.pdf",
+  "resume_count": 3,
+  "summary": {
+    "total": 3,
+    "passed": 2,
+    "review": 0,
+    "failed": 1,
+    "ai_used": 0,
+    "tokens_input": 0,
+    "tokens_output": 0,
+    "tokens_used": 0,
+    "tokens_limit": 6000,
+    "tokens_remaining": 6000
+  },
+  "results": [
+    {
+      "name": "Other Activities",
+      "file": "resume_Areeya.pdf",
+      "score": 69.8,
+      "recommendation": "ผ่าน",
+      "tfidf": 32.0,
+      "keyword": 100.0,
+      "struct": 80.0,
+      "experience": "ไม่ระบุ",
+      "error": null,
+      "struct_checks": {
+        "มี Email": false,
+        "มี เบอร์โทร": true,
+        "มี ประสบการณ์": true,
+        "มี การศึกษา": true,
+        "มี ทักษะ": true
+      },
+      "rank": 1,
+      "insight": null
+    },
+    {
+      "name": "Education",
+      "file": "resume_Nutjaree.pdf",
+      "score": 67.9,
+      "recommendation": "ผ่าน",
+      "tfidf": 19.6,
+      "keyword": 100.0,
+      "struct": 100.0,
+      "experience": "ไม่ระบุ",
+      "error": null,
+      "struct_checks": {
+        "มี Email": true,
+        "มี เบอร์โทร": true,
+        "มี ประสบการณ์": true,
+        "มี การศึกษา": true,
+        "มี ทักษะ": true
+      },
+      "rank": 2,
+      "insight": null
+    },
+    {
+      "name": "Nida Mana",
+      "file": "resume_nida.pdf",
+      "score": 0.0,
+      "recommendation": "ไม่ผ่าน",
+      "tfidf": 0.0,
+      "keyword": 0.0,
+      "struct": 0.0,
+      "experience": "5 ปี",
+      "error": "ขาด keyword บังคับ: data",
+      "struct_checks": {},
+      "rank": 3,
+      "insight": null
+    }
+  ]
+}
