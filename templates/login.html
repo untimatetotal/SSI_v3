@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>เข้าสู่ระบบ — CV-Screener</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--surface:#f7f7f8;--border:#e7e7ea;
+  --ink:#18181b;--sub:#71717a;--faint:#a1a1aa;
+  --accent:#4338ca;--accent-soft:#eef0fd;
+  --red:#dc2626;--red-soft:#fdeded;
+  --radius:14px;--radius-sm:9px;
+}
+body{font-family:'Noto Sans Thai','Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+
+/* NAV */
+nav{border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;background:#c22731}
+.logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;color:#fff}
+.logo img{height:36px;width:auto;object-fit:contain}
+
+/* MAIN */
+main{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 24px}
+.card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:36px}
+.card-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.card-sub{font-size:13px;color:var(--sub);margin-bottom:28px}
+
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field label{font-size:12px;font-weight:600;color:var(--ink)}
+input[type=text],input[type=email],input[type=password]{
+  width:100%;padding:10px 12px;background:#fff;
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--ink);font-size:13px;font-family:'Noto Sans Thai','Inter',sans-serif;
+  outline:none;transition:border-color .15s
+}
+input:focus{border-color:var(--accent)}
+input::placeholder{color:var(--faint)}
+
+.btn{width:100%;padding:13px;background:var(--ink);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:8px;font-family:'Noto Sans Thai','Inter',sans-serif}
+.btn:hover{background:var(--accent)}
+
+.error-box{background:var(--red-soft);border:1px solid #fad4d4;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:16px}
+
+.footer-link{text-align:center;margin-top:20px;font-size:13px;color:var(--sub)}
+.footer-link a{color:var(--accent);text-decoration:none;font-weight:500}
+.footer-link a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <img src="/static/SSI-Group-logo-transparent.png" onerror="this.style.display='none'">
+    CV-Screener
+  </div>
+</nav>
+
+<main>
+  <div class="card">
+    <div class="card-title">เข้าสู่ระบบ</div>
+    <div class="card-sub">ใส่ข้อมูลเพื่อเข้าใช้งาน CV-Screener</div>
+
+    {% if error %}
+    <div class="error-box">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/login">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" name="username" placeholder="กรอก Username" required autofocus>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="กรอก Password" required>
+      </div>
+      <button type="submit" class="btn">เข้าสู่ระบบ</button>
+    </form>
+
+    <div class="footer-link">
+      ยังไม่มีบัญชี? <a href="/register">สมัครสมาชิก</a>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>
