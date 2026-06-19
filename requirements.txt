@@ -3,3 +3,4 @@ pymupdf
 scikit-learn
 groq
 gunicorn
+flask-bcrypt
