@@ -108,6 +108,9 @@ def analyze():
         ai_mode  = request.form.get("ai_mode", "tfidf")
         groq_key = request.form.get("groq_key", "")
 
+        min_gpa_raw = request.form.get("min_gpa", "").strip()
+        min_gpa = float(min_gpa_raw) if min_gpa_raw else None
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8") as jd_tmp:
             jd_tmp.write(jd_text)
             jd_txt_path = jd_tmp.name
@@ -118,6 +121,7 @@ def analyze():
             bonus_keywords=bon_kws,
             pass_threshold=pass_thr,
             review_threshold=rev_thr,
+            min_gpa=min_gpa,
         )
         screener = ResumeScreener(config=config)
         results  = screener.screen(

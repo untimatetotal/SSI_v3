@@ -65,7 +65,7 @@ nav{border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:fle
 .file-chip button:hover{color:var(--red)}
 
 /* Inputs */
-input[type=text],input[type=password],select,textarea{
+input[type=text],input[type=password],input[type=number],select,textarea{
   width:100%;padding:10px 12px;background:#fff;
   border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);
   font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border-color .15s
@@ -397,6 +397,14 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
         <div class="field-hint">วุฒิที่สูงกว่าก็ผ่านเช่นกัน</div>
       </div>
 
+<!-- GPA -->
+<div class="field">
+  <div class="field-label">GPA ขั้นต่ำ <span class="opt">(ไม่บังคับ)</span></div>
+  <input type="number" id="min-gpa" placeholder="เช่น 2.50"
+         min="0" max="4" step="0.01" autocomplete="off">
+  <div class="field-hint">GPA ต้องมากกว่าหรือเท่ากับค่าที่กำหนด — ไม่พบ GPA = ไม่ผ่าน</div>
+</div>
+
       <!-- Bonus keywords -->
       <div class="field field-full">
         <div class="field-label">Bonus Keywords <span class="opt">(ไม่บังคับ — มีแล้วได้คะแนนเพิ่ม)</span></div>
@@ -640,6 +648,7 @@ async function runAnalyze() {
   fd.append('review_threshold', document.getElementById('rev-slider').value);
   fd.append('ai_mode',    aiMode);
   fd.append('groq_key',   document.getElementById('groq-key')?.value||'');
+  fd.append('min_gpa', document.getElementById('min-gpa').value);
 
   document.getElementById('run-btn').disabled = true;
   document.getElementById('loading').style.display = 'block';
@@ -733,7 +742,7 @@ function renderResults(results) {
     <div class="rank">${r.rank}</div>
     <div>
       <div class="rname">${r.file} ${ai?'<span style="font-size:11px;color:var(--purple)">· AI</span>':''}</div>
-      <div class="rmeta"><span>📄 ${r.file}</span><span>⏱ ${r.experience}</span></div>
+      <div class="rmeta"><span>📄 ${r.file}</span><span>⏱ ${r.experience}</span>${r.gpa ? `<span>🎓 GPA ${r.gpa}</span>` : ''}</div>
     </div>
     <div class="bars">
       <div class="brow"><span class="blbl">TF-IDF</span><div class="btrack"><div class="bfill" style="width:${r.tfidf}%;background:var(--accent)"></div></div><span class="bval" style="color:var(--accent)">${r.tfidf}</span></div>
