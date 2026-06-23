@@ -1,0 +1,80 @@
+{
+  "id": "20260615_043852_b72f6c",
+  "timestamp": "2026-06-15T04:38:52",
+  "jd_label": "JD_Marketing_Officer_EN.pdf",
+  "resume_count": 3,
+  "summary": {
+    "total": 3,
+    "passed": 0,
+    "review": 3,
+    "failed": 0,
+    "ai_used": 0,
+    "tokens_input": 0,
+    "tokens_output": 0,
+    "tokens_used": 0,
+    "tokens_limit": 6000,
+    "tokens_remaining": 6000
+  },
+  "results": [
+    {
+      "name": "Other Activities",
+      "file": "tmp8qm6eoaa.pdf",
+      "score": 56.3,
+      "recommendation": "พิจารณาเพิ่มเติม",
+      "tfidf": 32.0,
+      "keyword": 70.0,
+      "struct": 80.0,
+      "experience": "ไม่ระบุ",
+      "error": null,
+      "struct_checks": {
+        "มี Email": false,
+        "มี เบอร์โทร": true,
+        "มี ประสบการณ์": true,
+        "มี การศึกษา": true,
+        "มี ทักษะ": true
+      },
+      "rank": 1,
+      "insight": null
+    },
+    {
+      "name": "Education",
+      "file": "tmpmollfdns.pdf",
+      "score": 54.4,
+      "recommendation": "พิจารณาเพิ่มเติม",
+      "tfidf": 19.6,
+      "keyword": 70.0,
+      "struct": 100.0,
+      "experience": "ไม่ระบุ",
+      "error": null,
+      "struct_checks": {
+        "มี Email": true,
+        "มี เบอร์โทร": true,
+        "มี ประสบการณ์": true,
+        "มี การศึกษา": true,
+        "มี ทักษะ": true
+      },
+      "rank": 2,
+      "insight": null
+    },
+    {
+      "name": "Nida Mana",
+      "file": "tmp6yyby7ud.pdf",
+      "score": 50.9,
+      "recommendation": "พิจารณาเพิ่มเติม",
+      "tfidf": 11.0,
+      "keyword": 70.0,
+      "struct": 100.0,
+      "experience": "5 ปี",
+      "error": null,
+      "struct_checks": {
+        "มี Email": true,
+        "มี เบอร์โทร": true,
+        "มี ประสบการณ์": true,
+        "มี การศึกษา": true,
+        "มี ทักษะ": true
+      },
+      "rank": 3,
+      "insight": null
+    }
+  ]
+}

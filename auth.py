@@ -134,7 +134,7 @@ def register():
             error = "กรุณากรอก Groq API Key"
         elif not groq_api_key.startswith("gsk_"):
             error = "API Key ต้องขึ้นต้นด้วย gsk_"
-        elif len(groq_api_key) != 52:
+        elif len(groq_api_key) != 56:
             error = f"ความยาว API Key ไม่ถูกต้อง (ต้องมี 52 ตัวอักษร, ปัจจุบัน {len(groq_api_key)} ตัว)"
         elif not groq_api_key[4:].isalnum():
             error = "API Key มีตัวอักษรที่ไม่ถูกต้อง (ใช้ได้เฉพาะ a-z, A-Z, 0-9)"
