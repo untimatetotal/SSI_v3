@@ -12,6 +12,7 @@
   --ink:#18181b;--sub:#71717a;--faint:#a1a1aa;
   --accent:#4338ca;--accent-soft:#eef0fd;
   --red:#dc2626;--red-soft:#fdeded;
+  --amber:#d97706;--amber-soft:#fef6e7;
   --radius:14px;--radius-sm:9px;
 }
 body{font-family:'Noto Sans Thai','Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
@@ -21,13 +22,17 @@ nav{border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:fle
 .logo img{height:36px;width:auto;object-fit:contain}
 
 main{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 24px}
-.card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:36px}
+.card{width:100%;max-width:440px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:36px}
 .card-title{font-size:22px;font-weight:700;margin-bottom:4px}
 .card-sub{font-size:13px;color:var(--sub);margin-bottom:28px}
 
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
-.field label{font-size:12px;font-weight:600;color:var(--ink)}
-.field-hint{font-size:11px;color:var(--faint)}
+.field label{font-size:12px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:6px}
+.field label .req{color:var(--red);font-size:11px}
+.field-hint{font-size:11px;color:var(--faint);line-height:1.5}
+.field-hint a{color:var(--accent);text-decoration:none}
+.field-hint a:hover{text-decoration:underline}
+
 input[type=text],input[type=email],input[type=password]{
   width:100%;padding:10px 12px;background:#fff;
   border:1px solid var(--border);border-radius:var(--radius-sm);
@@ -37,7 +42,15 @@ input[type=text],input[type=email],input[type=password]{
 input:focus{border-color:var(--accent)}
 input::placeholder{color:var(--faint)}
 
-.btn{width:100%;padding:13px;background:var(--ink);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:8px;font-family:'Noto Sans Thai','Inter',sans-serif}
+/* API Key field — highlight เพิ่ม */
+.api-key-field{background:var(--amber-soft);border:1px solid #fae3bd;border-radius:var(--radius-sm);padding:14px;margin-bottom:16px}
+.api-key-field .field-label-main{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.api-key-field input{margin-bottom:6px}
+.api-key-field .field-hint{color:#92400e}
+
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+
+.btn{width:100%;padding:13px;background:var(--ink);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:4px;font-family:'Noto Sans Thai','Inter',sans-serif}
 .btn:hover{background:var(--accent)}
 
 .error-box{background:var(--red-soft);border:1px solid #fad4d4;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:16px}
@@ -59,30 +72,49 @@ input::placeholder{color:var(--faint)}
 <main>
   <div class="card">
     <div class="card-title">สมัครสมาชิก</div>
-    <div class="card-sub">สร้างบัญชีเพื่อใช้งาน CV-Screener</div>
+    <div class="card-sub">สร้างบัญชีเพื่อเริ่มใช้งาน CV-Screener</div>
 
     {% if error %}
     <div class="error-box">{{ error }}</div>
     {% endif %}
 
     <form method="POST" action="/register">
+
       <div class="field">
-        <label>Username</label>
-        <input type="text" name="username" placeholder="อย่างน้อย 3 ตัวอักษร" required autofocus>
-        <span class="field-hint">ใช้ภาษาอังกฤษ ตัวเลข หรือ _</span>
+        <label>Username <span class="req">*</span></label>
+        <input type="text" name="username" placeholder="อย่างน้อย 3 ตัวอักษร" required autofocus autocomplete="off">
       </div>
+
       <div class="field">
-        <label>Email</label>
-        <input type="email" name="email" placeholder="example@email.com" required>
+        <label>Email <span class="req">*</span></label>
+        <input type="email" name="email" placeholder="example@ssi.co.th" required autocomplete="off">
       </div>
+
       <div class="field">
-        <label>Password</label>
+        <label>Password <span class="req">*</span></label>
         <input type="password" name="password" placeholder="อย่างน้อย 6 ตัวอักษร" required>
       </div>
+
       <div class="field">
-        <label>ยืนยัน Password</label>
+        <label>ยืนยัน Password <span class="req">*</span></label>
         <input type="password" name="password2" placeholder="กรอก Password อีกครั้ง" required>
       </div>
+
+      <hr class="divider">
+
+      <!-- Groq API Key — บังคับ -->
+      <div class="api-key-field">
+        <div class="field-label-main">
+          🔑 Groq API Key <span class="req" style="color:var(--red)">* จำเป็น</span>
+        </div>
+        <input type="password" name="groq_api_key" placeholder="gsk_..." required autocomplete="off">
+        <div class="field-hint">
+          ใช้สำหรับ AI วิเคราะห์และแปลภาษาไทย — กรอกครั้งเดียว ระบบจำไว้ให้ตลอด<br>
+          ขอได้ฟรีที่ <a href="https://console.groq.com" target="_blank">console.groq.com</a>
+          → API Keys → Create API Key
+        </div>
+      </div>
+
       <button type="submit" class="btn">สมัครสมาชิก</button>
     </form>
 

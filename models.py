@@ -54,23 +54,27 @@ class ResumeResult:
     keyword: float = 0.0
     struct: float = 0.0
     experience: str = "ไม่ระบุ"
-    gpa: Optional[float] = None       # GPA ที่ดึงได้จาก resume
+    gpa: Optional[float] = None
     error: Optional[str] = None
     struct_checks: dict = field(default_factory=dict)
+    req_keywords: dict = field(default_factory=dict)  # {"python": True, "excel": False}
+    bon_keywords: dict = field(default_factory=dict)  # {"powerbi": True, "crm": False}
 
     def to_dict(self) -> dict:
         return {
-            "name":         self.name,
-            "file":         self.file,
-            "score":        self.score,
+            "name":           self.name,
+            "file":           self.file,
+            "score":          self.score,
             "recommendation": self.recommendation,
-            "tfidf":        self.tfidf,
-            "keyword":      self.keyword,
-            "struct":       self.struct,
-            "experience":   self.experience,
-            "gpa":          self.gpa,
-            "error":        self.error,
-            "struct_checks": self.struct_checks,
+            "tfidf":          self.tfidf,
+            "keyword":        self.keyword,
+            "struct":         self.struct,
+            "experience":     self.experience,
+            "gpa":            self.gpa,
+            "error":          self.error,
+            "struct_checks":  self.struct_checks,
+            "req_keywords":   self.req_keywords,
+            "bon_keywords":   self.bon_keywords,
         }
 
     def passed(self) -> bool:
@@ -165,6 +169,12 @@ class Analyzer:
         # ── ดึง GPA จาก resume ──────────────────────────────
         gpa_value = extract_gpa(text)
 
+        # ── keyword breakdown (ทำก่อนเช็ค required) ─────────
+        req_hits = {kw: (kw.lower() in text)
+                    for kw in self.config.required_keywords}
+        bon_hits = {kw: (kw.lower() in text)
+                    for kw in self.config.bonus_keywords}
+
         # ── เช็ค required keywords + วุฒิ + GPA ────────────
         missing = self._check_required(text, gpa_value=gpa_value)
         if missing:
@@ -176,6 +186,8 @@ class Analyzer:
                 error=f"ขาดคุณสมบัติ: {', '.join(missing)}",
                 experience=self._extract_exp(text),
                 gpa=gpa_value,
+                req_keywords=req_hits,
+                bon_keywords=bon_hits,
             )
 
         # ── คำนวณคะแนน 3 ส่วน ───────────────────────────────
@@ -208,6 +220,8 @@ class Analyzer:
             experience=self._extract_exp(text),
             gpa=gpa_value,
             struct_checks=struct["checks"],
+            req_keywords=req_hits,
+            bon_keywords=bon_hits,
         )
 
     def _check_required(self, text: str, gpa_value: Optional[float] = None) -> list:

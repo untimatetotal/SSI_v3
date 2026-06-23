@@ -15,7 +15,7 @@ from flask_bcrypt import Bcrypt
 import sys
 sys.path.append(".")
 from models import Config, ResumeScreener
-from database import init_db, save_history, get_history_list, get_history_by_id, delete_history
+from database import init_db, save_history, get_history_list, get_history_by_id, delete_history, get_user_groq_key
 from auth import auth
 
 app = Flask(__name__)
@@ -61,6 +61,7 @@ def analyze():
     jd_tmp_path = None
     jd_txt_path = None
     resume_tmp  = []
+    translated_tmp_paths = {}
 
     try:
         import fitz
@@ -106,14 +107,92 @@ def analyze():
         pass_thr = int(request.form.get("pass_threshold", 60))
         rev_thr  = int(request.form.get("review_threshold", 40))
         ai_mode  = request.form.get("ai_mode", "tfidf")
-        groq_key = request.form.get("groq_key", "")
+
+        # ── ดึง Groq API Key จาก session (บันทึกตอน login/register) ──
+        groq_key = session.get("groq_api_key", "") or get_user_groq_key(session["user_id"])
 
         min_gpa_raw = request.form.get("min_gpa", "").strip()
         min_gpa = float(min_gpa_raw) if min_gpa_raw else None
 
+        # ── ฟังก์ชันตรวจว่าข้อความมีภาษาไทยไหม ──────────────
+        def has_thai(text: str) -> bool:
+            return any('\u0e00' <= c <= '\u0e7f' for c in text)
+
+        # ── ฟังก์ชันแปลข้อความไทย→อังกฤษด้วย Groq ────────────
+        def translate_to_english(text: str, client) -> str:
+            """แปลข้อความไทย (หรือผสม) เป็นอังกฤษ — คืนข้อความเดิมถ้า error"""
+            try:
+                resp = client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=[
+                        {"role": "system", "content": (
+                            "You are a professional translator. "
+                            "Translate the Thai text to English accurately. "
+                            "Keep proper nouns, company names, and technical terms as-is. "
+                            "Return ONLY the translated text, no explanations."
+                        )},
+                        {"role": "user", "content": text[:2000]},
+                    ],
+                    temperature=0.1,
+                    max_tokens=1000,
+                )
+                return resp.choices[0].message.content.strip()
+            except Exception:
+                return text  # ถ้าแปลไม่ได้ ใช้ข้อความเดิม
+
+        # ── แปล JD ถ้าเป็นภาษาไทย ────────────────────────────
+        translate_key = groq_key or request.form.get("groq_key", "")
+        if has_thai(jd_text) and translate_key:
+            from groq import Groq as GroqClient
+            _trans_client = GroqClient(api_key=translate_key)
+            jd_text = translate_to_english(jd_text, _trans_client)
+
+        # ── บันทึก JD (อาจแปลแล้ว) ลง temp file ──────────────
         with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8") as jd_tmp:
             jd_tmp.write(jd_text)
             jd_txt_path = jd_tmp.name
+
+        # ── แปล Resume ไทย→อังกฤษ (batch 5 ฉบับ/รอบ) ─────────
+        # สร้าง map: orig_filename → translated_tmp_path
+        translated_tmp_paths = {}   # orig_name → new_tmp_path (ถ้าแปล)
+
+        if translate_key:
+            from groq import Groq as GroqClient
+            _trans_client = GroqClient(api_key=translate_key)
+
+            # อ่านข้อความจาก resume แต่ละไฟล์ก่อน
+            thai_resumes = []   # list of (orig_name, tmp_path, text)
+            for orig_name, tmp_path in resume_tmp:
+                try:
+                    doc = fitz.open(tmp_path)
+                    text = " ".join(page.get_text() for page in doc)
+                    doc.close()
+                    if has_thai(text):
+                        thai_resumes.append((orig_name, tmp_path, text))
+                except Exception:
+                    pass
+
+            # แปลทีละ 5 ฉบับเพื่อไม่ให้เกิน token limit/นาที
+            BATCH_SIZE = 5
+            for i in range(0, len(thai_resumes), BATCH_SIZE):
+                batch = thai_resumes[i:i + BATCH_SIZE]
+                for orig_name, tmp_path, thai_text in batch:
+                    translated = translate_to_english(thai_text, _trans_client)
+                    # บันทึกข้อความที่แปลแล้วลง temp file ใหม่
+                    with tempfile.NamedTemporaryFile(
+                        delete=False, suffix=".txt", mode="w", encoding="utf-8"
+                    ) as tf:
+                        tf.write(translated)
+                        translated_tmp_paths[orig_name] = tf.name
+
+        # ── สร้าง resume_paths สำหรับ TF-IDF ─────────────────
+        # ถ้าแปลแล้ว → ใช้ไฟล์ที่แปล, ถ้าไม่ → ใช้ไฟล์ PDF เดิม
+        effective_paths = []
+        for orig_name, tmp_path in resume_tmp:
+            if orig_name in translated_tmp_paths:
+                effective_paths.append(translated_tmp_paths[orig_name])
+            else:
+                effective_paths.append(tmp_path)
 
         config = Config(
             required_keywords=req_kws,
@@ -126,7 +205,7 @@ def analyze():
         screener = ResumeScreener(config=config)
         results  = screener.screen(
             jd_path=jd_txt_path,
-            resume_paths=[p for _, p in resume_tmp],
+            resume_paths=effective_paths,
         )
 
         path_to_original = {p: orig for orig, p in resume_tmp}
@@ -268,6 +347,9 @@ def analyze():
             try: os.unlink(jd_txt_path)
             except: pass
         for _, p in resume_tmp:
+            try: os.unlink(p)
+            except: pass
+        for p in (translated_tmp_paths or {}).values():
             try: os.unlink(p)
             except: pass
 

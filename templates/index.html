@@ -101,6 +101,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
 .results-sub{font-size:12.5px;color:var(--sub);margin-top:3px}
 .export-btn{padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--sub);font-size:12.5px;cursor:pointer;transition:all .15s;font-weight:500}
 .export-btn:hover{border-color:var(--accent);color:var(--accent)}
+.export-btn:disabled{opacity:.6;cursor:not-allowed}
 
 /* Stats */
 .stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
@@ -201,18 +202,18 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
 .guide-step p{font-size:12.5px;color:var(--sub);line-height:1.6}
 .guide-step code{background:var(--surface);padding:1px 6px;border-radius:5px;font-size:11.5px;color:var(--accent);font-family:monospace}
 
-
 </style>
-</head>
-<!--  libary PDF -->
+
+<!-- PDF export libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
 
 <body>
 
 <nav>
   <div class="logo">
-     <img src="static/SSI-Group-logo-transparent.png" style="width:90px;height:90px;border-radius:8px"> CV-Screener</div>
+     <img src="/static/SSI-Group-logo-transparent.png" style="height:36px;width:auto;object-fit:contain"> CV-Screener</div>
   <div class="nav-links">
     <a onclick="openHistory()">ประวัติ</a>
     <a onclick="openGuide()">คู่มือการใช้งาน</a>
@@ -248,6 +249,14 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
     <div class="history-list">
 
      <div class="guide-step">
+  <div class="guide-num">1</div>
+  <div>
+    <div class="guide-title">ใส่ Job Specification</div>
+    <p>อัปโหลดไฟล์ <b>.txt</b> หรือ <b>.pdf</b> โดยคลิกหรือลากไฟล์มาวาง หรือสลับไปแท็บ <b>"พิมพ์เอง"</b> แล้วพิมพ์รายละเอียดงานตรงๆ</p>
+  </div>
+</div>
+
+<div class="guide-step">
   <div class="guide-num">2</div>
   <div>
     <div class="guide-title">อัปโหลด Resume</div>
@@ -308,7 +317,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
   <div class="guide-num">9</div>
   <div>
     <div class="guide-title">ประวัติและ Export</div>
-    <p>ผลการวิเคราะห์แต่ละครั้งจะถูกบันทึกอัตโนมัติ ดูย้อนหลังได้ที่เมนู <b>"ประวัติ"</b> หรือกด <b>"Export JSON"</b> เพื่อดาวน์โหลดผลลัพธ์</p>
+    <p>ผลการวิเคราะห์แต่ละครั้งจะถูกบันทึกอัตโนมัติ ดูย้อนหลังได้ที่เมนู <b>"ประวัติ"</b> หรือกด <b>"Export PDF"</b> เพื่อดาวน์โหลดรายงานผลลัพธ์เป็น PDF</p>
   </div>
 </div>
 
@@ -381,7 +390,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
       <!-- Required keywords -->
       <div class="field">
         <div class="field-label">Required Keywords <span class="opt">(บังคับ)</span></div>
-        <input type="text" id="req-kw" placeholder="เช่น python data excel" autocomplete="off">
+        <input type="text" id="req-kw" placeholder="เช่น python data excel">
         <div class="field-hint">ขาดคำใดคำหนึ่ง = ตัดออกทันที</div>
       </div>
 
@@ -397,13 +406,13 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
         <div class="field-hint">วุฒิที่สูงกว่าก็ผ่านเช่นกัน</div>
       </div>
 
-<!-- GPA -->
-<div class="field">
-  <div class="field-label">GPA ขั้นต่ำ <span class="opt">(ไม่บังคับ)</span></div>
-  <input type="number" id="min-gpa" placeholder="เช่น 2.50"
-         min="0" max="4" step="0.01" autocomplete="off">
-  <div class="field-hint">GPA ต้องมากกว่าหรือเท่ากับค่าที่กำหนด — ไม่พบ GPA = ไม่ผ่าน</div>
-</div>
+      <!-- GPA -->
+      <div class="field">
+        <div class="field-label">GPA ขั้นต่ำ <span class="opt">(ไม่บังคับ)</span></div>
+        <input type="number" id="min-gpa" placeholder="เช่น 2.50"
+               min="0" max="4" step="0.01" autocomplete="off">
+        <div class="field-hint">GPA ต้องมากกว่าหรือเท่ากับค่าที่กำหนด — ไม่พบ GPA = ไม่ผ่าน</div>
+      </div>
 
       <!-- Bonus keywords -->
       <div class="field field-full">
@@ -441,9 +450,9 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
 
       <div class="field field-full" id="ai-section" style="display:none">
         <div class="ai-box">
-          <div class="field-label">Groq API Key</div>
-          <input type="password" id="groq-key" placeholder="gsk_...">
-          <div class="field-label">ส่ง AI เฉพาะคะแนน TF-IDF ≥ <span id="thr-val">30</span></div>
+          <div class="field-label" style="color:var(--purple)">🤖 โหมด Groq AI</div>
+          <p style="font-size:12.5px;color:var(--sub)">ระบบจะใช้ Groq API Key ที่ลงทะเบียนไว้อัตโนมัติ</p>
+          <div class="field-label" style="margin-top:8px">ส่ง AI เฉพาะคะแนน TF-IDF ≥ <span id="thr-val">30</span></div>
           <input type="range" min="0" max="100" value="30" oninput="document.getElementById('thr-val').textContent=this.value" id="ai-thr">
         </div>
       </div>
@@ -458,49 +467,55 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
       <div class="results-title">ผลการคัดกรอง</div>
       <div class="results-sub" id="result-sub">รอการวิเคราะห์...</div>
     </div>
-   <!--<button class="export-btn" onclick="exportPDF()">⬇ Export PDF</button>--> 
+    <button class="export-btn" id="export-pdf-btn" onclick="exportPDF()">⬇ Export PDF</button>
   </div>
 
-  <div class="stat-row" id="stat-row" style="display:none">
-    <div class="stat-card"><div class="stat-num" id="s-total">0</div><div class="stat-lbl">ทั้งหมด</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--green)"  id="s-pass">0</div><div class="stat-lbl">ผ่าน</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--amber)"  id="s-rev">0</div><div class="stat-lbl">พิจารณา</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--red)"    id="s-fail">0</div><div class="stat-lbl">ไม่ผ่าน</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--purple)" id="s-ai">0</div><div class="stat-lbl">AI ใช้</div></div>
-  </div>
+  <!-- ── ส่วนที่จะถูกถ่ายภาพเพื่อสร้าง PDF ── -->
+  <div id="pdf-capture-area">
 
-  <div class="token-panel" id="token-panel">
-    <div class="token-row">
-      <div class="token-title">Groq Token Usage <span style="color:var(--sub);font-weight:400">(ต่อ 1 นาที)</span></div>
-      <div class="token-nums" id="token-nums">0 / 6,000</div>
+    <div class="stat-row" id="stat-row" style="display:none">
+      <div class="stat-card"><div class="stat-num" id="s-total">0</div><div class="stat-lbl">ทั้งหมด</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--green)"  id="s-pass">0</div><div class="stat-lbl">ผ่าน</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--amber)"  id="s-rev">0</div><div class="stat-lbl">พิจารณา</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--red)"    id="s-fail">0</div><div class="stat-lbl">ไม่ผ่าน</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--purple)" id="s-ai">0</div><div class="stat-lbl">AI ใช้</div></div>
     </div>
-    <div class="token-bar"><div class="token-bar-fill" id="token-bar-fill" style="width:0%"></div></div>
-    <div class="token-detail">
-      <span>Input <b id="tok-in">0</b></span>
-      <span>Output <b id="tok-out">0</b></span>
-      <span>ใช้ไป <b id="tok-used">0</b></span>
-      <span>คงเหลือ <b id="tok-remain">6,000</b></span>
+
+    <div class="token-panel" id="token-panel">
+      <div class="token-row">
+        <div class="token-title">Groq Token Usage <span style="color:var(--sub);font-weight:400">(ต่อ 1 นาที)</span></div>
+        <div class="token-nums" id="token-nums">0 / 6,000</div>
+      </div>
+      <div class="token-bar"><div class="token-bar-fill" id="token-bar-fill" style="width:0%"></div></div>
+      <div class="token-detail">
+        <span>Input <b id="tok-in">0</b></span>
+        <span>Output <b id="tok-out">0</b></span>
+        <span>ใช้ไป <b id="tok-used">0</b></span>
+        <span>คงเหลือ <b id="tok-remain">6,000</b></span>
+      </div>
     </div>
-  </div>
 
-  <div class="pills" id="filter-pills" style="display:none">
-    <button class="pill on" onclick="filterResults('all',this)">ทั้งหมด</button>
-    <button class="pill" onclick="filterResults('ผ่าน',this)">ผ่าน</button>
-    <button class="pill" onclick="filterResults('พิจารณาเพิ่มเติม',this)">พิจารณา</button>
-    <button class="pill" onclick="filterResults('ไม่ผ่าน',this)">ไม่ผ่าน</button>
-  </div>
+    <div class="pills" id="filter-pills" style="display:none">
+      <button class="pill on" onclick="filterResults('all',this)">ทั้งหมด</button>
+      <button class="pill" onclick="filterResults('ผ่าน',this)">ผ่าน</button>
+      <button class="pill" onclick="filterResults('พิจารณาเพิ่มเติม',this)">พิจารณา</button>
+      <button class="pill" onclick="filterResults('ไม่ผ่าน',this)">ไม่ผ่าน</button>
+    </div>
 
-  <div class="loading" id="loading">
-    <div class="spinner"></div>
-    <p>กำลังวิเคราะห์ Resume...</p>
-  </div>
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>กำลังวิเคราะห์ Resume...</p>
+    </div>
 
-  <div class="empty" id="empty-state">
-    <div class="empty-icon">📋</div>
-    <p>กรอกข้อมูลด้านบนแล้วกด <b>วิเคราะห์ Resume</b></p>
-  </div>
+    <div class="empty" id="empty-state">
+      <div class="empty-icon">📋</div>
+      <p>กรอกข้อมูลด้านบนแล้วกด <b>วิเคราะห์ Resume</b></p>
+    </div>
 
-  <div id="results-container"></div>
+    <div id="results-container"></div>
+
+  </div>
+  <!-- ── จบส่วนที่ถ่ายภาพ ── -->
 
 </div>
 
@@ -644,11 +659,10 @@ async function runAnalyze() {
   fd.append('required',   document.getElementById('req-kw').value);
   fd.append('bonus',      document.getElementById('bon-kw').value);
   fd.append('edu',        document.getElementById('edu').value);
+  fd.append('min_gpa',    document.getElementById('min-gpa')?.value || '');
   fd.append('pass_threshold',   document.getElementById('pass-slider').value);
   fd.append('review_threshold', document.getElementById('rev-slider').value);
   fd.append('ai_mode',    aiMode);
-  fd.append('groq_key',   document.getElementById('groq-key')?.value||'');
-  fd.append('min_gpa', document.getElementById('min-gpa').value);
 
   document.getElementById('run-btn').disabled = true;
   document.getElementById('loading').style.display = 'block';
@@ -735,6 +749,21 @@ function renderResults(results) {
     const sym = lbl[r.recommendation]||'?';
     const ai  = r.insight && !r.insight.error;
     const struct = r.struct_checks||{};
+    const reqKw  = r.req_keywords||{};
+    const bonKw  = r.bon_keywords||{};
+
+    // สร้าง keyword badge
+    const reqBadges = Object.entries(reqKw).map(([kw,found])=>
+      `<span class="struct-tag" style="color:${found?'var(--green)':'var(--red)'}">
+        ${found?'✓':'✗'} ${kw}
+      </span>`
+    ).join('');
+
+    const bonBadges = Object.entries(bonKw).map(([kw,found])=>
+      `<span class="struct-tag" style="color:${found?'var(--green)':'var(--faint)'}">
+        ${found?'✓':'○'} ${kw}
+      </span>`
+    ).join('');
 
     return `
 <div class="rcard" data-rec="${r.recommendation}">
@@ -742,7 +771,7 @@ function renderResults(results) {
     <div class="rank">${r.rank}</div>
     <div>
       <div class="rname">${r.file} ${ai?'<span style="font-size:11px;color:var(--purple)">· AI</span>':''}</div>
-      <div class="rmeta"><span>📄 ${r.file}</span><span>⏱ ${r.experience}</span>${r.gpa ? `<span>🎓 GPA ${r.gpa}</span>` : ''}</div>
+      <div class="rmeta"><span>⏱ ${r.experience}</span>${r.gpa != null ? `<span>🎓 GPA ${r.gpa.toFixed(2)}</span>` : ''}</div>
     </div>
     <div class="bars">
       <div class="brow"><span class="blbl">TF-IDF</span><div class="btrack"><div class="bfill" style="width:${r.tfidf}%;background:var(--accent)"></div></div><span class="bval" style="color:var(--accent)">${r.tfidf}</span></div>
@@ -758,10 +787,22 @@ function renderResults(results) {
   <div class="rcard-detail" id="detail-${i}">
     <div class="detail-grid">
       <div>
+
+        ${Object.keys(reqKw).length ? `
+        <div class="detail-label">Required Keywords</div>
+        <div class="struct-list" style="margin-bottom:12px">${reqBadges}</div>
+        ` : ''}
+
+        ${Object.keys(bonKw).length ? `
+        <div class="detail-label">Bonus Keywords</div>
+        <div class="struct-list" style="margin-bottom:12px">${bonBadges}</div>
+        ` : ''}
+
         <div class="detail-label">โครงสร้าง Resume</div>
         <div class="struct-list">
           ${Object.entries(struct).map(([k,v])=>`<span class="struct-tag" style="color:${v?'var(--green)':'var(--red)'}">${v?'✓':'✗'} ${k}</span>`).join('')}
         </div>
+
         ${r.error?`<div class="warn-box" style="margin-top:10px">${r.error}</div>`:''}
       </div>
       ${ai?`
@@ -783,11 +824,12 @@ function toggle(i) {
   document.getElementById('detail-'+i).classList.toggle('open');
 }
 
-// ── export PDF ─
+// ── export PDF (html2canvas + jsPDF) ──────────────────────────
 async function exportPDF() {
   if (!allResults.length) return alert('ยังไม่มีผลลัพธ์');
 
   const btn = document.getElementById('export-pdf-btn');
+  const originalText = btn.textContent;
   btn.textContent = 'กำลังสร้าง PDF...';
   btn.disabled = true;
 
@@ -804,7 +846,7 @@ async function exportPDF() {
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
 
-    // คำนวณขนาดให้พอดีกับ A4
+    // คำนวณขนาดให้พอดีกับความกว้าง A4 (595pt) แล้วปรับความสูงตามสัดส่วนภาพ
     const pdfWidth = 595;
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
@@ -822,11 +864,10 @@ async function exportPDF() {
   } catch (e) {
     alert('สร้าง PDF ไม่สำเร็จ: ' + e.message);
   } finally {
-    btn.textContent = '⬇ Export PDF';
+    btn.textContent = originalText;
     btn.disabled = false;
   }
 }
-
 
 // ── guide panel ──────────────────────────────────────────────
 function openGuide() {
