@@ -13,6 +13,9 @@ from functools import wraps
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_bcrypt import Bcrypt
 import sys
+import platform
+
+
 sys.path.append(".")
 from models import Config, ResumeScreener
 from database import init_db, save_history, get_history_list, get_history_by_id, delete_history, get_user_groq_key
@@ -130,7 +133,9 @@ def analyze():
                         import pytesseract
                         from PIL import Image as PILImage
                         import io
-                        pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+                        import platform
+                        if platform.system() == 'windows':
+                            pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
                         doc = fitz.open(js_tmp_path)
                         ocr_texts = []
                         for page in doc:
@@ -169,7 +174,8 @@ def analyze():
         edu_kws  = EDU_MAP.get(request.form.get("edu",""), [])
         pass_thr = int(request.form.get("pass_threshold", 60))
         rev_thr  = int(request.form.get("review_threshold", 40))
-        ai_mode  = request.form.get("ai_mode", "tfidf")
+        ai_mode      = request.form.get("ai_mode", "tfidf")
+        ai_threshold = int(request.form.get("ai_threshold", 0))
 
         # ── ดึง Groq API Key จาก session ─────────────────────
         groq_key = session.get("groq_api_key", "") or get_user_groq_key(session["user_id"])
@@ -306,7 +312,7 @@ def analyze():
             client = Groq(api_key=groq_key)
 
             for r in results:
-                if r.score < 30:
+                if r.score < ai_threshold:
                     continue
                 tmp_path = next((p for orig, p in resume_tmp if orig == r.file), None)
                 if not tmp_path:

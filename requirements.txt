@@ -4,3 +4,5 @@ scikit-learn
 groq
 gunicorn
 flask-bcrypt
+pytesseract
+pillow
