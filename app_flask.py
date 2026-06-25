@@ -13,9 +13,6 @@ from functools import wraps
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_bcrypt import Bcrypt
 import sys
-import platform
-
-
 sys.path.append(".")
 from models import Config, ResumeScreener
 from database import init_db, save_history, get_history_list, get_history_by_id, delete_history, get_user_groq_key
@@ -90,8 +87,9 @@ def analyze():
                     try:
                         import pytesseract
                         from PIL import Image as PILImage
-                        import io
-                        pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+                        import io, platform
+                        if platform.system() == 'Windows':
+                            pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
                         doc = fitz.open(jd_tmp_path)
                         ocr_texts = []
                         for page in doc:
@@ -132,9 +130,8 @@ def analyze():
                     try:
                         import pytesseract
                         from PIL import Image as PILImage
-                        import io
-                        import platform
-                        if platform.system() == 'windows':
+                        import io, platform
+                        if platform.system() == 'Windows':
                             pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
                         doc = fitz.open(js_tmp_path)
                         ocr_texts = []
