@@ -66,6 +66,7 @@ def analyze():
     try:
         import fitz
 
+        # ── รับ JD ────────────────────────────────────────
         jd_text  = ""
         jd_label = "Job Description"
         if "jd_file" in request.files and request.files["jd_file"].filename:
@@ -79,6 +80,26 @@ def analyze():
                 jd_text = " ".join(p.get_text() for p in doc).lower()
                 doc.close()
                 doc = None
+                print(f"[DEBUG JD] fitz length={len(jd_text)}")
+                # ── OCR fallback ถ้า fitz อ่านไม่ออก ────────
+                if not jd_text.strip():
+                    print("[DEBUG JD] fitz อ่านไม่ออก → ลอง OCR")
+                    try:
+                        import pytesseract
+                        from PIL import Image as PILImage
+                        import io
+                        pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+                        doc = fitz.open(jd_tmp_path)
+                        ocr_texts = []
+                        for page in doc:
+                            pix = page.get_pixmap(dpi=200)
+                            img = PILImage.open(io.BytesIO(pix.tobytes('png')))
+                            ocr_texts.append(pytesseract.image_to_string(img, lang='tha+eng'))
+                        doc.close()
+                        jd_text = " ".join(ocr_texts).lower()
+                        print(f"[DEBUG JD] OCR length={len(jd_text)} preview={repr(jd_text[:100])}")
+                    except Exception as e:
+                        print(f"[DEBUG JD] OCR error: {e}")
                 try: os.unlink(jd_tmp_path)
                 except: pass
                 jd_tmp_path = None
@@ -88,8 +109,50 @@ def analyze():
             jd_text = request.form["jd_text"].lower()
             jd_label = (request.form["jd_text"].strip().splitlines() or ["Job Description"])[0][:60]
 
-        if not jd_text.strip():
-            return jsonify({"error": "กรุณาใส่ Job Description"}), 400
+        # ── รับ JS ────────────────────────────────────────
+        js_text  = ""
+        js_tmp_path = None
+        if "js_file" in request.files and request.files["js_file"].filename:
+            js_file = request.files["js_file"]
+            if js_file.filename.lower().endswith(".pdf"):
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f:
+                    js_file.save(f.name)
+                    js_tmp_path = f.name
+                doc = fitz.open(js_tmp_path)
+                js_text = " ".join(p.get_text() for p in doc).lower()
+                doc.close()
+                doc = None
+                print(f"[DEBUG JS] fitz length={len(js_text)}")
+                # ── OCR fallback ถ้า fitz อ่านไม่ออก ────────
+                if not js_text.strip():
+                    print("[DEBUG JS] fitz อ่านไม่ออก → ลอง OCR")
+                    try:
+                        import pytesseract
+                        from PIL import Image as PILImage
+                        import io
+                        pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+                        doc = fitz.open(js_tmp_path)
+                        ocr_texts = []
+                        for page in doc:
+                            pix = page.get_pixmap(dpi=200)
+                            img = PILImage.open(io.BytesIO(pix.tobytes('png')))
+                            ocr_texts.append(pytesseract.image_to_string(img, lang='tha+eng'))
+                        doc.close()
+                        js_text = " ".join(ocr_texts).lower()
+                        print(f"[DEBUG JS] OCR length={len(js_text)} preview={repr(js_text[:100])}")
+                    except Exception as e:
+                        print(f"[DEBUG JS] OCR error: {e}")
+                try: os.unlink(js_tmp_path)
+                except: pass
+                js_tmp_path = None
+            else:
+                js_text = js_file.read().decode("utf-8", errors="ignore").lower()
+
+        # ── รวม JD + JS ───────────────────────────────────
+        jd_text = f"{jd_text} {js_text}".strip()
+
+        if not jd_text:
+            return jsonify({"error": "อ่านไฟล์ไม่ออก — PDF อาจเป็นไฟล์สแกน ลองใช้แท็บ 'พิมพ์เอง' แทน หรือแปลงเป็น .txt ก่อน"}), 400
 
         resume_files = request.files.getlist("resumes")
         if not resume_files or not resume_files[0].filename:
@@ -108,7 +171,7 @@ def analyze():
         rev_thr  = int(request.form.get("review_threshold", 40))
         ai_mode  = request.form.get("ai_mode", "tfidf")
 
-        # ── ดึง Groq API Key จาก session (บันทึกตอน login/register) ──
+        # ── ดึง Groq API Key จาก session ─────────────────────
         groq_key = session.get("groq_api_key", "") or get_user_groq_key(session["user_id"])
 
         min_gpa_raw = request.form.get("min_gpa", "").strip()
@@ -120,7 +183,6 @@ def analyze():
 
         # ── ฟังก์ชันแปลข้อความไทย→อังกฤษด้วย Groq ────────────
         def translate_to_english(text: str, client) -> str:
-            """แปลข้อความไทย (หรือผสม) เป็นอังกฤษ — คืนข้อความเดิมถ้า error"""
             try:
                 resp = client.chat.completions.create(
                     model="llama-3.1-8b-instant",
@@ -138,30 +200,40 @@ def analyze():
                 )
                 return resp.choices[0].message.content.strip()
             except Exception:
-                return text  # ถ้าแปลไม่ได้ ใช้ข้อความเดิม
+                return text
 
-        # ── แปล JD ถ้าเป็นภาษาไทย ────────────────────────────
-        translate_key = groq_key or request.form.get("groq_key", "")
-        if has_thai(jd_text) and translate_key:
-            from groq import Groq as GroqClient
-            _trans_client = GroqClient(api_key=translate_key)
-            jd_text = translate_to_english(jd_text, _trans_client)
-
-        # ── บันทึก JD (อาจแปลแล้ว) ลง temp file ──────────────
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8") as jd_tmp:
-            jd_tmp.write(jd_text)
-            jd_txt_path = jd_tmp.name
-
-        # ── แปล Resume ไทย→อังกฤษ (batch 5 ฉบับ/รอบ) ─────────
-        # สร้าง map: orig_filename → translated_tmp_path
-        translated_tmp_paths = {}   # orig_name → new_tmp_path (ถ้าแปล)
-
+        # ── แปล JD และ JS แยกกันถ้าเป็นภาษาไทย ──────────────
+        translate_key = groq_key
         if translate_key:
             from groq import Groq as GroqClient
             _trans_client = GroqClient(api_key=translate_key)
+            if has_thai(jd_text):
+                print(f"[TRANSLATE] JD มีภาษาไทย — กำลังแปล...")
+                jd_text = translate_to_english(jd_text, _trans_client)
+                print(f"[TRANSLATE] JD แปลเสร็จ: {jd_text[:100]}")
+            if has_thai(js_text):
+                print(f"[TRANSLATE] JS มีภาษาไทย — กำลังแปล...")
+                js_text = translate_to_english(js_text, _trans_client)
+                print(f"[TRANSLATE] JS แปลเสร็จ: {js_text[:100]}")
 
-            # อ่านข้อความจาก resume แต่ละไฟล์ก่อน
-            thai_resumes = []   # list of (orig_name, tmp_path, text)
+        # ── รวม JD + JS หลังแปลแล้ว ──────────────────────────
+        combined_jd = f"{jd_text} {js_text}".strip()
+
+        # ── บันทึก JD+JS (แปลแล้ว) ลง temp file ──────────────
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8") as jd_tmp:
+            jd_tmp.write(combined_jd)
+            jd_txt_path = jd_tmp.name
+
+        # ── แปล Resume ไทย→อังกฤษ (batch 5 ฉบับ/รอบ) ─────────
+        translated_tmp_paths = {}
+
+        if translate_key:
+            # ใช้ _trans_client ที่สร้างไว้แล้วตอนแปล JD/JS (ถ้ามี)
+            if '_trans_client' not in dir():
+                from groq import Groq as GroqClient
+                _trans_client = GroqClient(api_key=translate_key)
+
+            thai_resumes = []
             for orig_name, tmp_path in resume_tmp:
                 try:
                     doc = fitz.open(tmp_path)
@@ -172,13 +244,11 @@ def analyze():
                 except Exception:
                     pass
 
-            # แปลทีละ 5 ฉบับเพื่อไม่ให้เกิน token limit/นาที
             BATCH_SIZE = 5
             for i in range(0, len(thai_resumes), BATCH_SIZE):
                 batch = thai_resumes[i:i + BATCH_SIZE]
                 for orig_name, tmp_path, thai_text in batch:
                     translated = translate_to_english(thai_text, _trans_client)
-                    # บันทึกข้อความที่แปลแล้วลง temp file ใหม่
                     with tempfile.NamedTemporaryFile(
                         delete=False, suffix=".txt", mode="w", encoding="utf-8"
                     ) as tf:
@@ -208,10 +278,17 @@ def analyze():
             resume_paths=effective_paths,
         )
 
+        # ── แปลง r.file (temp path) ให้เป็นชื่อไฟล์จริง ──────
         path_to_original = {p: orig for orig, p in resume_tmp}
+        # เพิ่ม translated paths เข้า map ทั้ง full path และ basename
+        for orig_name, trans_path in translated_tmp_paths.items():
+            path_to_original[trans_path] = orig_name
+            path_to_original[Path(trans_path).name] = orig_name  # ← เพิ่ม basename
+
         for r in results:
             matched = path_to_original.get(r.file)
             if not matched:
+                # ลอง match จาก basename ของ resume_tmp
                 for orig, p in resume_tmp:
                     if Path(p).name == Path(r.file).name:
                         matched = orig
@@ -247,7 +324,7 @@ def analyze():
                             {"role":"system","content":"Respond only with valid JSON."},
                             {"role":"user","content":(
                                 f"Analyze resume vs JD. JSON only.\n"
-                                f"JD: {jd_text[:600]}\n"
+                                f"JD: {combined_jd[:600]}\n"
                                 f"Resume: {resume_text}\n"
                                 f'Return: {{"ai_score":<0-100>,'
                                 f'"matched_skills":[],'

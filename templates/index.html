@@ -359,7 +359,7 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
     <div class="setup-grid">
       <!-- JD -->
       <div class="field field-full">
-        <div class="field-label">Job Specification (English only)</div>
+        <div class="field-label">Job Description</div>
         <div class="seg" style="align-self:flex-start;margin-bottom:4px">
           <button class="seg-btn on" id="btn-jd-file" onclick="setJdMode('file')">อัปโหลดไฟล์</button>
           <button class="seg-btn"   id="btn-jd-type" onclick="setJdMode('type')">พิมพ์เอง</button>
@@ -376,7 +376,20 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
         </div>
       </div>
 
-      <!-- Resume -->
+      <!-- Job Specification -->
+      <div class="field field-full">
+        <div class="field-label">Job Specification <span class="opt"></span></div>
+        <input type="file" id="js-input" accept=".txt,.pdf" style="display:none" onchange="showJsFile()">
+        <div class="upload-area" id="js-drop">
+          <span class="icon">📄</span>
+          <p id="js-label">คลิกหรือลากไฟล์ <b>.txt / .pdf</b> มาวาง</p>
+        </div>
+      </div>
+
+      <!-- Error: ต้องมีอย่างน้อย 1 -->
+      <div id="jd-js-error" class="warn-box" style="display:none;grid-column:1/-1">
+        กรุณาใส่อย่างน้อย 1 อย่าง (Job Description หรือ Job Specification)
+      </div>
       <div class="field field-full">
         <div class="field-label">Resume (PDF)</div>
         <input type="file" id="resume-input" accept=".pdf" multiple style="display:none" onchange="addResumes()">
@@ -389,9 +402,9 @@ input[type=range]{flex:1;accent-color:var(--accent);height:4px}
 
       <!-- Required keywords -->
       <div class="field">
-        <div class="field-label">Required Keywords <span class="opt">(บังคับ)</span></div>
+        <div class="field-label">Required Keywords <span class="opt">(ไม่บังคับใส่)</span></div>
         <input type="text" id="req-kw" placeholder="เช่น python data excel">
-        <div class="field-hint">ขาดคำใดคำหนึ่ง = ตัดออกทันที</div>
+        <div class="field-hint">ขาดคำใดคำหนึ่ง = ตัดออกทันที(คะแนน resume = 0 )</div>
       </div>
 
       <!-- Education -->
@@ -586,9 +599,12 @@ function setupDropZone(zoneId, onFiles) {
     if (files.length) onFiles(files);
   });
   zone.addEventListener('click', () => {
-    const input = zoneId === 'jd-drop'
-      ? document.getElementById('jd-input')
-      : document.getElementById('resume-input');
+    const inputMap = {
+      'jd-drop':     'jd-input',
+      'js-drop':     'js-input',
+      'resume-drop': 'resume-input',
+    };
+    const input = document.getElementById(inputMap[zoneId] || 'resume-input');
     input.click();
   });
 }
@@ -607,7 +623,24 @@ setupDropZone('jd-drop', (files) => {
   document.getElementById('jd-label').innerHTML = '✓ ' + file.name;
 });
 
-// ── Resume drop zone ─────────────────────────────────────────────
+// ── JS drop zone ──────────────────────────────────────────────
+function showJsFile() {
+  const f = document.getElementById('js-input').files[0];
+  if(f) document.getElementById('js-label').innerHTML = '✓ ' + f.name;
+}
+
+setupDropZone('js-drop', (files) => {
+  const file = files[0];
+  const name = file.name.toLowerCase();
+  if (!name.endsWith('.txt') && !name.endsWith('.pdf')) {
+    alert('รองรับเฉพาะไฟล์ .txt หรือ .pdf');
+    return;
+  }
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  document.getElementById('js-input').files = dt.files;
+  document.getElementById('js-label').innerHTML = '✓ ' + file.name;
+});
 setupDropZone('resume-drop', (files) => {
   const pdfs   = files.filter(f => f.name.toLowerCase().endsWith('.pdf'));
   const others = files.length - pdfs.length;
@@ -643,15 +676,21 @@ function renderResumeList() {
 async function runAnalyze() {
   const fd = new FormData();
 
-  if(jdMode==='file') {
-    const jdf = document.getElementById('jd-input').files[0];
-    if(!jdf) return alert('กรุณาเลือกไฟล์ JD');
-    fd.append('jd_file', jdf);
-  } else {
-    const txt = document.getElementById('jd-text').value.trim();
-    if(!txt) return alert('กรุณากรอก Job Specification');
-    fd.append('jd_text', txt);
+  const hasJD = jdMode === 'file'
+    ? document.getElementById('jd-input').files.length > 0
+    : document.getElementById('jd-text').value.trim() !== '';
+  const hasJS = document.getElementById('js-input') &&
+    document.getElementById('js-input').files.length > 0;
+
+  if (!hasJD && !hasJS) {
+    document.getElementById('jd-js-error').style.display = 'block';
+    return;
   }
+  document.getElementById('jd-js-error').style.display = 'none';
+
+  if (hasJD && jdMode === 'file') fd.append('jd_file', document.getElementById('jd-input').files[0]);
+  if (hasJD && jdMode === 'type') fd.append('jd_text', document.getElementById('jd-text').value);
+  if (hasJS) fd.append('js_file', document.getElementById('js-input').files[0]);
 
   if(resumeFiles.length===0) return alert('กรุณาอัปโหลด Resume');
   resumeFiles.forEach(f=>fd.append('resumes',f));
