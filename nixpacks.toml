@@ -1,2 +1,2 @@
 [phases.setup]
-nixPkgs = ["tesseract5", "tesseract5-lang"]
+aptPkgs = ["tesseract-ocr", "tesseract-ocr-tha", "tesseract-ocr-eng"]
