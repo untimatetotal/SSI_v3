@@ -15,11 +15,11 @@ from flask_bcrypt import Bcrypt
 import sys
 sys.path.append(".")
 from models import Config, ResumeScreener
-from database import init_db, save_history, get_history_list, get_history_by_id, delete_history, get_user_groq_key
+from database_postgres import init_db, save_history, get_history_list, get_history_by_id, delete_history, get_user_groq_key, search_candidates
 from auth import auth
 
 app = Flask(__name__)
-app.secret_key = "ssi-cvscreener-secret-key-2024"   # เปลี่ยนก่อน deploy จริง
+app.secret_key = "FdNVBcBJjwaaiu5-pwoy2yjeCLLIRQ0pIFO9vtrbMvQ="   # เปลี่ยนก่อน deploy จริง
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
 bcrypt = Bcrypt(app)
@@ -459,6 +459,20 @@ def history_delete_route(history_id):
     if not deleted:
         return jsonify({"error": "ไม่พบประวัตินี้หรือไม่มีสิทธิ์ลบ"}), 404
     return jsonify({"deleted": True})
+
+@app.route("/api/candidates/search", methods=["GET"])
+@login_required
+def api_search_candidates():
+    results = search_candidates(
+        user_id=session["user_id"],
+        min_score=request.args.get("min_score", type=float),
+        min_gpa=request.args.get("min_gpa", type=float),
+        min_experience=request.args.get("min_experience", type=float),
+        jd_label_contains=request.args.get("jd_label_contains"),
+    )
+    return jsonify({"candidates": results})
+
+
 
 
 if __name__ == "__main__":

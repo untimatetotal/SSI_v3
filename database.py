@@ -1,5 +1,6 @@
 # ============================================================
-# database.py — SQLite database for CVScreener
+# database.py — SQLite database for CVScreener 
+# this file for enrollment & save history 
 # ============================================================
 
 import sqlite3
