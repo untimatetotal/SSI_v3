@@ -4,11 +4,10 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, session
 from flask_bcrypt import Bcrypt
-from database_postgres import create_user, get_user_by_username
+from database import create_user, get_user_by_username
 
 auth = Blueprint("auth", __name__)
 bcrypt = Bcrypt()
-
 
 @auth.route("/login", methods=["GET", "POST"])
 def login():
@@ -76,8 +75,7 @@ def logout():
 
 from flask import Blueprint, render_template, request, redirect, url_for, session
 from flask_bcrypt import Bcrypt
-from database_postgres import create_user, get_user_by_username
-
+from database import create_user, get_user_by_username
 auth = Blueprint("auth", __name__)
 bcrypt = Bcrypt()
 

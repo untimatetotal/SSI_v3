@@ -15,8 +15,21 @@ from flask_bcrypt import Bcrypt
 import sys
 sys.path.append(".")
 from models import Config, ResumeScreener
-from database_postgres import init_db, save_history, get_history_list, get_history_by_id, delete_history, get_user_groq_key, search_candidates
+from database import init_db, save_history, get_history_list, get_history_by_id, delete_history, get_user_groq_key
 from auth import auth
+
+
+import shutil
+from flask import send_file
+try:
+    from openpyxl import Workbook
+except ImportError:
+    raise ImportError("please install : pip install openpyxl")
+
+QUALIFIED_DIR = Path("ResultFile/Qualified")
+TALENT_POOL_DIR = Path("ResultFile/TalentPool")
+
+
 
 app = Flask(__name__)
 app.secret_key = "FdNVBcBJjwaaiu5-pwoy2yjeCLLIRQ0pIFO9vtrbMvQ="   # เปลี่ยนก่อน deploy จริง
@@ -53,6 +66,23 @@ def login_required(f):
 @login_required
 def index():
     return render_template("index.html", username=session.get("username"))
+
+
+def sort_resume_file(orig_name, tmp_path, recommendation, jd_label):
+    """FR-5.3 (ผ่าน→Qualified Candidates) / FR-5.4 (ไม่ผ่าน→Talent Pool)"""
+    safe_position = "".join(c for c in (jd_label or "unknown") if c.isalnum() or c in " _-")[:50] or "unknown"
+    date_str = datetime.now().strftime("%Y-%m-%d")
+
+    if recommendation == "ผ่าน":
+        dest_dir = QUALIFIED_DIR / f"{safe_position}_{date_str}"
+    else:
+        dest_dir = TALENT_POOL_DIR / safe_position
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        shutil.copy(tmp_path, dest_dir / orig_name)
+    except Exception as e:
+        print(f"[warn] sort_resume_file failed: {e}")
 
 
 @app.route("/analyze", methods=["POST"])
@@ -267,14 +297,39 @@ def analyze():
             else:
                 effective_paths.append(tmp_path)
 
+        
+            age_min = request.form.get("age_min", type=int)
+            age_max = request.form.get("age_max", type=int)
+            age_range = (age_min, age_max) if age_min and age_max else None
+
+            gender = request.form.get("gender") or None
+
+            salary_min = request.form.get("salary_min", type=float)
+            salary_max = request.form.get("salary_max", type=float)
+            salary_range = (salary_min, salary_max) if salary_min and salary_max else None
+
+            enable_special  = request.form.get("enable_special") == "on"
+            require_vehicle = request.form.get("require_vehicle") == "on"
+            require_license = request.form.get("require_license") == "on"
+            min_toeic       = request.form.get("min_toeic", type=float)
+
+
+
         config = Config(
-            required_keywords=req_kws,
-            edu_keywords=edu_kws,
-            bonus_keywords=bon_kws,
+            position_keywords=req_kws,
+            skill_keywords=bon_kws,
+            edu_level_keywords=edu_kws,
+            min_gpa=min_gpa,
+            age_range=age_range,
+            gender=gender,
+            salary_range=salary_range,
+            enable_special_score=enable_special,
+            require_vehicle=require_vehicle,
+            require_license=require_license,
+            min_toeic_score=min_toeic,
             pass_threshold=pass_thr,
             review_threshold=rev_thr,
-            min_gpa=min_gpa,
-        )
+)
         screener = ResumeScreener(config=config)
         results  = screener.screen(
             jd_path=jd_txt_path,
@@ -384,6 +439,10 @@ def analyze():
             d["insight"] = ai_insights.get(r.file, None)
             output.append(d)
 
+            tmp_path = next((p for orig, p in resume_tmp if orig == r.file), None)
+            if tmp_path:
+                    sort_resume_file(r.file, tmp_path, r.recommendation, jd_label)
+
         tokens_remaining = max(0, TOKEN_LIMIT_PER_MIN - total_tokens_used)
 
         summary = {
@@ -473,7 +532,36 @@ def api_search_candidates():
     return jsonify({"candidates": results})
 
 
+@app.route("/export/excel/<history_id>", methods=["GET"])
+@login_required
+def export_excel(history_id):
+    data = get_history_by_id(history_id, session["user_id"])
+    if not data:
+        return jsonify({"error": "ไม่พบประวัตินี้"}), 404
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "ผลการคัดกรอง"
+    ws.append(["Rank", "ชื่อไฟล์", "คะแนนรวม", "สถานะ",
+               "Keyword Score", "AI Score", "Structure Score",
+               "GPA", "ประสบการณ์", "ขาดคุณสมบัติ"])
+
+    for r in data.get("results", []):
+        ws.append([
+            r.get("rank"), r.get("file"), r.get("score"), r.get("recommendation"),
+            r.get("keyword_score"), r.get("ai_score"), r.get("struct_score"),
+            r.get("gpa"), r.get("experience"),
+            ", ".join(r.get("missing_keywords", [])),
+        ])
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
+    wb.save(tmp.name)
+    wb.close()
+    return send_file(tmp.name, as_attachment=True,
+                      download_name=f"cvscreener_{history_id}.xlsx")
+
+
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5050)
