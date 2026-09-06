@@ -1,38 +1,41 @@
 # ============================================================
 # app_flask.py — CVScreener Flask Web App (with Login)
 # ============================================================
-# ติดตั้ง: pip install flask groq pymupdf flask-bcrypt
+# ติดตั้ง: pip install flask groq pymupdf flask-bcrypt openpyxl
 # รัน:     python app_flask.py
-# เปิด:    http://localhost:5000
+# เปิด:    http://localhost:5050
+# ============================================================
+# ⚠️ สถานะปัจจุบัน (ตามที่คุยกันไว้ในบทสนทนา):
+#   - import ยังชี้ไปที่ `database` (SQLite) ชั่วคราว เพราะ Postgres
+#     บน Railway ยัง offline อยู่ (billing) — สลับกลับเป็น
+#     `database_postgres` เมื่อแก้ billing เสร็จแล้ว
+#   - @login_required ถูก comment ออกชั่วคราวเพื่อทดสอบโดยไม่ต้อง login
+#     ต้องเอากลับคืนก่อน deploy จริง (ดูจุดที่มี "TODO คืนค่า" กำกับ)
 # ============================================================
 
-import os, json, tempfile, gc, uuid
+import os, json, tempfile, gc, uuid, shutil
 from pathlib import Path
 from datetime import datetime
 from functools import wraps
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
 from flask_bcrypt import Bcrypt
 import sys
 sys.path.append(".")
-from models import Config, ResumeScreener
+
+from models import Config, ResumeScreener, extract_keywords_via_ai
+
+# TODO: สลับเป็น database_postgres เมื่อ Postgres กลับมาใช้ได้
 from database import init_db, save_history, get_history_list, get_history_by_id, delete_history, get_user_groq_key
+
 from auth import auth
 
-
-import shutil
-from flask import send_file
 try:
     from openpyxl import Workbook
 except ImportError:
     raise ImportError("please install : pip install openpyxl")
 
-QUALIFIED_DIR = Path("ResultFile/Qualified")
-TALENT_POOL_DIR = Path("ResultFile/TalentPool")
-
-
-
 app = Flask(__name__)
-app.secret_key = "FdNVBcBJjwaaiu5-pwoy2yjeCLLIRQ0pIFO9vtrbMvQ="   # เปลี่ยนก่อน deploy จริง
+app.secret_key = os.environ["SECRET_KEY"]
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
 bcrypt = Bcrypt(app)
@@ -42,6 +45,9 @@ with app.app_context():
     init_db()
 
 TOKEN_LIMIT_PER_MIN = 6000
+
+QUALIFIED_DIR   = Path("ResultFile/Qualified")
+TALENT_POOL_DIR = Path("ResultFile/TalentPool")
 
 EDU_MAP = {
     "1": ["diploma","ปวส","associate","อนุปริญญา",
@@ -62,12 +68,6 @@ def login_required(f):
     return decorated
 
 
-@app.route("/")
-@login_required
-def index():
-    return render_template("index.html", username=session.get("username"))
-
-
 def sort_resume_file(orig_name, tmp_path, recommendation, jd_label):
     """FR-5.3 (ผ่าน→Qualified Candidates) / FR-5.4 (ไม่ผ่าน→Talent Pool)"""
     safe_position = "".join(c for c in (jd_label or "unknown") if c.isalnum() or c in " _-")[:50] or "unknown"
@@ -83,6 +83,16 @@ def sort_resume_file(orig_name, tmp_path, recommendation, jd_label):
         shutil.copy(tmp_path, dest_dir / orig_name)
     except Exception as e:
         print(f"[warn] sort_resume_file failed: {e}")
+
+
+@app.route("/")
+# TODO คืนค่า: ใส่ @login_required กลับก่อน deploy จริง
+def index():
+    # TODO คืนค่า: ลบ 2 บรรทัดนี้ทิ้งเมื่อเอา @login_required กลับมา
+    if not session.get("user_id"):
+        session["user_id"] = 1
+        session["username"] = "test"
+    return render_template("index.html", username=session.get("username"))
 
 
 @app.route("/analyze", methods=["POST"])
@@ -111,7 +121,6 @@ def analyze():
                 doc.close()
                 doc = None
                 print(f"[DEBUG JD] fitz length={len(jd_text)}")
-                # ── OCR fallback ถ้า fitz อ่านไม่ออก ────────
                 if not jd_text.strip():
                     print("[DEBUG JD] fitz อ่านไม่ออก → ลอง OCR")
                     try:
@@ -154,7 +163,6 @@ def analyze():
                 doc.close()
                 doc = None
                 print(f"[DEBUG JS] fitz length={len(js_text)}")
-                # ── OCR fallback ถ้า fitz อ่านไม่ออก ────────
                 if not js_text.strip():
                     print("[DEBUG JS] fitz อ่านไม่ออก → ลอง OCR")
                     try:
@@ -180,7 +188,6 @@ def analyze():
             else:
                 js_text = js_file.read().decode("utf-8", errors="ignore").lower()
 
-        # ── รวม JD + JS ───────────────────────────────────
         jd_text = f"{jd_text} {js_text}".strip()
 
         if not jd_text:
@@ -204,17 +211,30 @@ def analyze():
         ai_mode      = request.form.get("ai_mode", "tfidf")
         ai_threshold = int(request.form.get("ai_threshold", 0))
 
-        # ── ดึง Groq API Key จาก session ─────────────────────
         groq_key = session.get("groq_api_key", "") or get_user_groq_key(session["user_id"])
 
         min_gpa_raw = request.form.get("min_gpa", "").strip()
         min_gpa = float(min_gpa_raw) if min_gpa_raw else None
 
-        # ── ฟังก์ชันตรวจว่าข้อความมีภาษาไทยไหม ──────────────
+        # ── FR-3: อ่านค่า filter ใหม่จากฟอร์ม ─────────────────
+        age_min = request.form.get("age_min", type=int)
+        age_max = request.form.get("age_max", type=int)
+        age_range = (age_min, age_max) if age_min and age_max else None
+
+        gender = request.form.get("gender") or None
+
+        salary_min = request.form.get("salary_min", type=float)
+        salary_max = request.form.get("salary_max", type=float)
+        salary_range = (salary_min, salary_max) if salary_min and salary_max else None
+
+        enable_special  = request.form.get("enable_special") == "on"
+        require_vehicle = request.form.get("require_vehicle") == "on"
+        require_license = request.form.get("require_license") == "on"
+        min_toeic       = request.form.get("min_toeic", type=float)
+
         def has_thai(text: str) -> bool:
             return any('\u0e00' <= c <= '\u0e7f' for c in text)
 
-        # ── ฟังก์ชันแปลข้อความไทย→อังกฤษด้วย Groq ────────────
         def translate_to_english(text: str, client) -> str:
             try:
                 resp = client.chat.completions.create(
@@ -235,7 +255,6 @@ def analyze():
             except Exception:
                 return text
 
-        # ── แปล JD และ JS แยกกันถ้าเป็นภาษาไทย ──────────────
         translate_key = groq_key
         if translate_key:
             from groq import Groq as GroqClient
@@ -249,19 +268,15 @@ def analyze():
                 js_text = translate_to_english(js_text, _trans_client)
                 print(f"[TRANSLATE] JS แปลเสร็จ: {js_text[:100]}")
 
-        # ── รวม JD + JS หลังแปลแล้ว ──────────────────────────
         combined_jd = f"{jd_text} {js_text}".strip()
 
-        # ── บันทึก JD+JS (แปลแล้ว) ลง temp file ──────────────
         with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8") as jd_tmp:
             jd_tmp.write(combined_jd)
             jd_txt_path = jd_tmp.name
 
-        # ── แปล Resume ไทย→อังกฤษ (batch 5 ฉบับ/รอบ) ─────────
         translated_tmp_paths = {}
 
         if translate_key:
-            # ใช้ _trans_client ที่สร้างไว้แล้วตอนแปล JD/JS (ถ้ามี)
             if '_trans_client' not in dir():
                 from groq import Groq as GroqClient
                 _trans_client = GroqClient(api_key=translate_key)
@@ -288,8 +303,6 @@ def analyze():
                         tf.write(translated)
                         translated_tmp_paths[orig_name] = tf.name
 
-        # ── สร้าง resume_paths สำหรับ TF-IDF ─────────────────
-        # ถ้าแปลแล้ว → ใช้ไฟล์ที่แปล, ถ้าไม่ → ใช้ไฟล์ PDF เดิม
         effective_paths = []
         for orig_name, tmp_path in resume_tmp:
             if orig_name in translated_tmp_paths:
@@ -297,23 +310,13 @@ def analyze():
             else:
                 effective_paths.append(tmp_path)
 
-        
-            age_min = request.form.get("age_min", type=int)
-            age_max = request.form.get("age_max", type=int)
-            age_range = (age_min, age_max) if age_min and age_max else None
-
-            gender = request.form.get("gender") or None
-
-            salary_min = request.form.get("salary_min", type=float)
-            salary_max = request.form.get("salary_max", type=float)
-            salary_range = (salary_min, salary_max) if salary_min and salary_max else None
-
-            enable_special  = request.form.get("enable_special") == "on"
-            require_vehicle = request.form.get("require_vehicle") == "on"
-            require_license = request.form.get("require_license") == "on"
-            min_toeic       = request.form.get("min_toeic", type=float)
-
-
+        # ── FR-4.6: สกัด keyword master list จาก JD/JS ด้วย AI (ครั้งเดียว) ──
+        ai_masterlist = []
+        if ai_mode == "hybrid" and groq_key:
+            from groq import Groq as GroqClient
+            _kw_client = GroqClient(api_key=groq_key)
+            ai_masterlist = extract_keywords_via_ai(combined_jd, _kw_client)
+            print(f"[FR-4.6] AI master list: {ai_masterlist}")
 
         config = Config(
             position_keywords=req_kws,
@@ -327,26 +330,24 @@ def analyze():
             require_vehicle=require_vehicle,
             require_license=require_license,
             min_toeic_score=min_toeic,
+            ai_keyword_masterlist=ai_masterlist,
             pass_threshold=pass_thr,
             review_threshold=rev_thr,
-)
+        )
         screener = ResumeScreener(config=config)
         results  = screener.screen(
             jd_path=jd_txt_path,
             resume_paths=effective_paths,
         )
 
-        # ── แปลง r.file (temp path) ให้เป็นชื่อไฟล์จริง ──────
         path_to_original = {p: orig for orig, p in resume_tmp}
-        # เพิ่ม translated paths เข้า map ทั้ง full path และ basename
         for orig_name, trans_path in translated_tmp_paths.items():
             path_to_original[trans_path] = orig_name
-            path_to_original[Path(trans_path).name] = orig_name  # ← เพิ่ม basename
+            path_to_original[Path(trans_path).name] = orig_name
 
         for r in results:
             matched = path_to_original.get(r.file)
             if not matched:
-                # ลอง match จาก basename ของ resume_tmp
                 for orig, p in resume_tmp:
                     if Path(p).name == Path(r.file).name:
                         matched = orig
@@ -354,83 +355,10 @@ def analyze():
             if matched:
                 r.file = matched
 
-        ai_insights = {}
+        ai_insights = {}  # เก็บไว้เผื่อ frontend เดิมอ้างถึง (ไม่ใช้จริงแล้ว — AI คำนวณใน models.py แล้ว)
         total_input_tokens  = 0
         total_output_tokens = 0
         total_tokens_used   = 0
-
-        if ai_mode == "hybrid" and groq_key:
-            from groq import Groq
-            client = Groq(api_key=groq_key)
-
-            for r in results:
-                if r.score < ai_threshold:
-                    continue
-                tmp_path = next((p for orig, p in resume_tmp if orig == r.file), None)
-                if not tmp_path:
-                    continue
-
-                doc = fitz.open(tmp_path)
-                resume_text = " ".join(page.get_text() for page in doc)[:1500]
-                doc.close()
-                doc = None
-
-                try:
-                    resp = client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
-                        messages=[
-                            {"role":"system","content":"Respond only with valid JSON."},
-                            {"role":"user","content":(
-                                f"Analyze resume vs JD. JSON only.\n"
-                                f"JD: {combined_jd[:600]}\n"
-                                f"Resume: {resume_text}\n"
-                                f'Return: {{"ai_score":<0-100>,'
-                                f'"matched_skills":[],'
-                                f'"missing_skills":[],'
-                                f'"summary":"Thai 1-sentence summary"}}'
-                            )}
-                        ],
-                        temperature=0.1,
-                        max_tokens=300,
-                    )
-
-                    usage = getattr(resp, "usage", None)
-                    if usage:
-                        in_tok  = getattr(usage, "prompt_tokens", 0) or 0
-                        out_tok = getattr(usage, "completion_tokens", 0) or 0
-                        tot_tok = getattr(usage, "total_tokens", in_tok + out_tok)
-                    else:
-                        in_tok = out_tok = tot_tok = 0
-
-                    total_input_tokens  += in_tok
-                    total_output_tokens += out_tok
-                    total_tokens_used   += tot_tok
-
-                    raw  = resp.choices[0].message.content.strip()
-                    raw  = raw.replace("```json","").replace("```","")
-                    data = json.loads(raw)
-
-                    combined = round(r.score * 0.4 + data["ai_score"] * 0.6, 1)
-                    ai_insights[r.file] = {
-                        **data,
-                        "combined": combined,
-                        "tokens_used": tot_tok,
-                        "tokens_input": in_tok,
-                        "tokens_output": out_tok,
-                    }
-                    r.score = combined
-
-                    if combined >= pass_thr:
-                        r.recommendation = "ผ่าน"
-                    elif combined >= rev_thr:
-                        r.recommendation = "พิจารณาเพิ่มเติม"
-                    else:
-                        r.recommendation = "ไม่ผ่าน"
-
-                except Exception as e:
-                    ai_insights[r.file] = {"error": str(e)}
-
-            results.sort(key=lambda r: r.score, reverse=True)
 
         output = []
         for rank, r in enumerate(results, 1):
@@ -439,9 +367,10 @@ def analyze():
             d["insight"] = ai_insights.get(r.file, None)
             output.append(d)
 
+            # FR-5.3/5.4: sort resume ลงโฟลเดอร์
             tmp_path = next((p for orig, p in resume_tmp if orig == r.file), None)
             if tmp_path:
-                    sort_resume_file(r.file, tmp_path, r.recommendation, jd_label)
+                sort_resume_file(r.file, tmp_path, r.recommendation, jd_label)
 
         tokens_remaining = max(0, TOKEN_LIMIT_PER_MIN - total_tokens_used)
 
@@ -450,7 +379,8 @@ def analyze():
             "passed":  sum(1 for r in results if r.recommendation == "ผ่าน"),
             "review":  sum(1 for r in results if r.recommendation == "พิจารณาเพิ่มเติม"),
             "failed":  sum(1 for r in results if r.recommendation == "ไม่ผ่าน"),
-            "ai_used": len(ai_insights),
+            "ai_used": len(output) if ai_masterlist else 0,
+            "max_possible_score": 100 if ai_masterlist else 75,
             "tokens_input":     total_input_tokens,
             "tokens_output":    total_output_tokens,
             "tokens_used":      total_tokens_used,
@@ -519,23 +449,13 @@ def history_delete_route(history_id):
         return jsonify({"error": "ไม่พบประวัตินี้หรือไม่มีสิทธิ์ลบ"}), 404
     return jsonify({"deleted": True})
 
-@app.route("/api/candidates/search", methods=["GET"])
-@login_required
-def api_search_candidates():
-    results = search_candidates(
-        user_id=session["user_id"],
-        min_score=request.args.get("min_score", type=float),
-        min_gpa=request.args.get("min_gpa", type=float),
-        min_experience=request.args.get("min_experience", type=float),
-        jd_label_contains=request.args.get("jd_label_contains"),
-    )
-    return jsonify({"candidates": results})
-
 
 @app.route("/export/excel/<history_id>", methods=["GET"])
 @login_required
 def export_excel(history_id):
-    data = get_history_by_id(history_id, session["user_id"])
+    """FR-5.5 — Export ผลการคัดกรองเป็นไฟล์ Excel"""
+    safe_id = "".join(c for c in history_id if c.isalnum() or c in "_-")
+    data = get_history_by_id(safe_id, user_id=session["user_id"])
     if not data:
         return jsonify({"error": "ไม่พบประวัตินี้"}), 404
 
@@ -558,9 +478,7 @@ def export_excel(history_id):
     wb.save(tmp.name)
     wb.close()
     return send_file(tmp.name, as_attachment=True,
-                      download_name=f"cvscreener_{history_id}.xlsx")
-
-
+                      download_name=f"cvscreener_{safe_id}.xlsx")
 
 
 if __name__ == "__main__":

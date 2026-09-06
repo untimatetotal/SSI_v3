@@ -1,9 +1,9 @@
 # ============================================================
 # models.py — CVScreener scoring engine (CVS-REQ-001)
 # ============================================================
-# v2: เพิ่ม extraction สำหรับ FR-3.6 (อายุ), FR-3.10 (เพศ),
-#     FR-3.11 (เงินเดือน), FR-3.13 (ยานพาหนะ/ใบขับขี่),
-#     FR-3.14 (ภาษา) — เติมจุดที่เคย TODO ไว้ในเวอร์ชันก่อน
+# v3: FR-3 extraction (อายุ/เพศ/เงินเดือน/ยานพาหนะ/ภาษา)
+#     + FR-4.6 AI Score เวอร์ชันจริง (master list ผ่าน Groq
+#     แทนที่ placeholder เดิม)
 # ============================================================
 
 import re
@@ -19,8 +19,38 @@ except ImportError:
 
 
 # ============================================================
-# Extraction functions (FR-3.x)
+# Extraction functions (FR-3.x, FR-4.6)
 # ============================================================
+
+def extract_keywords_via_ai(jd_text: str, groq_client, max_keywords: int = 30) -> list:
+    """
+    FR-4.6 ข้อ 1 — ให้ AI สกัด keyword จาก JD/JS มาเป็น Master List
+    เรียกครั้งเดียวต่อการวิเคราะห์ 1 รอบ (ไม่ใช่ต่อ resume แต่ละคน)
+    """
+    import json as _json
+    try:
+        resp = groq_client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": (
+                    "Extract the most important skill/requirement keywords "
+                    "from this job description. Respond ONLY with a JSON "
+                    f"array of lowercase keywords, max {max_keywords} items. "
+                    "No explanation, just the array."
+                )},
+                {"role": "user", "content": jd_text[:2000]},
+            ],
+            temperature=0.1,
+            max_tokens=300,
+        )
+        raw = resp.choices[0].message.content.strip()
+        raw = raw.replace("```json", "").replace("```", "")
+        keywords = _json.loads(raw)
+        return [str(k).lower().strip() for k in keywords if k][:max_keywords]
+    except Exception as e:
+        print(f"[warn] extract_keywords_via_ai failed: {e}")
+        return []
+
 
 def extract_gpa(text: str) -> Optional[float]:
     """FR-3.12"""
@@ -60,7 +90,6 @@ def extract_age(text: str) -> Optional[int]:
     ⚠️ ความแม่นยำจำกัด — resume จำนวนมากไม่ระบุอายุตรงๆ ตามกฎหมายคุ้มครอง
     ข้อมูลส่วนบุคคล ให้ผล None บ่อยเป็นเรื่องปกติ ไม่ใช่ bug
     """
-    # แบบที่ 1: ระบุอายุตรงๆ
     patterns_direct = [
         r'อายุ\s*[:\s]?\s*(\d{1,2})\s*ปี',
         r'age\s*[:\s]\s*(\d{1,2})\b',
@@ -69,16 +98,15 @@ def extract_age(text: str) -> Optional[int]:
         m = re.search(p, text)
         if m:
             age = int(m.group(1))
-            if 15 <= age <= 70:  # กรองค่าที่ไม่สมเหตุสมผล (กันไปจับเลขอื่น)
+            if 15 <= age <= 70:
                 return age
 
-    # แบบที่ 2: คำนวณจากปีเกิด (พ.ศ. หรือ ค.ศ.)
     from datetime import date
     current_year_ad = date.today().year
     m = re.search(r'เกิด(?:วันที่)?.{0,15}?(\d{4})', text)
     if m:
         year = int(m.group(1))
-        if year > 2400:  # เป็น พ.ศ. แปลงเป็น ค.ศ.
+        if year > 2400:
             year -= 543
         age = current_year_ad - year
         if 15 <= age <= 70:
@@ -96,7 +124,6 @@ def extract_age(text: str) -> Optional[int]:
 def extract_gender(text: str) -> Optional[str]:
     """
     FR-3.10 — ดึงเพศจาก resume คืนค่า "male" / "female" / None
-    ใช้คำนำหน้าชื่อและคำระบุเพศตรงๆ เป็นหลัก
     ⚠️ เป็นการเดาจากข้อความ ไม่ใช่ข้อมูลที่ยืนยันแล้ว ควรใช้ระมัดระวัง
     และเปิดให้ HR ตรวจสอบซ้ำเสมอ ไม่ควรใช้ตัดสิทธิ์อัตโนมัติ 100%
     """
@@ -115,8 +142,7 @@ def extract_gender(text: str) -> Optional[str]:
 def extract_salary_expectation(text: str) -> Optional[float]:
     """
     FR-3.11 — ดึงเงินเดือนที่คาดหวังจาก resume (ถ้าระบุไว้)
-    ⚠️ resume ส่วนใหญ่ไม่ระบุเงินเดือนคาดหวัง มักอยู่ใน cover letter
-    หรือฟอร์มสมัครแยกต่างหาก — ให้ None บ่อยเป็นเรื่องปกติ
+    ⚠️ resume ส่วนใหญ่ไม่ระบุ ให้ None บ่อยเป็นเรื่องปกติ
     """
     patterns = [
         r'(?:เงินเดือน|salary)(?:ที่คาดหวัง|expected|expectation)?\s*[:\s]\s*([\d,]+)',
@@ -143,10 +169,7 @@ def extract_vehicle_status(text: str) -> dict:
 
 
 def extract_language_scores(text: str) -> dict:
-    """
-    FR-3.14 — ดึงคะแนนภาษาอังกฤษ (TOEIC/IELTS/TOEFL) ถ้าระบุไว้
-    คืน dict เช่น {"TOEIC": 750, "IELTS": None, "TOEFL": None}
-    """
+    """FR-3.14 — ดึงคะแนนภาษาอังกฤษ (TOEIC/IELTS/TOEFL) ถ้าระบุไว้"""
     scores = {}
     for test_name, pattern in [
         ("TOEIC", r'toeic\s*[:\s]\s*(\d{2,4})'),
@@ -171,7 +194,7 @@ class ResumeResult:
     keyword_score: float = 0.0
     ai_score: float = 0.0
     struct_score: float = 0.0
-    special_score: float = 0.0   # FR-4.9 — คะแนนพิเศษ 15 คะแนน (เฉพาะบางตำแหน่ง)
+    special_score: float = 0.0
     experience: str = "ไม่ระบุ"
     gpa: Optional[float] = None
     age: Optional[int] = None
@@ -182,7 +205,7 @@ class ResumeResult:
     error: Optional[str] = None
     struct_checks: dict = field(default_factory=dict)
     keyword_breakdown: dict = field(default_factory=dict)
-    missing_keywords: list = field(default_factory=list)  # FR-5.5 4.2 — สื่อสารว่าขาดอะไร
+    missing_keywords: list = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -211,20 +234,17 @@ class ResumeResult:
 class Config:
     def __init__(
         self,
-        # กลุ่ม 1: ประสบการณ์ & ทักษะหลัก (34 คะแนน)
         position_keywords=None, duties_keywords=None, skill_keywords=None,
         min_experience_years=None,
-        # กลุ่ม 2: คุณสมบัติรอง (18-19 คะแนน)
         field_of_study_keywords=None, min_gpa=None, general_keywords=None,
-        # กลุ่ม 3: ข้อมูลพื้นฐาน (8 คะแนน)
         edu_level_keywords=None,
-        age_range=None,      # (min, max) FR-3.6
-        gender=None,         # "male" | "female" | None (ไม่จำกัด) FR-3.10
-        salary_range=None,   # (min, max) FR-3.11 — งบประมาณที่บริษัทตั้งไว้
-        # เงื่อนไขแบบที่ 3 special (FR-4.9 — 15 คะแนนพิเศษ เฉพาะบางตำแหน่ง)
+        age_range=None,
+        gender=None,
+        salary_range=None,
         enable_special_score=False,
-        require_vehicle=False, require_license=False,   # FR-3.13 (5 คะแนน)
-        min_toeic_score=None, other_language=None,        # FR-3.14 (10 คะแนน)
+        require_vehicle=False, require_license=False,
+        min_toeic_score=None, other_language=None,
+        ai_keyword_masterlist=None,   # FR-4.6 — master list ที่สกัดจาก JD/JS แล้ว
 
         pass_threshold=60,
         review_threshold=45,
@@ -248,6 +268,7 @@ class Config:
         self.require_license = require_license
         self.min_toeic_score  = min_toeic_score
         self.other_language   = other_language
+        self.ai_keyword_masterlist = ai_keyword_masterlist or []
 
         self.pass_threshold   = pass_threshold
         self.review_threshold = review_threshold
@@ -309,7 +330,7 @@ class Analyzer:
         keyword_score, breakdown, missing = self._keyword_score(
             text, gpa_value, exp_years, age_value, gender_val, salary_val
         )
-        ai_score = self._ai_score_placeholder(jd_text, text)
+        ai_score = self._ai_score(text)
         struct   = self._struct_score(text)
 
         special_score = 0.0
@@ -340,37 +361,32 @@ class Analyzer:
     def _keyword_score(self, text, gpa_value, exp_years, age_value, gender_val, salary_val):
         c = self.config
         breakdown = {}
-        missing = []  # FR-5.5 4.2 — เก็บหัวข้อที่ไม่พบ ไว้โชว์ให้ HR เห็นเหตุผล
+        missing = []
 
         def check(label, condition, points):
             breakdown[label] = points if condition else 0.0
             if not condition:
                 missing.append(label)
 
-        # กลุ่ม 1 (34)
         check("ตำแหน่งงาน (FR-3.2)", self._any_keyword_found(text, c.position_keywords), 10.0)
         check("ลักษณะงาน (FR-3.8)",   self._any_keyword_found(text, c.duties_keywords), 10.0)
         check("ทักษะ (FR-3.9)",       self._any_keyword_found(text, c.skill_keywords), 8.0)
         check("ประสบการณ์ (FR-3.7)",  self._meets_min(exp_years, c.min_experience_years), 6.0)
 
-        # กลุ่ม 2 (18-19)
         check("สาขาวิชา (FR-3.4)",    self._any_keyword_found(text, c.field_of_study_keywords), 8.0)
         check("GPA (FR-3.12)",         self._meets_min(gpa_value, c.min_gpa), 6.0)
         check("Keyword ทั่วไป (FR-3.3)", self._any_keyword_found(text, c.general_keywords), 5.0)
 
-        # กลุ่ม 3 (8)
         check("วุฒิการศึกษา (FR-3.5)", self._any_keyword_found(text, c.edu_level_keywords), 2.0)
         check("อายุ (FR-3.6)",         self._in_range(age_value, c.age_range), 2.0)
         check("เพศ (FR-3.10)",         self._gender_match(gender_val, c.gender), 2.0)
         check("เงินเดือน (FR-3.11)",   self._in_range(salary_val, c.salary_range), 2.0)
 
         raw_total = sum(breakdown.values())
-        normalized = round((raw_total / 61.0) * 60, 2)  # normalize เพราะ requirement รวมได้ 61 ไม่ใช่ 60
+        normalized = round((raw_total / 61.0) * 60, 2)
         return normalized, breakdown, missing
 
     def _any_keyword_found(self, text, keywords):
-        # หมายเหตุ: ถ้าไม่ได้กำหนดเงื่อนไข (list ว่าง) ถือว่า "ไม่ได้ใช้ filter นี้"
-        # ให้ผ่านอัตโนมัติ ไม่ใช่ตัดคะแนน — ตรงกับ FR-4.5 ข้อ 2 (ไม่ระบุ = ไม่กระทบ)
         if not keywords:
             return True
         return any(kw.lower() in text for kw in keywords)
@@ -397,13 +413,18 @@ class Analyzer:
             return False
         return actual == required
 
-    def _ai_score_placeholder(self, jd_text, resume_text):
-        """FR-4.6 เวอร์ชัน placeholder — ของจริงต้องต่อ Groq API"""
-        jd_words = set(re.findall(r'[a-zA-Z\u0E00-\u0E7F]+', jd_text.lower()))
-        if not jd_words:
+    def _ai_score(self, resume_text: str) -> float:
+        """
+        FR-4.6 ข้อ 2 — จับคู่ resume กับ master list ที่ AI สกัดไว้แล้ว
+        (ผ่าน extract_keywords_via_ai ที่เรียกครั้งเดียวใน app_flask.py)
+        นับคำที่เจอซ้ำหลายครั้งเป็นแค่ 1 ครั้ง ไม่เรียก AI ซ้ำต่อ resume
+        ถ้าไม่มี master list (ไม่มี Groq key) → คะแนนส่วนนี้เป็น 0
+        """
+        master_list = self.config.ai_keyword_masterlist
+        if not master_list:
             return 0.0
-        matched = sum(1 for w in jd_words if w in resume_text)
-        return round((matched / len(jd_words)) * 25, 1)
+        matched = sum(1 for kw in master_list if kw in resume_text)
+        return round((matched / len(master_list)) * 25, 1)
 
     def _struct_score(self, text):
         checks = {
@@ -426,13 +447,11 @@ class Analyzer:
         c = self.config
         score = 0.0
 
-        # FR-3.13 ยานพาหนะ+ใบขับขี่ (5 คะแนน)
         vehicle_ok = (not c.require_vehicle or vehicle.get("has_vehicle")) and \
                      (not c.require_license or vehicle.get("has_license"))
         if vehicle_ok:
             score += 5.0
 
-        # FR-3.14 ทักษะภาษา (10 คะแนน)
         lang_ok = True
         if c.min_toeic_score is not None:
             toeic = lang_score.get("TOEIC")
