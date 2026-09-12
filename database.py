@@ -1,10 +1,15 @@
 # ============================================================
-# database.py — SQLite database for CVScreener 
-# this file for enrollment & save history 
+# database.py — SQLite database for CVScreener
+# this file for enrollment & save history
+# ============================================================
+# v2: เพิ่ม search_candidates() เวอร์ชันชั่วคราวสำหรับ "ค้นหาจากคลัง"
+#     (ฟีเจอร์นี้ในเวอร์ชันเต็มควรใช้ database_postgres.py แทน เมื่อ
+#     Postgres กลับมาใช้ได้ — ตัวนี้เป็นแค่ fallback ชั่วคราว)
 # ============================================================
 
 import sqlite3
 import json
+import re
 from pathlib import Path
 
 DB_PATH = Path("cvscreener.db")
@@ -21,7 +26,6 @@ def init_db():
     conn = get_db()
     c = conn.cursor()
 
-    # ── ตาราง users ──────────────────────────────────────────
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,14 +37,12 @@ def init_db():
         )
     """)
 
-    # ── migrate: เพิ่มคอลัมน์ถ้า database เก่าไม่มี ──────────
     try:
         c.execute("ALTER TABLE users ADD COLUMN groq_api_key TEXT NOT NULL DEFAULT ''")
         print("[DB] Migrated: added groq_api_key column")
     except Exception:
         pass  # คอลัมน์มีอยู่แล้ว ไม่ต้อง error
 
-    # ── ตาราง history ─────────────────────────────────────────
     c.execute("""
         CREATE TABLE IF NOT EXISTS history (
             id           TEXT    PRIMARY KEY,
@@ -199,3 +201,68 @@ def delete_history(history_id, user_id):
         return c.rowcount > 0
     finally:
         conn.close()
+
+
+# ── Candidate search (ชั่วคราวสำหรับ SQLite) ────────────────────
+
+def search_candidates(user_id, min_score=None, max_score=None, min_gpa=None,
+                       min_experience=None, max_experience=None,
+                       recommendation=None, jd_label_contains=None,
+                       date_from=None, date_to=None, limit=100):
+    """
+    เวอร์ชันชั่วคราวสำหรับ SQLite — ค้นหาผู้สมัครข้าม session โดยสแกน
+    history ทั้งหมดของ user แล้ว parse JSON ใน Python
+    ⚠️ ช้ากว่า PostgreSQL (ไม่มี index บน field ข้างใน JSON) เหมาะกับ
+    ข้อมูลปริมาณไม่มาก ใช้แทนกันไปก่อนจนกว่า Postgres จะกลับมาใช้ได้
+    """
+    conn = get_db()
+    try:
+        c = conn.cursor()
+        c.execute("SELECT * FROM history WHERE user_id = ? ORDER BY timestamp DESC", (user_id,))
+        rows = c.fetchall()
+    finally:
+        conn.close()
+
+    def parse_exp(exp_text):
+        if not exp_text:
+            return None
+        m = re.search(r'(\d+(?:\.\d+)?)', str(exp_text))
+        return float(m.group(1)) if m else None
+
+    results = []
+    for row in rows:
+        try:
+            candidates = json.loads(row["results"] or "[]")
+        except json.JSONDecodeError:
+            continue
+
+        for cand in candidates:
+            score = cand.get("score") or 0
+            if min_score is not None and score < min_score:
+                continue
+            if max_score is not None and score > max_score:
+                continue
+
+            gpa = cand.get("gpa")
+            if min_gpa is not None and (gpa is None or gpa < min_gpa):
+                continue
+
+            exp_years = parse_exp(cand.get("experience"))
+            if min_experience is not None and (exp_years is None or exp_years < min_experience):
+                continue
+            if max_experience is not None and (exp_years is None or exp_years > max_experience):
+                continue
+
+            if recommendation and cand.get("recommendation") != recommendation:
+                continue
+            if jd_label_contains and jd_label_contains.lower() not in (row["jd_label"] or "").lower():
+                continue
+            if date_from and row["timestamp"] < date_from:
+                continue
+            if date_to and row["timestamp"] > date_to:
+                continue
+
+            results.append({**cand, "jd_label": row["jd_label"], "created_at": row["timestamp"]})
+
+    results.sort(key=lambda r: r.get("score", 0), reverse=True)
+    return results[:limit]

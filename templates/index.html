@@ -4,1069 +4,826 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CV-Screener — SSI v3</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@100..900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@100..900&family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#ffffff; --surface:#eeeef0; --surface2:#eeeef0;
-  --border:#e7e7ea; --border-strong:#d4d4d9;
-  --ink:#18181b; --sub:#71717a; --faint:#a1a1aa;
-  --accent:#4338ca; --accent-soft:#eef0fd; --accent-hover:#3730a3;
+  --bg:#fafafb; --paper:#ffffff; --border:#e8e8ec; --border-strong:#d5d5dc;
+  --ink:#14151c; --sub:#6b6d78; --faint:#a4a6b0;
+  --brand:#c22731;
+  --repo:#b45309; --repo-soft:#fdf2e3; --repo-line:#f2dcb8;
+  --hist:#0f766e; --hist-soft:#e7f7f5; --hist-line:#c7ece7;
+  --search:#4338ca; --search-soft:#eef0fd; --search-line:#d6d9f8;
   --green:#16a34a; --green-soft:#eafaf0;
   --amber:#d97706; --amber-soft:#fef6e7;
   --red:#dc2626; --red-soft:#fdeded;
-  --purple:#7c3aed; --purple-soft:#f4eefd;
-  --radius:14px; --radius-sm:9px;
+  --radius-lg:18px; --radius:14px; --radius-sm:9px;
 }
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
-h1,h2,h3,.font-display{font-family:'Sora',sans-serif}
+body{font-family:'Inter','Noto Sans Thai',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:'Sora','Noto Sans Thai',sans-serif}
+mark{background:#fde68a;color:var(--ink);padding:0 2px;border-radius:2px}
 
-/* NAV */
-nav{border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;background:#c22731;backdrop-filter:blur(8px)}
-.logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;font-family:'Sora',sans-serif;letter-spacing:-.2px;margin-top: -6px;}
-.mark{width:30px;height:30px;background:var(--ink);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;font-family:'Sora',sans-serif}
-.nav-links{display:flex;gap:28px}
-.nav-links a{color:rgba(255,255,255,0.7)}
-.nav-links a:hover{color:#fff}
-.cost-chip{display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--green-soft);border:1px solid #d3f0dd;border-radius:100px;font-size:12px;color:var(--green);font-weight:500;font-variant-numeric:tabular-nums;transition:all .2s}
-.cost-chip.ai{background:var(--purple-soft);border-color:#e6dafb;color:var(--purple)}
-.cost-chip.warn{background:var(--amber-soft);border-color:#fae3bd;color:var(--amber)}
-.cost-chip.danger{background:var(--red-soft);border-color:#fad4d4;color:var(--red)}
+.shell{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+.sidebar{background:var(--paper);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:22px 16px}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 8px 26px}
+.brand-mark{width:34px;height:34px;border-radius:9px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif;font-weight:700;font-size:14px}
+.brand-name{font-family:'Sora',sans-serif;font-weight:700;font-size:15px}
+.brand-sub{font-size:10.5px;color:var(--faint)}
+.nav-group{display:flex;flex-direction:column;gap:4px;flex:1}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;cursor:pointer;color:var(--sub);border:1px solid transparent}
+.nav-item:hover{background:var(--bg)}
+.nav-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--bg)}
+.nav-label{font-size:13.5px;font-weight:600}
+.nav-desc{font-size:10.5px;color:var(--faint)}
+.nav-item.active{color:var(--ink)}
+.nav-item[data-view="repo"].active{background:var(--repo-soft);border-color:var(--repo-line)}
+.nav-item[data-view="repo"].active .nav-icon{background:var(--repo);color:#fff}
+.nav-item[data-view="hist"].active{background:var(--hist-soft);border-color:var(--hist-line)}
+.nav-item[data-view="hist"].active .nav-icon{background:var(--hist);color:#fff}
+.nav-item[data-view="search"].active{background:var(--search-soft);border-color:var(--search-line)}
+.nav-item[data-view="search"].active .nav-icon{background:var(--search);color:#fff}
+.sidebar-foot{border-top:1px solid var(--border);padding-top:14px;display:flex;align-items:center;gap:10px}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.user-name{font-size:12.5px;font-weight:600}
+.user-role{font-size:10.5px;color:var(--faint)}
+.logout-link{font-size:11px;color:var(--faint);margin-left:auto;cursor:pointer}
 
+.main{padding:28px 40px 100px;max-width:1180px}
+.page-head{margin-bottom:22px}
+.page-eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px}
+.page-title{font-size:25px;font-weight:700;letter-spacing:-.4px;margin-bottom:5px}
+.page-desc{font-size:13.5px;color:var(--sub);max-width:640px;line-height:1.5}
+.view{display:none}
+.view.active{display:block}
 
-/* LAYOUT — centered single column */
-.page{max-width:880px;margin:0 auto;padding:40px 24px 80px}
-.hero{margin-bottom:32px}
-.hero-eyebrow{font-size:12px;font-weight:600;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
-.hero h1{font-size:30px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
-.hero p{font-size:14px;color:var(--sub)}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+.search-box{flex:1;min-width:220px;position:relative}
+.search-box input{width:100%;padding:11px 14px 11px 38px;border:1px solid var(--border);border-radius:11px;font-size:13.5px;font-family:inherit;background:var(--paper);outline:none}
+.search-box .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;opacity:.5}
+.pill-group{display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:100px;border:1px solid var(--border)}
+.pill{padding:7px 14px;border-radius:100px;font-size:12.5px;font-weight:600;color:var(--sub);cursor:pointer;white-space:nowrap}
+.pill.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card{background:var(--paper);border:1px solid var(--border);border-radius:var(--radius)}
+.card:hover{border-color:var(--border-strong)}
 
-/* SETUP CARD */
-.setup{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;display:flex;flex-direction:column;gap:24px;margin-bottom:28px}
-.setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.field{display:flex;flex-direction:column;gap:8px}
-.field-full{grid-column:1/-1}
-.field-label{font-size:12px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:6px}
-.field-label .opt{font-size:11px;font-weight:400;color:var(--faint)}
-.field-hint{font-size:11px;color:var(--faint)}
+.mode-seg{display:inline-flex;background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:4px;margin-bottom:20px}
+.mode-btn{padding:9px 20px;border-radius:100px;border:none;background:transparent;font-size:13px;font-weight:600;color:var(--sub);cursor:pointer;font-family:inherit}
+.mode-btn.on{background:var(--search);color:#fff}
 
-/* Upload areas */
-.upload-area{border:1.5px dashed var(--border-strong);border-radius:var(--radius-sm);padding:22px 16px;text-align:center;cursor:pointer;transition:all .15s;background:#fff}
-.upload-area:hover{border-color:var(--accent);background:var(--accent-soft)}
-.upload-area.dragover{border-color:var(--accent);background:var(--accent-soft);border-style:solid}
-.upload-area .icon{font-size:24px;display:block;margin-bottom:6px;opacity:.7}
-.upload-area p{font-size:12.5px;color:var(--sub);line-height:1.4}
-.upload-area p b{color:var(--ink)}
+.search-hero{background:linear-gradient(135deg,var(--search-soft),#fff);border:1px solid var(--search-line);border-radius:var(--radius-lg);padding:26px;margin-bottom:22px}
+.search-hero-label{font-size:12px;font-weight:700;color:var(--search);margin-bottom:10px}
+.tag-input-box{display:flex;flex-wrap:wrap;gap:7px;padding:10px;border:1.5px solid var(--search-line);border-radius:13px;background:#fff;min-height:52px;align-items:center}
+.tag-input-box:focus-within{border-color:var(--search)}
+.jtag{display:inline-flex;align-items:center;gap:6px;background:var(--search);color:#fff;padding:6px 12px;border-radius:100px;font-size:13px;font-weight:500}
+.jtag button{background:none;border:none;color:#fff;opacity:.8;cursor:pointer;font-size:12px;padding:0}
+.tag-input-box input{border:none;flex:1;min-width:140px;padding:6px;font-size:14px;font-family:inherit;outline:none}
+.hero-hint{font-size:11.5px;color:var(--faint);margin-top:8px}
 
-.file-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
-.file-chip{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;border-radius:var(--radius-sm);border:1px solid var(--border);font-size:12.5px}
-.file-chip span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
-.file-chip button{background:none;border:none;color:var(--faint);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;transition:color .15s}
-.file-chip button:hover{color:var(--red)}
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.upload-box{border:1.5px dashed var(--border-strong);border-radius:13px;padding:22px 16px;text-align:center;background:#fff;cursor:pointer}
+.upload-box:hover,.upload-box.dragover{border-color:var(--search);background:var(--search-soft)}
+.upload-box .ic{font-size:22px;display:block;margin-bottom:6px;opacity:.7}
+.upload-box p{font-size:12.5px;color:var(--sub)}
+.upload-box p b{color:var(--ink)}
+.upload-full{grid-column:1/-1}
+.resume-drop-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.drop-chip{font-size:11.5px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px}
+.drop-chip button{background:none;border:none;color:var(--faint);cursor:pointer}
 
-/* Inputs */
-input[type=text],input[type=password],input[type=number],select,textarea{
-  width:100%;padding:10px 12px;background:#fff;
-  border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);
-  font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border-color .15s
-}
-input:focus,select:focus,textarea:focus{border-color:var(--accent)}
-input::placeholder,textarea::placeholder{color:var(--faint)}
-select{cursor:pointer}
-textarea{resize:vertical;min-height:90px}
+.filter-toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.filter-section-label{font-size:13px;font-weight:600;display:flex;align-items:center;gap:12px}
+.clear-link{font-size:11.5px;color:var(--faint);cursor:pointer;text-decoration:underline;background:none;border:none;font-family:inherit}
+.clear-link:hover{color:var(--red)}
+.result-count{font-size:13px;color:var(--sub)}
 
-/* Segmented control */
-.seg{display:inline-flex;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;padding:3px;gap:2px}
-.seg-btn{padding:6px 16px;background:transparent;color:var(--sub);border:none;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:500;font-family:'Inter',sans-serif;transition:all .15s}
-.seg-btn.on{background:var(--ink);color:#fff}
+.adv-filters{background:var(--paper);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:20px;display:flex;flex-direction:column;gap:18px}
+.adv-block-label{font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:-4px}
+.adv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.f-field{display:flex;flex-direction:column;gap:5px}
+.f-field.f-wide{grid-column:span 2}
+.f-label{font-size:11px;font-weight:600;color:var(--sub)}
+.f-field input,.f-field select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;font-family:inherit}
+.opt-label{display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer}
+.opt-label input{width:auto;accent-color:var(--search)}
+.opt-row{display:flex;gap:14px;padding-top:4px;flex-wrap:wrap}
 
-/* AI box */
-.ai-box{background:var(--purple-soft);border:1px solid #e6dafb;border-radius:var(--radius-sm);padding:16px;display:flex;flex-direction:column;gap:12px}
-.ai-box .field-label{color:var(--purple)}
+.special-inline{border-top:1px dashed var(--border);padding-top:16px}
+.special-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.switch{position:relative;width:36px;height:21px;background:var(--border-strong);border-radius:100px;flex-shrink:0}
+.switch.on{background:var(--search)}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:17px;height:17px;background:#fff;border-radius:50%;transition:left .15s}
+.switch.on::after{left:17px}
+.special-body{display:none}
+.special-body.show{display:block}
 
-/* Sliders */
-.slider-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.slider-row{display:flex;align-items:center;gap:10px}
-input[type=range]{flex:1;accent-color:var(--accent);height:4px}
-.sv{font-size:13px;font-weight:600;color:var(--ink);min-width:28px;text-align:right;font-variant-numeric:tabular-nums}
+.results-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px}
+.select-all-label{font-size:12.5px;color:var(--sub);display:flex;align-items:center;gap:6px}
+.results-actions{display:flex;gap:8px}
+.action-btn{padding:8px 14px;border-radius:9px;border:1px solid var(--border);background:#fff;font-size:12.5px;font-weight:600;color:var(--sub);cursor:pointer}
+.action-btn:hover{border-color:var(--search);color:var(--search)}
+.action-btn.primary{background:var(--search);color:#fff;border-color:var(--search)}
+.run-btn-main{width:100%;padding:14px;background:var(--ink);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:'Sora',sans-serif;cursor:pointer;margin-bottom:20px}
+.run-btn-main:hover{background:var(--search)}
+.run-btn-main:disabled{background:var(--faint);cursor:not-allowed}
 
-/* Run button */
-.run-btn{width:100%;padding:14px;background:var(--ink);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;font-family:'Sora',sans-serif;cursor:pointer;transition:all .15s;letter-spacing:.2px}
-.run-btn:hover{background:var(--accent)}
-.run-btn:disabled{background:var(--faint);cursor:not-allowed}
+.match-grid{display:flex;flex-direction:column;gap:10px}
+.match-card{padding:0;overflow:hidden}
+.match-row{padding:15px 18px;display:flex;align-items:center;gap:14px;cursor:pointer}
+.match-check{width:auto;accent-color:var(--search)}
+.match-avatar{width:42px;height:42px;border-radius:11px;background:var(--search-soft);color:var(--search);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Sora',sans-serif;font-size:13px;flex-shrink:0}
+.match-rank{font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:var(--faint);width:20px;text-align:center;flex-shrink:0}
+.match-info{flex:1;min-width:0}
+.match-name{font-size:14px;font-weight:600}
+.match-sub{font-size:11.5px;color:var(--sub);display:flex;gap:10px;margin-top:2px;flex-wrap:wrap}
+.match-bars{display:flex;flex-direction:column;gap:4px;width:150px;flex-shrink:0}
+.mbar-row{display:flex;align-items:center;gap:6px}
+.mbar-lbl{font-size:9.5px;color:var(--faint);width:38px}
+.mbar-track{flex:1;height:4px;background:var(--bg);border-radius:2px;overflow:hidden}
+.mbar-fill{height:100%;border-radius:2px}
+.match-score{text-align:right;flex-shrink:0;width:56px}
+.match-score-num{font-family:'Sora',sans-serif;font-size:19px;font-weight:700;color:var(--search)}
+.match-score-lbl{font-size:9.5px;color:var(--faint)}
+.match-badge{font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:100px;margin-top:3px;display:inline-block}
+.match-badge.pass{background:var(--green-soft);color:var(--green)}
+.match-badge.rev{background:var(--amber-soft);color:var(--amber)}
+.match-badge.fail{background:var(--red-soft);color:var(--red)}
+.match-detail{max-height:0;overflow:hidden;transition:max-height .25s ease;border-top:1px solid transparent;background:var(--bg)}
+.match-detail.open{max-height:500px;border-top-color:var(--border)}
+.match-detail-inner{padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.dd-label{font-size:10.5px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.dd-preview{background:#fff;border:1px solid var(--border);border-radius:9px;padding:12px;font-size:12px;line-height:1.7;color:var(--sub);max-height:160px;overflow-y:auto}
+.missing-tags{display:flex;flex-wrap:wrap;gap:6px}
+.mtag{font-size:11px;padding:3px 10px;border-radius:100px;background:var(--red-soft);color:var(--red);font-weight:500}
+.detail-foot{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px dashed var(--border);font-size:11.5px;color:var(--faint)}
 
-/* RESULTS SECTION */
-.results-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
-.results-title{font-size:20px;font-weight:700;letter-spacing:-.3px}
-.results-sub{font-size:12.5px;color:var(--sub);margin-top:3px}
-.export-btn{padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--sub);font-size:12.5px;cursor:pointer;transition:all .15s;font-weight:500}
-.export-btn:hover{border-color:var(--accent);color:var(--accent)}
-.export-btn:disabled{opacity:.6;cursor:not-allowed}
+.repo-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--paper);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+.stat-num{font-family:'Sora',sans-serif;font-size:26px;font-weight:700}
+.stat-lbl{font-size:11.5px;color:var(--sub);margin-top:2px}
+.resume-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.resume-card{padding:16px}
+.resume-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.file-icon{width:38px;height:38px;border-radius:9px;background:var(--repo-soft);color:var(--repo);display:flex;align-items:center;justify-content:center;font-size:16px}
+.folder-tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:100px}
+.folder-tag.qualified{background:var(--green-soft);color:var(--green)}
+.folder-tag.pool{background:var(--amber-soft);color:var(--amber)}
+.resume-name{font-size:13.5px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.resume-meta{font-size:11.5px;color:var(--sub);line-height:1.6}
+.resume-actions{display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.mini-btn{flex:1;padding:7px;border-radius:8px;border:1px solid var(--border);background:var(--paper);font-size:11.5px;font-weight:600;color:var(--sub);cursor:pointer;text-decoration:none;text-align:center;display:block}
+.mini-btn:hover{border-color:var(--repo);color:var(--repo)}
 
-/* Stats */
-.stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;text-align:center}
-.stat-num{font-family:'Sora',sans-serif;font-size:24px;font-weight:700;line-height:1;letter-spacing:-.5px}
-.stat-lbl{font-size:11px;color:var(--sub);margin-top:4px}
+.timeline{display:flex;flex-direction:column;gap:2px}
+.timeline-item{display:flex;gap:16px;padding:18px 4px;border-bottom:1px solid var(--border);cursor:pointer}
+.timeline-item:hover .hist-title{color:var(--hist)}
+.timeline-dot-col{display:flex;flex-direction:column;align-items:center;padding-top:3px}
+.timeline-dot{width:10px;height:10px;border-radius:50%;background:var(--hist)}
+.timeline-line{width:1.5px;flex:1;background:var(--border);margin-top:4px}
+.hist-body{flex:1}
+.hist-row-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.hist-title{font-size:14px;font-weight:600}
+.hist-time{font-size:11.5px;color:var(--faint);white-space:nowrap}
+.hist-tags{display:flex;gap:6px;flex-wrap:wrap}
+.htag{font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px}
+.htag.n{background:var(--bg);color:var(--sub)}
+.htag.pass{background:var(--green-soft);color:var(--green)}
+.htag.rev{background:var(--amber-soft);color:var(--amber)}
+.htag.fail{background:var(--red-soft);color:var(--red)}
+.hist-del{background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px}
 
-/* Token panel */
-.token-panel{display:none;background:var(--purple-soft);border:1px solid #e6dafb;border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:16px}
-.token-panel.show{display:block}
-.token-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.token-title{font-size:12.5px;font-weight:600;color:var(--purple);display:flex;align-items:center;gap:6px}
-.token-nums{font-size:12px;color:var(--purple);font-variant-numeric:tabular-nums;font-weight:600}
-.token-bar{height:6px;border-radius:4px;background:#fff;overflow:hidden}
-.token-bar-fill{height:100%;border-radius:4px;background:var(--purple);transition:width .6s ease}
-.token-detail{display:flex;gap:18px;margin-top:10px;font-size:11.5px;color:var(--sub)}
-.token-detail span b{color:var(--ink);font-variant-numeric:tabular-nums}
-
-/* Filter pills */
-.pills{display:flex;gap:6px;margin-bottom:14px}
-.pill{padding:6px 16px;border-radius:100px;font-size:12.5px;border:1px solid var(--border);color:var(--sub);cursor:pointer;background:#fff;transition:all .15s;font-weight:500}
-.pill.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-
-/* Result cards */
-.rcard{background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .15s;margin-bottom:10px}
-.rcard:hover{border-color:var(--border-strong);box-shadow:0 2px 12px rgba(0,0,0,0.04)}
-.rcard-header{display:grid;grid-template-columns:30px 1fr auto 120px;gap:16px;align-items:center;padding:16px 20px;cursor:pointer}
-.rank{font-size:16px;font-weight:600;color:var(--faint);text-align:center;font-family:'Sora',sans-serif}
-.rname{font-size:14.5px;font-weight:600;letter-spacing:-.1px}
-.rmeta{font-size:11.5px;color:var(--sub);margin-top:3px;display:flex;gap:12px}
-.bars{display:flex;flex-direction:column;gap:5px;min-width:140px}
-.brow{display:flex;align-items:center;gap:6px}
-.blbl{font-size:10px;color:var(--faint);width:44px;font-weight:500}
-.btrack{flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
-.bfill{height:100%;border-radius:2px;transition:width .8s ease}
-.bval{font-size:10px;font-weight:600;width:22px;text-align:right;font-variant-numeric:tabular-nums}
-.score-col{text-align:right}
-.score-big{font-family:'Sora',sans-serif;font-size:26px;font-weight:700;line-height:1;letter-spacing:-.5px}
-.score-lbl{font-size:9.5px;color:var(--faint);margin-top:1px}
-.badge{display:inline-block;padding:3px 10px;border-radius:100px;font-size:10.5px;font-weight:600;margin-top:5px}
-.b-pass  {background:var(--green-soft);color:var(--green)}
-.b-review{background:var(--amber-soft);color:var(--amber)}
-.b-fail  {background:var(--red-soft);color:var(--red)}
-
-.rcard-detail{padding:0 20px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s;border-top:1px solid transparent}
-.rcard-detail.open{max-height:340px;padding:16px 20px;border-top-color:var(--border)}
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.detail-label{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
-.struct-list{display:flex;flex-wrap:wrap;gap:6px}
-.struct-tag{font-size:11px;padding:3px 9px;border-radius:100px;background:var(--surface);font-weight:500}
-.ai-insight-box{background:var(--accent-soft);border-left:2px solid var(--accent);padding:10px 14px;border-radius:0 8px 8px 0;font-size:12.5px;color:var(--ink);line-height:1.5}
-.warn-box{background:var(--red-soft);border-left:2px solid var(--red);padding:10px 14px;border-radius:0 8px 8px 0;font-size:12.5px;color:var(--red)}
-.token-mini{font-size:11px;color:var(--purple);margin-top:8px;font-variant-numeric:tabular-nums;font-weight:500}
-.skill-line{font-size:12px;color:var(--sub);margin-top:8px;line-height:1.6}
-.skill-line b{color:var(--ink)}
-
-/* Loading / empty */
-.loading{display:none;text-align:center;padding:60px 20px;color:var(--sub)}
-.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,21,28,.4);z-index:300;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.show{display:flex}
+.modal-box{background:#fff;border-radius:18px;max-width:820px;width:100%;max-height:85vh;overflow-y:auto}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;border-radius:18px 18px 0 0}
+.modal-title{font-size:16px;font-weight:700}
+.modal-close{background:var(--bg);border:none;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:14px}
+.modal-body{padding:20px 24px}
+.empty-state{text-align:center;padding:60px 20px;color:var(--sub)}
+.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--search);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.empty{text-align:center;padding:60px 20px;color:var(--sub);border:1px dashed var(--border);border-radius:var(--radius);background:var(--surface)}
-.empty-icon{font-size:32px;margin-bottom:10px;opacity:.5}
-.empty p{font-size:13px}
-.empty p b{color:var(--ink)}
 
-@media(max-width:720px){
-  .setup-grid,.slider-grid,.detail-grid{grid-template-columns:1fr}
-  .stat-row{grid-template-columns:repeat(2,1fr)}
-  .rcard-header{grid-template-columns:24px 1fr;grid-template-rows:auto auto;gap:8px}
-  .bars,.score-col{grid-column:2}
-  nav{padding:0 16px}
-  .nav-links{display:none}
+@media(max-width:900px){
+  .shell{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .adv-grid,.upload-grid{grid-template-columns:1fr 1fr}
+  .repo-stats{grid-template-columns:1fr 1fr}
+  .match-bars{display:none}
 }
-
-/* HISTORY PANEL */
-.history-overlay{display:none;position:fixed;inset:0;background:rgba(24,24,27,0.35);backdrop-filter:blur(2px);z-index:200;justify-content:flex-end}
-.history-overlay.show{display:flex}
-.history-panel{width:380px;max-width:90vw;background:#fff;height:100%;box-shadow:-8px 0 24px rgba(0,0,0,0.08);display:flex;flex-direction:column;animation:slidein .2s ease}
-@keyframes slidein{from{transform:translateX(100%)}to{transform:translateX(0)}}
-.history-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border)}
-.history-list{flex:1;overflow-y:auto;padding:12px}
-.history-item{border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .15s;position:relative}
-.history-item:hover{border-color:var(--accent);background:var(--accent-soft)}
-.history-item-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-.history-jd{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.history-time{font-size:10.5px;color:var(--faint);white-space:nowrap;font-variant-numeric:tabular-nums}
-.history-stats{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-.history-tag{font-size:10.5px;padding:2px 8px;border-radius:100px;font-weight:600}
-.history-del{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px;padding:4px;opacity:0;transition:opacity .15s}
-.history-item:hover .history-del{opacity:1}
-.history-del:hover{color:var(--red)}
-
-/* GUIDE PANEL */
-.guide-step{display:flex;gap:14px;padding:14px 8px;border-bottom:1px solid var(--border)}
-.guide-step:last-child{border-bottom:none}
-.guide-num{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif}
-.guide-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px}
-.guide-step p{font-size:12.5px;color:var(--sub);line-height:1.6}
-.guide-step code{background:var(--surface);padding:1px 6px;border-radius:5px;font-size:11.5px;color:var(--accent);font-family:monospace}
-
 </style>
-
-<!-- PDF export libraries -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-
 <body>
 
-<nav>
-  <div class="logo">
-     <img src="/static/SSI-Group-logo-transparent.png" style="height:36px;width:auto;object-fit:contain"> CV-Screener</div>
-  <div class="nav-links">
-    <a onclick="openHistory()">ประวัติ</a>
-    <a onclick="openGuide()">คู่มือการใช้งาน</a>
-    <!--<a>Algorithm</a> -->
-  </div>
-  <div class="cost-chip" id="cost-chip">Algorithm (Free Mode)</div>
-</nav>
-
-<!-- ── HISTORY PANEL (overlay) ── -->
-<div id="history-overlay" class="history-overlay" onclick="if(event.target===this)closeHistory()">
-  <div class="history-panel">
-    <div class="history-head">
-      <div class="results-title" style="font-size:16px">ประวัติการวิเคราะห์</div>
-      <button class="export-btn" onclick="closeHistory()">ปิด ✕</button>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">SSI</div>
+      <div><div class="brand-name">CV-Screener</div><div class="brand-sub">SSI Group · Recruitment Center</div></div>
     </div>
-    <div id="history-list" class="history-list">
-      <div class="empty" style="border:none;padding:40px 0">
-        <div class="empty-icon">⏳</div>
-        <p>กำลังโหลด...</p>
+    <div class="nav-group">
+      <div class="nav-item active" data-view="search" onclick="switchView('search',this)">
+        <div class="nav-icon">🔎</div>
+        <div><div class="nav-label">คัดกรองตำแหน่งงาน</div><div class="nav-desc">ค้นหา + วิเคราะห์ผู้สมัคร</div></div>
+      </div>
+      <div class="nav-item" data-view="repo" onclick="switchView('repo',this)">
+        <div class="nav-icon">🗂️</div>
+        <div><div class="nav-label">คลัง Resume</div><div class="nav-desc">ไฟล์ทั้งหมดในระบบ</div></div>
+      </div>
+      <div class="nav-item" data-view="hist" onclick="switchView('hist',this)">
+        <div class="nav-icon">🕘</div>
+        <div><div class="nav-label">History</div><div class="nav-desc">ประวัติการคัดกรอง</div></div>
       </div>
     </div>
-  </div>
-</div>
-
-
-<!-- ── GUIDE PANEL (overlay) ── -->
-<div id="guide-overlay" class="history-overlay" onclick="if(event.target===this)closeGuide()">
-  <div class="history-panel">
-    <div class="history-head">
-      <div class="results-title" style="font-size:16px">วิธีใช้งาน CV-Screener</div>
-      <button class="export-btn" onclick="closeGuide()">ปิด ✕</button>
+    <div class="sidebar-foot">
+      <div class="avatar">HR</div>
+      <div><div class="user-name">{{ username }}</div><div class="user-role">Recruitment Center</div></div>
+      <a class="logout-link" href="/logout">ออกจากระบบ</a>
     </div>
-    <div class="history-list">
+  </aside>
 
-     <div class="guide-step">
-  <div class="guide-num">1</div>
-  <div>
-    <div class="guide-title">ใส่ Job Specification</div>
-    <p>อัปโหลดไฟล์ <b>.txt</b> หรือ <b>.pdf</b> โดยคลิกหรือลากไฟล์มาวาง หรือสลับไปแท็บ <b>"พิมพ์เอง"</b> แล้วพิมพ์รายละเอียดงานตรงๆ</p>
-  </div>
-</div>
+  <main class="main">
 
-<div class="guide-step">
-  <div class="guide-num">2</div>
-  <div>
-    <div class="guide-title">อัปโหลด Resume</div>
-    <p>ลากไฟล์ <b>PDF</b> ของผู้สมัครมาวางได้ทีละหลายไฟล์ ระบบจะวิเคราะห์ทุกไฟล์พร้อมกันและจัดอันดับให้</p>
-  </div>
-</div>
+    <!-- ═══════════ VIEW: คัดกรองตำแหน่งงาน ═══════════ -->
+    <section class="view active" id="view-search">
+      <div class="page-head">
+        <div class="page-eyebrow" style="color:var(--search)">คัดกรองตำแหน่งงาน</div>
+        <h1 class="page-title">ค้นหาและวิเคราะห์ผู้สมัคร</h1>
+        <p class="page-desc">ค้นหาจาก Resume ที่มีอยู่ในคลัง หรืออัปโหลด Job Description ใหม่เพื่อวิเคราะห์ Resume ชุดใหม่</p>
+      </div>
 
-<div class="guide-step">
-  <div class="guide-num">3</div>
-  <div>
-    <div class="guide-title">Required Keywords</div>
-    <p>คำที่ <b>ต้องมี</b> ใน resume เช่น <code>python data excel</code> — ถ้า resume ขาดคำใดคำหนึ่งจะถูกตัดออกทันที (คะแนน 0)</p>
-  </div>
-</div>
+      <div class="mode-seg">
+        <button class="mode-btn on" id="mode-existing" onclick="setMode('existing')">ค้นหาจากคลัง</button>
+        <button class="mode-btn" id="mode-new" onclick="setMode('new')">อัปโหลด + วิเคราะห์ใหม่</button>
+      </div>
 
-<div class="guide-step">
-  <div class="guide-num">4</div>
-  <div>
-    <div class="guide-title">วุฒิการศึกษาขั้นต่ำ</div>
-    <p>เลือกวุฒิที่ต้องการ เช่น <b>ปริญญาตรี</b> — ผู้สมัครที่จบ ป.ตรี หรือสูงกว่า (ป.โท) จะผ่านเกณฑ์นี้ด้วย</p>
-  </div>
-</div>
-
-<div class="guide-step">
-  <div class="guide-num">5</div>
-  <div>
-    <div class="guide-title">Bonus Keywords</div>
-    <p>คำที่ <b>มีก็ดี ไม่มีก็ไม่ตัด</b> เช่น <code>excel powerbi crm</code> — ยิ่งมีตรงมาก คะแนนยิ่งสูง</p>
-  </div>
-</div>
-
-<div class="guide-step">
-  <div class="guide-num">6</div>
-  <div>
-    <div class="guide-title">เกณฑ์คะแนน</div>
-    <p>ตั้งค่าคะแนนขั้นต่ำที่ <b>"ผ่าน"</b> และ <b>"พิจารณา"</b> — คะแนนต่ำกว่าเกณฑ์พิจารณาจะถูกจัดเป็น <b>"ไม่ผ่าน"</b></p>
-  </div>
-</div>
-
-<div class="guide-step">
-  <div class="guide-num">7</div>
-  <div>
-    <div class="guide-title">โหมดการวิเคราะห์</div>
-    <p><b>TF-IDF เท่านั้น</b> — ฟรี 100% วิเคราะห์ด้วยอัลกอริทึมเปรียบเทียบคำ<br>
-    <b>+ Groq AI</b> — ใส่ Groq API Key เพื่อให้ AI ช่วยวิเคราะห์เชิงลึกเพิ่ม (resume ที่คะแนน TF-IDF ต่ำเกินไปจะไม่ถูกส่งให้ AI เพื่อประหยัด token)</p>
-  </div>
-</div>
-
-<div class="guide-step">
-  <div class="guide-num">8</div>
-  <div>
-    <div class="guide-title">ดูผลลัพธ์</div>
-    <p>คลิกที่การ์ดผู้สมัครเพื่อดูรายละเอียดคะแนน โครงสร้าง resume และ AI insights (ถ้าใช้) ใช้ตัวกรองด้านบนเพื่อดูเฉพาะ <b>ผ่าน / พิจารณา / ไม่ผ่าน</b></p>
-  </div>
-</div>
-
-<div class="guide-step">
-  <div class="guide-num">9</div>
-  <div>
-    <div class="guide-title">ประวัติและ Export</div>
-    <p>ผลการวิเคราะห์แต่ละครั้งจะถูกบันทึกอัตโนมัติ ดูย้อนหลังได้ที่เมนู <b>"ประวัติ"</b> หรือกด <b>"Export PDF"</b> เพื่อดาวน์โหลดรายงานผลลัพธ์เป็น PDF</p>
-  </div>
-</div>
-
-
-<div class="guide-step">
-  <div class="guide-num">10</div>
-  <div>
-    <div class="guide-title">วิธีขอ Groq API Key (ฟรี)</div>
-    <p>
-      1. ไปที่ <code>console.groq.com</code><br>
-      2. สมัครสมาชิก / เข้าสู่ระบบด้วย Google หรือ GitHub<br>
-      3. ไปที่เมนู <b>API Keys</b> ด้านบน<br>
-      4. กด <b>Create API Key</b> ตั้งชื่อ แล้วกดสร้าง<br>
-      5. คัดลอกคีย์ที่ขึ้นต้นด้วย <code>gsk_...</code> (จะเห็นครั้งเดียว เก็บไว้ให้ดี)<br>
-      6. นำมาใส่ในช่อง <b>Groq API Key</b> ที่โหมด "+ Groq AI"
-    </p>
-    <p style="margin-top:6px">Free tier ให้โควต้า 6,000 token/นาที และ 14,400 requests/วัน — เพียงพอสำหรับใช้งานทั่วไป ไม่มีค่าใช้จ่าย</p>
-  </div>
-</div>
-
-
-    </div>
-  </div>
-</div>
-
-
-
-<div class="page">
-
-
-  
-
-  <div class="hero">
-    <div class="hero-eyebrow">Resume Screening</div>
-    <h1>ALGORITHM & AI ANALYZER</h1>
-    <p>อัปโหลด Job Specification และ Resumes แล้วให้ระบบคัดกรองด้วย Algorithm และ ระบบ AI</p>
-  </div>
-
-  <!-- ── SETUP CARD ── -->
-  <div class="setup">
-
-    <div class="setup-grid">
-      <!-- JD -->
-      <div class="field field-full">
-        <div class="field-label">Job Description</div>
-        <div class="seg" style="align-self:flex-start;margin-bottom:4px">
-          <button class="seg-btn on" id="btn-jd-file" onclick="setJdMode('file')">อัปโหลดไฟล์</button>
-          <button class="seg-btn"   id="btn-jd-type" onclick="setJdMode('type')">พิมพ์เอง</button>
-        </div>
-        <div id="jd-file-area">
-          <input type="file" id="jd-input" accept=".txt,.pdf" style="display:none" onchange="showJdFile()">
-          <div class="upload-area" id="jd-drop">
-            <span class="icon">📋</span>
-            <p id="jd-label">คลิกหรือลากไฟล์ <b>.txt / .pdf</b> มาวาง</p>
+      <div id="mode-body-existing">
+        <div class="search-hero">
+          <div class="search-hero-label">🔎 ชื่อตำแหน่งงาน</div>
+          <div class="tag-input-box" id="jobtitle-box">
+            <input type="text" placeholder="พิมพ์แล้วกด Enter เช่น Marketing Officer" id="jobtitle-input">
           </div>
-        </div>
-        <div id="jd-type-area" style="display:none">
-          <textarea id="jd-text" rows="4" placeholder="Position: Marketing Officer&#10;Required Skills: Excel, Data Analysis&#10;Education: Bachelor degree"></textarea>
+          <div class="hero-hint">คั่นด้วย Enter หรือเครื่องหมาย , — ตำแหน่งใดตำแหน่งหนึ่งตรงกันถือว่าเกี่ยวข้อง</div>
         </div>
       </div>
 
-      <!-- Job Specification -->
-      <div class="field field-full">
-        <div class="field-label">Job Specification <span class="opt"></span></div>
-        <input type="file" id="js-input" accept=".txt,.pdf" style="display:none" onchange="showJsFile()">
-        <div class="upload-area" id="js-drop">
-          <span class="icon">📄</span>
-          <p id="js-label">คลิกหรือลากไฟล์ <b>.txt / .pdf</b> มาวาง</p>
-        </div>
-      </div>
-
-      <!-- Error: ต้องมีอย่างน้อย 1 -->
-      <div id="jd-js-error" class="warn-box" style="display:none;grid-column:1/-1">
-        กรุณาใส่อย่างน้อย 1 อย่าง (Job Description หรือ Job Specification)
-      </div>
-      <div class="field field-full">
-        <div class="field-label">Resume (PDF)</div>
-        <input type="file" id="resume-input" accept=".pdf" multiple style="display:none" onchange="addResumes()">
-        <div class="upload-area" id="resume-drop">
-          <span class="icon">📁</span>
-          <p>คลิกหรือลากไฟล์ <b>Resume PDF</b> มาวาง — เลือกได้หลายไฟล์</p>
-        </div>
-        <div class="file-list" id="resume-list"></div>
-      </div>
-
-      <!-- Required keywords -->
-      <div class="field">
-        <div class="field-label">Required Keywords <span class="opt">(ไม่บังคับใส่)</span></div>
-        <input type="text" id="req-kw" placeholder="เช่น python data excel">
-        <div class="field-hint">ขาดคำใดคำหนึ่ง = ตัดออกทันที(คะแนน resume = 0 )</div>
-      </div>
-
-      <!-- Education -->
-      <div class="field">
-        <div class="field-label">วุฒิการศึกษาขั้นต่ำ</div>
-        <select id="edu">
-          <option value="">ไม่กำหนด</option>
-          <option value="1">ปวส. / อนุปริญญา</option>
-          <option value="2">ปริญญาตรี</option>
-          <option value="3">ปริญญาโท</option>
-        </select>
-        <div class="field-hint">วุฒิที่สูงกว่าก็ผ่านเช่นกัน</div>
-      </div>
-
-      <!-- GPA -->
-      <div class="field">
-        <div class="field-label">GPA ขั้นต่ำ <span class="opt">(ไม่บังคับ)</span></div>
-        <input type="number" id="min-gpa" placeholder="เช่น 2.50"
-               min="0" max="4" step="0.01" autocomplete="off">
-        <div class="field-hint">GPA ต้องมากกว่าหรือเท่ากับค่าที่กำหนด — ไม่พบ GPA = ไม่ผ่าน</div>
-      </div>
-
-      <!-- FR-3.6 อายุ -->
-<div class="field">
-  <div class="field-label">อายุ (ปี) <span class="opt">(ไม่บังคับ)</span></div>
-  <div style="display:flex;gap:8px">
-    <input type="number" name="age_min" placeholder="ต่ำสุด">
-    <input type="number" name="age_max" placeholder="สูงสุด">
-  </div>
-</div>
-
-<!-- FR-3.10 เพศ -->
-<div class="field">
-  <div class="field-label">เพศ <span class="opt">(ไม่บังคับ)</span></div>
-  <div class="seg">
-    <button type="button" class="seg-btn on" data-gender="">ไม่ระบุ</button>
-    <button type="button" class="seg-btn" data-gender="male">ชาย</button>
-    <button type="button" class="seg-btn" data-gender="female">หญิง</button>
-  </div>
-  <input type="hidden" id="gender-value" value="">
-</div>
-
-<!-- FR-3.11 เงินเดือน -->
-<div class="field">
-  <div class="field-label">เงินเดือน (บาท) <span class="opt">(ไม่บังคับ)</span></div>
-  <div style="display:flex;gap:8px">
-    <input type="number" id="salary-min" placeholder="ต่ำสุด">
-    <input type="number" id="salary-max" placeholder="สูงสุด">
-  </div>
-</div>
-
-<!-- FR-3.13 + FR-3.14 special -->
-<div class="field">
-  <div class="field-label">คะแนนพิเศษ <span class="opt">(เฉพาะบางตำแหน่ง)</span></div>
-  <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--sub)">
-    <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="enable-special" style="width:auto"> เปิดใช้คะแนนพิเศษ</label>
-    <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="require-vehicle" style="width:auto"> ต้องมีรถยนต์ส่วนตัว</label>
-    <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="require-license" style="width:auto"> ต้องมีใบขับขี่</label>
-    <input type="number" id="min-toeic" placeholder="TOEIC ขั้นต่ำ">
-  </div>
-</div>
-
-      <!-- Bonus keywords -->
-      <div class="field field-full">
-        <div class="field-label">Bonus Keywords <span class="opt">(ไม่บังคับ — มีแล้วได้คะแนนเพิ่ม)</span></div>
-        <input type="text" id="bon-kw" placeholder="เช่น excel powerbi crm english">
-      </div>
-
-      <!-- Thresholds -->
-      <div class="field field-full">
-        <div class="field-label">เกณฑ์คะแนน</div>
-        <div class="slider-grid">
-          <div class="slider-row">
-            <span style="font-size:12px;color:var(--sub);min-width:54px">ผ่าน ≥</span>
-            <input type="range" min="0" max="100" value="60" id="pass-slider"
-                   oninput="document.getElementById('pass-val').textContent=this.value">
-            <span class="sv" id="pass-val">60</span>
+      <div id="mode-body-new" style="display:none">
+        <div class="card" style="padding:22px;margin-bottom:20px">
+          <div class="f-label" style="margin-bottom:10px">Job Description / Job Specification <span style="color:var(--red)">*</span></div>
+          <div class="upload-grid">
+            <div>
+              <input type="file" id="jd-input" accept=".txt,.pdf" style="display:none">
+              <div class="upload-box" id="jd-drop"><span class="ic">📋</span><p id="jd-label"><b>Job Description</b><br>คลิกหรือลากไฟล์ .txt / .pdf</p></div>
+            </div>
+            <div>
+              <input type="file" id="js-input" accept=".txt,.pdf" style="display:none">
+              <div class="upload-box" id="js-drop"><span class="ic">📄</span><p id="js-label"><b>Job Specification</b><br>คลิกหรือลากไฟล์ .txt / .pdf</p></div>
+            </div>
           </div>
-          <div class="slider-row">
-            <span style="font-size:12px;color:var(--sub);min-width:54px">พิจารณาเพิ่มเติม ≥</span>
-            <input type="range" min="0" max="100" value="40" id="rev-slider"
-                   oninput="document.getElementById('rev-val').textContent=this.value">
-            <span class="sv" id="rev-val">40</span>
+          <div class="hero-hint" style="margin-bottom:16px">ต้องมีอย่างน้อย 1 อย่าง</div>
+
+          <div class="f-label" style="margin-bottom:10px">Resume (PDF) <span style="color:var(--red)">*</span></div>
+          <input type="file" id="resume-input" accept=".pdf" multiple style="display:none">
+          <div class="upload-box upload-full" id="resume-drop"><span class="ic">📁</span><p>คลิกหรือลากไฟล์ <b>Resume PDF</b> มาวาง — เลือกได้หลายไฟล์</p></div>
+          <div class="resume-drop-list" id="resume-list"></div>
+        </div>
+      </div>
+
+      <div class="filter-toggle-row">
+        <div class="filter-section-label">⚙️ ตัวกรอง / เงื่อนไขการให้คะแนน <button class="clear-link" onclick="clearAllFilters()">ล้างทั้งหมด</button></div>
+        <div class="result-count" id="result-count"></div>
+      </div>
+
+      <div class="adv-filters" id="adv-filters">
+        <div class="adv-block-label">เงื่อนไขหลัก · 60 คะแนน</div>
+        <div class="adv-grid">
+          <div class="f-field f-wide"><div class="f-label">ลักษณะงานที่ทำมา</div><input type="text" id="f-duties" placeholder="เช่น คัดเลือกใบสมัคร, สรรหาบุคลากร"></div>
+          <div class="f-field f-wide"><div class="f-label">ทักษะความสามารถ</div><input type="text" id="f-skills" placeholder="เช่น BOQ, VLOOKUP, เขียนแบบ"></div>
+          <div class="f-field"><div class="f-label">ประสบการณ์ขั้นต่ำ (ปี)</div><input type="number" id="f-exp" placeholder="เช่น 3"></div>
+          <div class="f-field"><div class="f-label">GPA ขั้นต่ำ</div><input type="number" step="0.01" id="f-gpa" placeholder="2.80"></div>
+
+          <div class="f-field"><div class="f-label">คณะ</div>
+            <select id="faculty-select" onchange="updateMajors()">
+              <option value="">เลือกคณะ</option>
+              <option value="eng">วิศวกรรมศาสตร์</option>
+              <option value="biz">บริหารธุรกิจ</option>
+              <option value="sci">วิทยาศาสตร์</option>
+              <option value="other">อื่นๆ (พิมพ์เอง)</option>
+            </select>
+          </div>
+          <div class="f-field"><div class="f-label">สาขาวิชา</div><select id="major-select"><option value="">เลือกคณะก่อน</option></select></div>
+          <div class="f-field f-wide" id="faculty-other" style="display:none"><div class="f-label">ระบุคณะ/สาขาเอง</div><input type="text" id="f-field-other" placeholder="พิมพ์คณะ/สาขาที่ไม่มีในตัวเลือก"></div>
+          <div class="f-field f-wide"><div class="f-label">คำค้นหาทั่วไป (Keywords)</div><input type="text" id="f-general" placeholder="เช่น ม.เชียงใหม่, ม.เกษตรศาสตร์"></div>
+        </div>
+
+        <div class="adv-block-label">ข้อมูลพื้นฐาน · 8 คะแนน</div>
+        <div class="adv-grid">
+          <div class="f-field f-wide"><div class="f-label">วุฒิการศึกษา (เลือกได้หลายรายการ)</div>
+            <div class="opt-row">
+              <label class="opt-label"><input type="checkbox" name="edu-lvl" value="1"> ปวช./ปวส.</label>
+              <label class="opt-label"><input type="checkbox" name="edu-lvl" value="2" checked> ปริญญาตรี</label>
+              <label class="opt-label"><input type="checkbox" name="edu-lvl" value="3"> ปริญญาโท</label>
+            </div>
+          </div>
+          <div class="f-field f-wide"><div class="f-label">เพศ</div>
+            <div class="opt-row">
+              <label class="opt-label"><input type="radio" name="gender" value="" checked> ไม่ระบุ</label>
+              <label class="opt-label"><input type="radio" name="gender" value="male"> ชาย</label>
+              <label class="opt-label"><input type="radio" name="gender" value="female"> หญิง</label>
+            </div>
+          </div>
+          <div class="f-field"><div class="f-label">อายุ ต่ำสุด</div><input type="number" id="f-age-min" placeholder="22"></div>
+          <div class="f-field"><div class="f-label">อายุ สูงสุด</div><input type="number" id="f-age-max" placeholder="35"></div>
+          <div class="f-field"><div class="f-label">เงินเดือน ต่ำสุด</div><input type="number" id="f-salary-min" placeholder="15,000"></div>
+          <div class="f-field"><div class="f-label">เงินเดือน สูงสุด</div><input type="number" id="f-salary-max" placeholder="25,000"></div>
+        </div>
+
+        <div class="special-inline">
+          <div class="special-toggle" onclick="toggleSpecial()">
+            <div><div class="f-label" style="color:var(--search)">เงื่อนไขพิเศษ — เฉพาะบางตำแหน่ง</div><div style="font-size:11px;color:var(--faint)">คะแนนเสริม 15 คะแนน นอกเหนือจาก 100 คะแนนหลัก</div></div>
+            <div class="switch" id="special-switch"></div>
+          </div>
+          <div class="special-body" id="special-body">
+            <div class="adv-grid" style="margin-top:14px">
+              <div class="f-field f-wide"><div class="f-label">ยานพาหนะ / ใบขับขี่ (5 คะแนน)</div>
+                <div class="opt-row">
+                  <label class="opt-label"><input type="checkbox" id="f-vehicle"> ต้องมีรถยนต์ส่วนตัว</label>
+                  <label class="opt-label"><input type="checkbox" id="f-license"> ต้องมีใบขับขี่</label>
+                </div>
+              </div>
+              <div class="f-field f-wide"><div class="f-label">ทักษะด้านภาษา (10 คะแนน)</div>
+                <label class="opt-label">คะแนน TOEIC ขั้นต่ำ <input type="number" id="f-toeic" placeholder="600" style="width:80px;margin-left:6px"></label>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- AI mode -->
-      <div class="field field-full">
-        <div class="field-label">โหมดการวิเคราะห์</div>
-        <div class="seg">
-          <button class="seg-btn on" id="btn-tfidf" onclick="setMode('tfidf')">TF-IDF เท่านั้น (ฟรี 100%)</button>
-          <button class="seg-btn"   id="btn-hybrid" onclick="setMode('hybrid')">+ Groq AI</button>
+      <div id="mode-new-runbox" style="display:none">
+        <div class="adv-grid" style="margin-bottom:14px">
+          <div class="f-field"><div class="f-label">เกณฑ์ผ่าน ≥</div><input type="number" id="f-pass" value="60"></div>
+          <div class="f-field"><div class="f-label">เกณฑ์พิจารณา ≥</div><input type="number" id="f-review" value="40"></div>
+          <div class="f-field f-wide" style="justify-content:flex-end;flex-direction:row;align-items:center;gap:8px">
+            <label class="opt-label"><input type="checkbox" id="f-ai-mode"> เปิดใช้ AI Score (ต้องมี Groq API Key)</label>
+          </div>
+        </div>
+        <button class="run-btn-main" id="run-btn" onclick="runAnalyze()">วิเคราะห์ Resume</button>
+      </div>
+
+      <div class="results-head">
+        <div><label class="select-all-label"><input type="checkbox" class="match-check" id="select-all" onclick="toggleSelectAll(this)"> เลือกทั้งหมด</label></div>
+        <div class="results-actions">
+          <button class="action-btn" onclick="exportExcel()">📊 Export Excel</button>
         </div>
       </div>
 
-      <div class="field field-full" id="ai-section" style="display:none">
-        <div class="ai-box">
-          <div class="field-label" style="color:var(--purple)">🤖 โหมด Groq AI</div>
-          <p style="font-size:12.5px;color:var(--sub)">ระบบจะใช้ Groq API Key ที่ลงทะเบียนไว้อัตโนมัติ</p>
-          <div class="field-label" style="margin-top:8px">ส่ง AI เฉพาะคะแนน TF-IDF ≥ <span id="thr-val">30</span></div>
-          <input type="range" min="0" max="100" value="30" oninput="document.getElementById('thr-val').textContent=this.value" id="ai-thr">
-        </div>
+      <div id="results-container">
+        <div class="empty-state"><p>ค้นหาหรือวิเคราะห์เพื่อดูผลลัพธ์</p></div>
       </div>
-    </div>
+    </section>
 
-    <button class="run-btn" id="run-btn" onclick="runAnalyze()">วิเคราะห์ Resume</button>
+    <!-- ═══════════ VIEW: คลัง Resume ═══════════ -->
+
+<div class="card" style="padding:16px;margin-bottom:16px">
+  <input type="file" id="repo-upload-input" accept=".pdf" multiple style="display:none">
+  <div class="upload-box" id="repo-upload-drop" style="padding:14px">
+    <span class="ic">📁</span><p>คลิกหรือลากไฟล์ Resume มาวางเพื่อเก็บเข้าคลังโดยตรง (ยังไม่วิเคราะห์)</p>
   </div>
-
-  <!-- ── RESULTS ── -->
-  <div class="results-head">
-    <div>
-      <div class="results-title">ผลการคัดกรอง</div>
-      <div class="results-sub" id="result-sub">รอการวิเคราะห์...</div>
-    </div>
-    <button class="export-btn" id="export-pdf-btn" onclick="exportPDF()">⬇ Export PDF</button>
-    <button class="export-btn" id="export-excel-btn" onclick="exportExcel()">⬇ Export Excel</button>
-  </div>
-
-  <!-- ── ส่วนที่จะถูกถ่ายภาพเพื่อสร้าง PDF ── -->
-  <div id="pdf-capture-area">
-
-    <div class="stat-row" id="stat-row" style="display:none">
-      <div class="stat-card"><div class="stat-num" id="s-total">0</div><div class="stat-lbl">ทั้งหมด</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:var(--green)"  id="s-pass">0</div><div class="stat-lbl">ผ่าน</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:var(--amber)"  id="s-rev">0</div><div class="stat-lbl">พิจารณา</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:var(--red)"    id="s-fail">0</div><div class="stat-lbl">ไม่ผ่าน</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:var(--purple)" id="s-ai">0</div><div class="stat-lbl">AI ใช้</div></div>
-    </div>
-
-    <div class="token-panel" id="token-panel">
-      <div class="token-row">
-        <div class="token-title">Groq Token Usage <span style="color:var(--sub);font-weight:400">(ต่อ 1 นาที)</span></div>
-        <div class="token-nums" id="token-nums">0 / 6,000</div>
-      </div>
-      <div class="token-bar"><div class="token-bar-fill" id="token-bar-fill" style="width:0%"></div></div>
-      <div class="token-detail">
-        <span>Input <b id="tok-in">0</b></span>
-        <span>Output <b id="tok-out">0</b></span>
-        <span>ใช้ไป <b id="tok-used">0</b></span>
-        <span>คงเหลือ <b id="tok-remain">6,000</b></span>
-      </div>
-    </div>
-
-    <div class="pills" id="filter-pills" style="display:none">
-      <button class="pill on" onclick="filterResults('all',this)">ทั้งหมด</button>
-      <button class="pill" onclick="filterResults('ผ่าน',this)">ผ่าน</button>
-      <button class="pill" onclick="filterResults('พิจารณาเพิ่มเติม',this)">พิจารณา</button>
-      <button class="pill" onclick="filterResults('ไม่ผ่าน',this)">ไม่ผ่าน</button>
-    </div>
-
-    <div class="loading" id="loading">
-      <div class="spinner"></div>
-      <p>กำลังวิเคราะห์ Resume...</p>
-    </div>
-
-    <div class="empty" id="empty-state">
-      <div class="empty-icon">📋</div>
-      <p>กรอกข้อมูลด้านบนแล้วกด <b>วิเคราะห์ Resume</b></p>
-    </div>
-
-    <div id="results-container"></div>
-
-  </div>
-  <!-- ── จบส่วนที่ถ่ายภาพ ── -->
-
 </div>
+
+    <section class="view" id="view-repo">
+      <div class="page-head">
+        <div class="page-eyebrow" style="color:var(--repo)">คลัง Resume</div>
+        <h1 class="page-title">ไฟล์ Resume ทั้งหมดในระบบ</h1>
+        <p class="page-desc">Resume ทุกไฟล์ที่เคยอัปโหลด จัดเก็บและแยกหมวดอัตโนมัติตามผลการคัดกรองล่าสุด</p>
+      </div>
+      <div class="repo-stats">
+        <div class="stat-card"><div class="stat-num" id="rp-total">–</div><div class="stat-lbl">ไฟล์ทั้งหมด</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--green)" id="rp-qualified">–</div><div class="stat-lbl">Qualified Candidates</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--amber)" id="rp-pool">–</div><div class="stat-lbl">Talent Pool</div></div>
+      </div>
+      <div class="toolbar">
+        <div class="search-box"><span class="ic">🔍</span><input id="repo-search" placeholder="ค้นหาชื่อไฟล์หรือตำแหน่งงาน..." oninput="renderRepoGrid()"></div>
+        <button class="action-btn" onclick="downloadSelected()">⬇ ดาวน์โหลดที่เลือก</button>
+          <div class="pill on" data-f="all">ทั้งหมด</div>
+          <div class="pill" data-f="qualified">Qualified</div>
+          <div class="pill" data-f="pool">Talent Pool</div>
+          <div class="pill" data-f="unsorted">ยังไม่วิเคราะห์</div>
+        </div>
+      </div>
+      <div class="resume-grid" id="repo-grid"><div class="empty-state"><div class="spinner"></div>กำลังโหลด...</div></div>
+    </section>
+
+    <!-- ═══════════ VIEW: History ═══════════ -->
+    <section class="view" id="view-hist">
+      <div class="page-head">
+        <div class="page-eyebrow" style="color:var(--hist)">History</div>
+        <h1 class="page-title">ประวัติการคัดกรอง</h1>
+        <p class="page-desc">คลิกแต่ละรายการเพื่อดูรายงานผลลัพธ์ฉบับเต็ม</p>
+      </div>
+      <div class="timeline" id="hist-timeline"><div class="empty-state"><div class="spinner"></div>กำลังโหลด...</div></div>
+    </section>
+
+  </main>
+</div>
+
+<div class="modal-overlay" id="hist-modal" onclick="if(event.target===this)closeHistoryModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div><div class="modal-title" id="hm-title"></div><div style="font-size:11.5px;color:var(--faint)" id="hm-time"></div></div>
+      <button class="modal-close" onclick="closeHistoryModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="repo-stats" style="margin-bottom:18px">
+        <div class="stat-card"><div class="stat-num" id="hm-total">–</div><div class="stat-lbl">ทั้งหมด</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--green)" id="hm-pass">–</div><div class="stat-lbl">ผ่าน</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--amber)" id="hm-rev">–</div><div class="stat-lbl">พิจารณา</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--red)" id="hm-fail">–</div><div class="stat-lbl">ไม่ผ่าน</div></div>
+      </div>
+      <div class="match-grid" id="hm-results"></div>
+    </div>
+  </div>
+</div>
+
 
 <script>
-let allResults = [];
-let currentHistoryId = null;
-let currentFilter = 'all';
-let jdMode = 'file';
-let aiMode = 'tfidf';
-
-// ── mode toggles ────────────────────────────────────────────
-function setMode(m) {
-  aiMode = m;
-  document.getElementById('btn-tfidf').className = 'seg-btn' + (m==='tfidf'?' on':'');
-  document.getElementById('btn-hybrid').className = 'seg-btn' + (m==='hybrid'?' on':'');
-  document.getElementById('ai-section').style.display = m==='hybrid'?'block':'none';
-
-  const chip = document.getElementById('cost-chip');
-  if(m==='tfidf') {
-    chip.className = 'cost-chip';
-    chip.textContent = 'TF-IDF · ฟรี 100%';
-    document.getElementById('token-panel').classList.remove('show');
-  } else {
-    chip.className = 'cost-chip ai';
-    chip.textContent = 'Groq Token: 0 / 6,000';
-  }
+// ═══════════════ NAV ═══════════════
+function switchView(name, el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('view-'+name).classList.add('active');
+  if (name === 'repo') loadRepository();
+  if (name === 'hist') loadHistory();
 }
 
-document.querySelectorAll('[data-gender]').forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll('[data-gender]').forEach(b => b.classList.remove('on'));
-    btn.classList.add('on');
-    document.getElementById('gender-value').value = btn.dataset.gender;
-  };
-});
 
-
-
-function setJdMode(m) {
-  jdMode = m;
-  document.getElementById('btn-jd-file').className = 'seg-btn'+(m==='file'?' on':'');
-  document.getElementById('btn-jd-type').className = 'seg-btn'+(m==='type'?' on':'');
-  document.getElementById('jd-file-area').style.display = m==='file'?'block':'none';
-  document.getElementById('jd-type-area').style.display = m==='type'?'block':'none';
-}
-function showJdFile() {
-  const f = document.getElementById('jd-input').files[0];
-  if(f) document.getElementById('jd-label').innerHTML = '✓ ' + f.name;
+// ═══════════════ MODE TOGGLE ═══════════════
+function setMode(m){
+  document.getElementById('mode-existing').classList.toggle('on', m==='existing');
+  document.getElementById('mode-new').classList.toggle('on', m==='new');
+  document.getElementById('mode-body-existing').style.display = m==='existing' ? 'block' : 'none';
+  document.getElementById('mode-body-new').style.display = m==='new' ? 'block' : 'none';
+  document.getElementById('mode-new-runbox').style.display = m==='new' ? 'block' : 'none';
+  currentMode = m;
+  document.getElementById('results-container').innerHTML = '<div class="empty-state"><p>ค้นหาหรือวิเคราะห์เพื่อดูผลลัพธ์</p></div>';
+  document.getElementById('result-count').textContent = '';
 }
 
-// ── ป้องกัน browser เปิดไฟล์เองตอนลากวางทั้งหน้า ───────────────
-['dragover','drop'].forEach(evt=>{
-  document.addEventListener(evt, e => e.preventDefault());
-});
+let currentMode = 'existing';
 
-// ── Helper: ทำให้ element ใดๆ เป็น drop zone ──────────────────
-function setupDropZone(zoneId, onFiles) {
-  const zone = document.getElementById(zoneId);
-  if (!zone) return;
-  let dragCounter = 0;
 
-  zone.addEventListener('dragenter', e => {
+
+function toggleSpecial(){
+  document.getElementById('special-switch').classList.toggle('on');
+  document.getElementById('special-body').classList.toggle('show');
+}
+
+// ═══════════════ JOB TITLE TAGS ═══════════════
+const jtInput = document.getElementById('jobtitle-input');
+jtInput.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ',') && jtInput.value.trim()) {
     e.preventDefault();
-    dragCounter++;
-    zone.classList.add('dragover');
-  });
-  zone.addEventListener('dragover', e => e.preventDefault());
-  zone.addEventListener('dragleave', e => {
-    e.preventDefault();
-    dragCounter--;
-    if (dragCounter <= 0) { dragCounter = 0; zone.classList.remove('dragover'); }
-  });
-  zone.addEventListener('drop', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter = 0;
-    zone.classList.remove('dragover');
-    const files = e.dataTransfer && e.dataTransfer.files
-      ? Array.from(e.dataTransfer.files) : [];
-    if (files.length) onFiles(files);
-  });
-  zone.addEventListener('click', () => {
-    const inputMap = {
-      'jd-drop':     'jd-input',
-      'js-drop':     'js-input',
-      'resume-drop': 'resume-input',
-    };
-    const input = document.getElementById(inputMap[zoneId] || 'resume-input');
-    input.click();
-  });
+    const tag = document.createElement('span');
+    tag.className = 'jtag';
+    tag.innerHTML = jtInput.value.trim() + ' <button onclick="this.parentElement.remove();runSearch()">✕</button>';
+    document.getElementById('jobtitle-box').insertBefore(tag, jtInput);
+    jtInput.value = '';
+    runSearch();
+  }
+});
+jtInput.addEventListener('blur', () => runSearch());
+function getJobTitles(){
+  return Array.from(document.querySelectorAll('#jobtitle-box .jtag')).map(t => t.textContent.replace('✕','').trim());
 }
 
-// ── JD drop zone ───────────────────────────────────────────────
-setupDropZone('jd-drop', (files) => {
-  const file = files[0];
-  const name = file.name.toLowerCase();
-  if (!name.endsWith('.txt') && !name.endsWith('.pdf')) {
-    alert('รองรับเฉพาะไฟล์ .txt หรือ .pdf');
-    return;
-  }
-  const dt = new DataTransfer();
-  dt.items.add(file);
-  document.getElementById('jd-input').files = dt.files;
-  document.getElementById('jd-label').innerHTML = '✓ ' + file.name;
-});
-
-// ── JS drop zone ──────────────────────────────────────────────
-function showJsFile() {
-  const f = document.getElementById('js-input').files[0];
-  if(f) document.getElementById('js-label').innerHTML = '✓ ' + f.name;
+// ═══════════════ CASCADING FACULTY/MAJOR ═══════════════
+const facultyMajors = {
+  eng: ['วิศวกรรมโยธา','วิศวกรรมไฟฟ้า','วิศวกรรมเครื่องกล','วิศวกรรมคอมพิวเตอร์'],
+  biz: ['การตลาด','การเงิน','การจัดการ','บัญชี'],
+  sci: ['วิทยาการคอมพิวเตอร์','เคมี','ชีววิทยา'],
+};
+function updateMajors(){
+  const f = document.getElementById('faculty-select').value;
+  const majorSel = document.getElementById('major-select');
+  document.getElementById('faculty-other').style.display = f === 'other' ? 'flex' : 'none';
+  majorSel.innerHTML = facultyMajors[f]
+    ? '<option value="">เลือกสาขา</option>' + facultyMajors[f].map(m => `<option>${m}</option>`).join('')
+    : '<option value="">เลือกคณะก่อน</option>';
 }
 
-setupDropZone('js-drop', (files) => {
-  const file = files[0];
-  const name = file.name.toLowerCase();
-  if (!name.endsWith('.txt') && !name.endsWith('.pdf')) {
-    alert('รองรับเฉพาะไฟล์ .txt หรือ .pdf');
-    return;
-  }
-  const dt = new DataTransfer();
-  dt.items.add(file);
-  document.getElementById('js-input').files = dt.files;
-  document.getElementById('js-label').innerHTML = '✓ ' + file.name;
-});
-setupDropZone('resume-drop', (files) => {
-  const pdfs   = files.filter(f => f.name.toLowerCase().endsWith('.pdf'));
-  const others = files.length - pdfs.length;
-  if (pdfs.length === 0) { alert('รองรับเฉพาะไฟล์ .pdf'); return; }
-  if (others > 0) alert(`ข้ามไฟล์ที่ไม่ใช่ .pdf จำนวน ${others} ไฟล์`);
-  pdfs.forEach(f => {
-    if (!resumeFiles.find(x => x.name === f.name)) resumeFiles.push(f);
-  });
-  renderResumeList();
-});
+// ═══════════════ FILE UPLOAD (โหมดวิเคราะห์ใหม่) ═══════════════
 
-// ── resume file list ─────────────────────────────────────────
+// ═══════════════ FILE UPLOAD (โหมดวิเคราะห์ใหม่) ═══════════════
 let resumeFiles = [];
-function addResumes() {
-  const files = Array.from(document.getElementById('resume-input').files);
-  files.forEach(f => { if(!resumeFiles.find(x=>x.name===f.name)) resumeFiles.push(f); });
-  renderResumeList();
-}
-function removeResume(name) {
-  resumeFiles = resumeFiles.filter(f=>f.name!==name);
-  renderResumeList();
-}
-function renderResumeList() {
-  const el = document.getElementById('resume-list');
-  el.innerHTML = resumeFiles.map(f=>`
-    <div class="file-chip">
-      <span>📄 ${f.name}</span>
-      <button onclick="removeResume('${f.name}')">×</button>
-    </div>`).join('');
-}
-
-// ── run ──────────────────────────────────────────────────────
-async function runAnalyze() {
-  const fd = new FormData();
-
-  const hasJD = jdMode === 'file'
-    ? document.getElementById('jd-input').files.length > 0
-    : document.getElementById('jd-text').value.trim() !== '';
-  const hasJS = document.getElementById('js-input') &&
-    document.getElementById('js-input').files.length > 0;
-
-  if (!hasJD && !hasJS) {
-    document.getElementById('jd-js-error').style.display = 'block';
-    return;
-  }
-  document.getElementById('jd-js-error').style.display = 'none';
-
-  if (hasJD && jdMode === 'file') fd.append('jd_file', document.getElementById('jd-input').files[0]);
-  if (hasJD && jdMode === 'type') fd.append('jd_text', document.getElementById('jd-text').value);
-  if (hasJS) fd.append('js_file', document.getElementById('js-input').files[0]);
-
-  if(resumeFiles.length===0) return alert('กรุณาอัปโหลด Resume');
-  resumeFiles.forEach(f=>fd.append('resumes',f));
-
-  fd.append('required',   document.getElementById('req-kw').value);
-  fd.append('bonus',      document.getElementById('bon-kw').value);
-  fd.append('edu',        document.getElementById('edu').value);
-  fd.append('min_gpa',    document.getElementById('min-gpa')?.value || '');
-  fd.append('pass_threshold',   document.getElementById('pass-slider').value);
-  fd.append('review_threshold', document.getElementById('rev-slider').value);
-  fd.append('ai_mode',    aiMode);
-
-  document.getElementById('run-btn').disabled = true;
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('empty-state').style.display = 'none';
-  document.getElementById('results-container').innerHTML = '';
-  document.getElementById('stat-row').style.display = 'none';
-  document.getElementById('filter-pills').style.display = 'none';
-  document.getElementById('token-panel').classList.remove('show');
-
-  try {
-    const resp = await fetch('/analyze', {method:'POST', body:fd});
-    const data = await resp.json();
-    if(data.error) { alert('Error: '+data.error); return; }
-    allResults = data.results;
-    currentHistoryId = data.history_id;
-    showSummary(data.summary);
-    renderResults(allResults);
-  } catch(e) {
-    alert('Connection error: '+e.message);
-  } finally {
-    document.getElementById('run-btn').disabled = false;
-    document.getElementById('loading').style.display = 'none';
-  }
-}
-
-function fmt(n) { return Math.round(n||0).toLocaleString('en-US'); }
-
-// ── summary ──────────────────────────────────────────────────
-function showSummary(s) {
-  document.getElementById('result-sub').textContent =
-    `${s.total} resume · ผ่าน ${s.passed} · พิจารณา ${s.review} · ไม่ผ่าน ${s.failed}`;
-  ['total','pass','rev','fail','ai'].forEach((k,i)=>{
-    document.getElementById('s-'+k).textContent = [s.total,s.passed,s.review,s.failed,s.ai_used][i];
+function setupDrop(dropId, inputId, onFile, multi){
+  const zone = document.getElementById(dropId);
+  const input = document.getElementById(inputId);
+  zone.onclick = () => input.click();
+  ['dragover','dragleave','drop'].forEach(evt => zone.addEventListener(evt, e => e.preventDefault()));
+  zone.addEventListener('dragenter', () => zone.classList.add('dragover'));
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    zone.classList.remove('dragover');
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length) { input.files = e.dataTransfer.files; onFile(multi ? files : files[0]); }
   });
-  document.getElementById('stat-row').style.display = 'grid';
-  document.getElementById('filter-pills').style.display = 'flex';
+  input.addEventListener('change', () => {
+    const files = Array.from(input.files || []);
+    if (files.length) onFile(multi ? files : files[0]);
+  });
+}
+setupDrop('jd-drop','jd-input', f => document.getElementById('jd-label').innerHTML = '✓ ' + f.name, false);
+setupDrop('js-drop','js-input', f => document.getElementById('js-label').innerHTML = '✓ ' + f.name, false);
+setupDrop('resume-drop','resume-input', files => {
+  files.forEach(f => { if (!resumeFiles.find(x=>x.name===f.name)) resumeFiles.push(f); });
+  renderResumeList();
+}, true);
 
-  const chip = document.getElementById('cost-chip');
-  if(aiMode === 'hybrid' && s.tokens_used !== undefined) {
-    const used   = s.tokens_used;
-    const limit  = s.tokens_limit || 6000;
-    const remain = s.tokens_remaining ?? Math.max(0, limit-used);
-    const pct    = Math.min(100, Math.round((used/limit)*100));
+// ═══ เพิ่มใหม่: อัปโหลด/ลบ/ดาวน์โหลดหลายไฟล์ ในหน้าคลัง Resume ═══
+setupDrop('repo-upload-drop', 'repo-upload-input', async (files) => {
+  const fd = new FormData();
+  files.forEach(f => fd.append('resumes', f));
+  const res = await fetch('/repository/upload', {method:'POST', body: fd});
+  const data = await res.json();
+  alert(`อัปโหลดสำเร็จ ${data.count} ไฟล์`);
+  loadRepository();
+}, true);
 
-    chip.textContent = `Token: ${fmt(used)} / ${fmt(limit)}`;
-    if(pct >= 90)      chip.className = 'cost-chip danger';
-    else if(pct >= 60) chip.className = 'cost-chip warn';
-    else               chip.className = 'cost-chip ai';
-
-    document.getElementById('token-panel').classList.add('show');
-    document.getElementById('token-nums').textContent = `${fmt(used)} / ${fmt(limit)}`;
-    const fill = document.getElementById('token-bar-fill');
-    fill.style.width = pct + '%';
-    fill.style.background = pct>=90 ? 'var(--red)' : pct>=60 ? 'var(--amber)' : 'var(--purple)';
-    document.getElementById('tok-in').textContent     = fmt(s.tokens_input);
-    document.getElementById('tok-out').textContent    = fmt(s.tokens_output);
-    document.getElementById('tok-used').textContent   = fmt(used);
-    document.getElementById('tok-remain').textContent = fmt(remain);
-  } else {
-    document.getElementById('token-panel').classList.remove('show');
-  }
+async function deleteRepoFile(folder, filename){
+  if (!confirm(`ลบไฟล์ ${filename}?`)) return;
+  await fetch(`/repository/delete/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`, {method:'DELETE'});
+  loadRepository();
 }
 
-// ── render ───────────────────────────────────────────────────
-function filterResults(f, btn) {
-  currentFilter = f;
-  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('on'));
-  btn.classList.add('on');
-  const filtered = f==='all' ? allResults : allResults.filter(r=>r.recommendation===f);
-  renderResults(filtered);
+function downloadSelected(){
+  const checked = document.querySelectorAll('#repo-grid .repo-check:checked');
+  if (!checked.length) return alert('ยังไม่ได้เลือกไฟล์');
+  checked.forEach(c => {
+    window.open(`/repository/download/${encodeURIComponent(c.dataset.folder)}/${encodeURIComponent(c.dataset.filename)}`, '_blank');
+  });
+}
+// ═══ จบส่วนที่เพิ่มใหม่ ═══
+
+function renderResumeList(){
+  document.getElementById('resume-list').innerHTML = resumeFiles.map(f =>
+    `<span class="drop-chip">📄 ${f.name} <button onclick="removeResume('${f.name}')">✕</button></span>`).join('');
+}
+function removeResume(name){ resumeFiles = resumeFiles.filter(f=>f.name!==name); renderResumeList(); }
+
+
+// ═══════════════ CLEAR FILTERS ═══════════════
+function clearAllFilters(){
+  document.querySelectorAll('#adv-filters input[type=text],#adv-filters input[type=number]').forEach(i=>i.value='');
+  document.querySelectorAll('#adv-filters input[type=checkbox]').forEach(i=>i.checked=false);
+  document.querySelector('input[name=gender][value=""]').checked = true;
+  document.getElementById('faculty-select').value=''; updateMajors();
+  if (currentMode === 'existing') runSearch();
 }
 
-function renderResults(results) {
-  const c   = {'ผ่าน':'green','พิจารณาเพิ่มเติม':'amber','ไม่ผ่าน':'red'};
-  const lbl = {'ผ่าน':'ผ่าน','พิจารณาเพิ่มเติม':'พิจารณา','ไม่ผ่าน':'ไม่ผ่าน'};
-
-  if (results.length === 0) {
-    document.getElementById('results-container').innerHTML =
-      `<div class="empty"><div class="empty-icon">🗂</div><p>ไม่มีรายการในหมวดนี้</p></div>`;
-    return;
-  }
-
-  document.getElementById('results-container').innerHTML = results.map((r,i)=>{
-    const col = c[r.recommendation]||'sub';
-    const sym = lbl[r.recommendation]||'?';
-    const ai  = r.insight && !r.insight.error;
-    const struct = r.struct_checks||{};
-    const reqKw  = r.req_keywords||{};
-    const bonKw  = r.bon_keywords||{};
-
-    // สร้าง keyword badge
-    const reqBadges = Object.entries(reqKw).map(([kw,found])=>
-      `<span class="struct-tag" style="color:${found?'var(--green)':'var(--red)'}">
-        ${found?'✓':'✗'} ${kw}
-      </span>`
-    ).join('');
-
-    const bonBadges = Object.entries(bonKw).map(([kw,found])=>
-      `<span class="struct-tag" style="color:${found?'var(--green)':'var(--faint)'}">
-        ${found?'✓':'○'} ${kw}
-      </span>`
-    ).join('');
-
-    return `
-<div class="rcard" data-rec="${r.recommendation}">
-  <div class="rcard-header" onclick="toggle(${i})">
-    <div class="rank">${r.rank}</div>
-    <div>
-      <div class="rname">${r.file} ${ai?'<span style="font-size:11px;color:var(--purple)">· AI</span>':''}</div>
-      <div class="rmeta"><span>⏱ ${r.experience}</span>${r.gpa != null ? `<span>🎓 GPA ${r.gpa.toFixed(2)}</span>` : ''}</div>
+// ═══════════════ RENDER MATCH CARD ═══════════════
+function fmtNum(n){ return (n===null||n===undefined) ? '–' : n; }
+function renderMatchCard(c, idx){
+  const rec = c.recommendation || 'ไม่ผ่าน';
+  const badgeClass = rec==='ผ่าน' ? 'pass' : rec==='พิจารณาเพิ่มเติม' ? 'rev' : 'fail';
+  const keyword = c.keyword_score ?? 0, ai = c.ai_score ?? 0, struct = c.struct_score ?? 0;
+  const missing = (c.missing_keywords || []).map(m => `<span class="mtag">${m}</span>`).join('') || '<span style="color:var(--faint);font-size:12px">ไม่มีคุณสมบัติที่ขาด</span>';
+  const uid = 'd' + idx + '_' + Math.random().toString(36).slice(2,7);
+  return `
+<div class="card match-card">
+  <div class="match-row" onclick="document.getElementById('${uid}').classList.toggle('open')">
+    <input type="checkbox" class="match-check" onclick="event.stopPropagation()">
+    <div class="match-rank">${idx+1}</div>
+    <div class="match-avatar">${(c.name||'?').slice(0,2)}</div>
+    <div class="match-info">
+      <div class="match-name">${c.name || 'ไม่ทราบชื่อ'}</div>
+      <div class="match-sub">
+        <span>🎓 GPA ${c.gpa!=null ? c.gpa.toFixed(2) : 'ไม่พบ'}</span>
+        <span>⏱ ${c.experience || 'ไม่ระบุ'}</span>
+        <span>📁 ${c.file || ''}</span>
+        ${c.jd_label ? `<span>🏷 ${c.jd_label}</span>` : ''}
+      </div>
     </div>
-    <div class="bars">
-      <div class="brow"><span class="blbl">Keyword</span><div class="btrack"><div class="bfill" style="width:${r.keyword_score/60*100}%;background:var(--accent)"></div></div><span class="bval" style="color:var(--accent)">${r.keyword_score}</span></div>
-<div class="brow"><span class="blbl">AI</span><div class="btrack"><div class="bfill" style="width:${r.ai_score/25*100}%;background:var(--purple)"></div></div><span class="bval" style="color:var(--purple)">${r.ai_score}</span></div>
-<div class="brow"><span class="blbl">Struct</span><div class="btrack"><div class="bfill" style="width:${r.struct_score/15*100}%;background:var(--green)"></div></div><span class="bval" style="color:var(--green)">${r.struct_score}</span></div>
+    <div class="match-bars">
+      <div class="mbar-row"><span class="mbar-lbl">Keyword</span><div class="mbar-track"><div class="mbar-fill" style="width:${keyword/60*100}%;background:var(--search)"></div></div></div>
+      <div class="mbar-row"><span class="mbar-lbl">AI</span><div class="mbar-track"><div class="mbar-fill" style="width:${ai/25*100}%;background:var(--hist)"></div></div></div>
+      <div class="mbar-row"><span class="mbar-lbl">Struct</span><div class="mbar-track"><div class="mbar-fill" style="width:${struct/15*100}%;background:var(--repo)"></div></div></div>
     </div>
-    <div class="score-col">
-      <div class="score-big" style="color:var(--${col})">${r.score}</div>
-      <div class="score-lbl">/ 100</div>
-      <div class="badge b-${r.recommendation==='ผ่าน'?'pass':r.recommendation==='พิจารณาเพิ่มเติม'?'review':'fail'}">${sym}</div>
+    <div class="match-score">
+      <div class="match-score-num">${c.score ?? 0}</div><div class="match-score-lbl">/ 100</div>
+      <div class="match-badge ${badgeClass}">${rec}</div>
     </div>
   </div>
-  <div class="rcard-detail" id="detail-${i}">
-    <div class="detail-grid">
-      <div>
-
-        ${Object.keys(reqKw).length ? `
-        <div class="detail-label">Required Keywords</div>
-        <div class="struct-list" style="margin-bottom:12px">${reqBadges}</div>
-        ` : ''}
-
-        ${Object.keys(bonKw).length ? `
-        <div class="detail-label">Bonus Keywords</div>
-        <div class="struct-list" style="margin-bottom:12px">${bonBadges}</div>
-        ` : ''}
-
-        <div class="detail-label">โครงสร้าง Resume</div>
-        <div class="struct-list">
-          ${Object.entries(struct).map(([k,v])=>`<span class="struct-tag" style="color:${v?'var(--green)':'var(--red)'}">${v?'✓':'✗'} ${k}</span>`).join('')}
-        </div>
-
-        ${r.error?`<div class="warn-box" style="margin-top:10px">${r.error}</div>`:''}
+  <div class="match-detail" id="${uid}">
+    <div class="match-detail-inner">
+      <div><div class="dd-label">คุณสมบัติที่ขาด</div><div class="missing-tags">${missing}</div></div>
+      <div><div class="dd-label">รายละเอียดคะแนน</div>
+        <div class="dd-preview">Keyword ${keyword}/60 · AI ${ai}/25 · Structure ${struct}/15${c.special_score ? ' · พิเศษ '+c.special_score+'/15' : ''}</div>
       </div>
-      ${ai?`
-      <div>
-        <div class="detail-label">Groq AI Insights</div>
-        ${r.insight.summary?`<div class="ai-insight-box">${r.insight.summary}</div>`:''}
-        ${r.insight.matched_skills?.length?`<div class="skill-line">✓ ตรงกับ JD: <b>${r.insight.matched_skills.slice(0,5).join(', ')}</b></div>`:''}
-        ${r.insight.missing_skills?.length?`<div class="skill-line">✗ ขาด: <b>${r.insight.missing_skills.slice(0,4).join(', ')}</b></div>`:''}
-        ${r.insight.combined?`<div class="skill-line">AI Score <b>${r.insight.ai_score}</b> → Combined <b>${r.insight.combined}</b></div>`:''}
-        ${r.insight.tokens_used?`<div class="token-mini">${fmt(r.insight.tokens_input)} in + ${fmt(r.insight.tokens_output)} out = ${fmt(r.insight.tokens_used)} tokens</div>`:''}
-      </div>`:`<div><div class="detail-label">หมายเหตุ</div><p style="font-size:12.5px;color:var(--sub)">${aiMode==='hybrid'?'คะแนน TF-IDF ต่ำเกินเกณฑ์ ไม่ส่ง AI':'ใช้ TF-IDF เท่านั้น'}</p></div>`}
+      <div class="detail-foot"><span>${c.created_at || ''}</span></div>
     </div>
   </div>
 </div>`;
-  }).join('');
 }
-
-function toggle(i) {
-  document.getElementById('detail-'+i).classList.toggle('open');
+function renderResults(candidates, countLabel){
+  const container = document.getElementById('results-container');
+  document.getElementById('result-count').innerHTML = countLabel || '';
+  if (!candidates || candidates.length === 0) {
+    container.innerHTML = '<div class="empty-state"><p>ไม่พบผู้สมัครที่ตรงกับเงื่อนไข</p></div>';
+    return;
+  }
+  container.innerHTML = '<div class="match-grid">' + candidates.map((c,i)=>renderMatchCard(c,i)).join('') + '</div>';
 }
+function toggleSelectAll(box){ document.querySelectorAll('.match-row .match-check').forEach(c=>c.checked = box.checked); }
 
-// ── export PDF (html2canvas + jsPDF) ──────────────────────────
-async function exportPDF() {
-  if (!allResults.length) return alert('ยังไม่มีผลลัพธ์');
+// ═══════════════ ค้นหาจากคลัง ═══════════════
+let lastResults = [];
+async function runSearch(){
+  if (currentMode !== 'existing') return;
+  const params = new URLSearchParams();
+  const titles = getJobTitles();
+  if (titles.length) params.set('jd_label_contains', titles[0]);
+  const gpa = document.getElementById('f-gpa').value;
+  if (gpa) params.set('min_gpa', gpa);
+  const exp = document.getElementById('f-exp').value;
+  if (exp) params.set('min_experience', exp);
 
-  const btn = document.getElementById('export-pdf-btn');
-  const originalText = btn.textContent;
-  btn.textContent = 'กำลังสร้าง PDF...';
-  btn.disabled = true;
-
+  document.getElementById('results-container').innerHTML = '<div class="empty-state"><div class="spinner"></div>กำลังค้นหา...</div>';
   try {
-    const target = document.getElementById('pdf-capture-area');
-
-    // ถ่ายภาพหน้าเว็บ (scale สูงเพื่อความชัด)
-    const canvas = await html2canvas(target, {
-      scale: 2,
-      backgroundColor: '#ffffff',
-      useCORS: true,
-    });
-
-    const imgData = canvas.toDataURL('image/png');
-    const { jsPDF } = window.jspdf;
-
-    // คำนวณขนาดให้พอดีกับความกว้าง A4 (595pt) แล้วปรับความสูงตามสัดส่วนภาพ
-    const pdfWidth = 595;
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-    const doc = new jsPDF({
-      unit: 'pt',
-      format: [pdfWidth, pdfHeight > 842 ? pdfHeight : 842],
-    });
-
-    doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-
-    const now = new Date();
-    const fname = `cv-screener-results-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.pdf`;
-    doc.save(fname);
-
-  } catch (e) {
-    alert('สร้าง PDF ไม่สำเร็จ: ' + e.message);
-  } finally {
-    btn.textContent = originalText;
-    btn.disabled = false;
+    const res = await fetch('/api/candidates/search?' + params.toString());
+    const data = await res.json();
+    lastResults = data.candidates || [];
+    renderResults(lastResults, `พบผู้สมัครที่เกี่ยวข้อง <b style="color:var(--ink)">${lastResults.length}</b> คน`);
+  } catch(e) {
+    document.getElementById('results-container').innerHTML = '<div class="empty-state"><p>ค้นหาไม่สำเร็จ: '+e.message+'</p></div>';
   }
 }
+['f-gpa','f-exp'].forEach(id => document.getElementById(id).addEventListener('change', runSearch));
 
-function exportExcel() {
-  if (!currentHistoryId) return alert('ยังไม่มีผลลัพธ์ที่บันทึกแล้ว');
+// ═══════════════ อัปโหลด + วิเคราะห์ใหม่ ═══════════════
+async function runAnalyze(){
+  const fd = new FormData();
+  if (document.getElementById('jd-input').files[0]) fd.append('jd_file', document.getElementById('jd-input').files[0]);
+  if (document.getElementById('js-input').files[0]) fd.append('js_file', document.getElementById('js-input').files[0]);
+  if (!resumeFiles.length) return alert('กรุณาอัปโหลด Resume อย่างน้อย 1 ไฟล์');
+  resumeFiles.forEach(f => fd.append('resumes', f));
+
+  fd.append('required', getJobTitles().join(' '));
+  fd.append('duties', document.getElementById('f-duties').value);
+  fd.append('bonus', document.getElementById('f-skills').value);
+  fd.append('field_of_study', document.getElementById('f-field-other').value);
+  fd.append('general', document.getElementById('f-general').value);
+  fd.append('min_gpa', document.getElementById('f-gpa').value);
+  fd.append('edu', (document.querySelector('input[name=edu-lvl]:checked') || {}).value || '');
+  fd.append('pass_threshold', document.getElementById('f-pass').value || 60);
+  fd.append('review_threshold', document.getElementById('f-review').value || 40);
+  fd.append('ai_mode', document.getElementById('f-ai-mode').checked ? 'hybrid' : 'tfidf');
+  fd.append('age_min', document.getElementById('f-age-min').value);
+  fd.append('age_max', document.getElementById('f-age-max').value);
+  fd.append('gender', (document.querySelector('input[name=gender]:checked')||{}).value || '');
+  fd.append('salary_min', document.getElementById('f-salary-min').value);
+  fd.append('salary_max', document.getElementById('f-salary-max').value);
+  fd.append('enable_special', document.getElementById('special-switch').classList.contains('on') ? 'on' : '');
+  fd.append('require_vehicle', document.getElementById('f-vehicle').checked ? 'on' : '');
+  fd.append('require_license', document.getElementById('f-license').checked ? 'on' : '');
+  fd.append('min_toeic', document.getElementById('f-toeic').value);
+
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true; btn.textContent = 'กำลังวิเคราะห์...';
+  document.getElementById('results-container').innerHTML = '<div class="empty-state"><div class="spinner"></div>กำลังวิเคราะห์ Resume...</div>';
+  try {
+    const res = await fetch('/analyze', {method:'POST', body: fd});
+    const data = await res.json();
+    if (data.error) { alert('Error: ' + data.error); return; }
+    lastResults = data.results || [];
+    currentHistoryId = data.history_id;
+    const s = data.summary || {};
+    renderResults(lastResults, `${s.total||0} resume · ผ่าน ${s.passed||0} · พิจารณา ${s.review||0} · ไม่ผ่าน ${s.failed||0} · เต็ม ${s.max_possible_score||100} คะแนน`);
+  } catch(e) {
+    document.getElementById('results-container').innerHTML = '<div class="empty-state"><p>วิเคราะห์ไม่สำเร็จ: '+e.message+'</p></div>';
+  } finally {
+    btn.disabled = false; btn.textContent = 'วิเคราะห์ Resume';
+  }
+}
+let currentHistoryId = null;
+function exportExcel(){
+  if (!currentHistoryId) return alert('ยังไม่มีผลลัพธ์ที่บันทึกแล้ว (ใช้ได้หลังวิเคราะห์ใหม่เท่านั้น)');
   window.location.href = '/export/excel/' + currentHistoryId;
 }
 
-// ── guide panel ──────────────────────────────────────────────
-function openGuide() {
-  document.getElementById('guide-overlay').classList.add('show');
-}
-function closeGuide() {
-  document.getElementById('guide-overlay').classList.remove('show');
-}
-
-// ── history ──────────────────────────────────────────────────
-function fmtTime(iso) {
-  if(!iso) return '';
-  const d = new Date(iso);
-  const today = new Date();
-  const sameDay = d.toDateString() === today.toDateString();
-  const time = d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
-  if (sameDay) return `วันนี้ ${time}`;
-  return d.toLocaleDateString('th-TH', {day:'numeric', month:'short'}) + ' ' + time;
-}
-
-async function openHistory() {
-  document.getElementById('history-overlay').classList.add('show');
-  const listEl = document.getElementById('history-list');
-  listEl.innerHTML = `<div class="empty" style="border:none;padding:40px 0"><div class="empty-icon">⏳</div><p>กำลังโหลด...</p></div>`;
-
+// ═══════════════ คลัง Resume ═══════════════
+let repoItems = [];
+let repoFilter = 'all';
+async function loadRepository(){
+  document.getElementById('repo-grid').innerHTML = '<div class="empty-state"><div class="spinner"></div>กำลังโหลด...</div>';
   try {
-    const resp = await fetch('/history');
-    const data = await resp.json();
-    renderHistoryList(data.history || []);
+    const res = await fetch('/repository');
+    const data = await res.json();
+    repoItems = data.items || [];
+    document.getElementById('rp-total').textContent = data.stats?.total ?? 0;
+    document.getElementById('rp-qualified').textContent = data.stats?.qualified ?? 0;
+    document.getElementById('rp-pool').textContent = data.stats?.pool ?? 0;
+    renderRepoGrid();
   } catch(e) {
-    listEl.innerHTML = `<div class="empty" style="border:none;padding:40px 0"><p>โหลดประวัติไม่สำเร็จ</p></div>`;
+    document.getElementById('repo-grid').innerHTML = '<div class="empty-state"><p>โหลดไม่สำเร็จ</p></div>';
   }
 }
-
-function closeHistory() {
-  document.getElementById('history-overlay').classList.remove('show');
-}
-
-function renderHistoryList(items) {
-  const listEl = document.getElementById('history-list');
-  if (items.length === 0) {
-    listEl.innerHTML = `<div class="empty" style="border:none;padding:40px 0"><div class="empty-icon">🗂</div><p>ยังไม่มีประวัติการวิเคราะห์</p></div>`;
-    return;
-  }
-  listEl.innerHTML = items.map(it => {
-    const s = it.summary || {};
-    return `
-<div class="history-item" onclick="loadHistory('${it.id}')">
-  <button class="history-del" onclick="event.stopPropagation();deleteHistory('${it.id}')" title="ลบ">🗑</button>
-  <div class="history-item-top">
-    <div class="history-jd">${it.jd_label || 'Job Specification'}</div>
-    <div class="history-time">${fmtTime(it.timestamp)}</div>
+function renderRepoGrid(){
+  const q = document.getElementById('repo-search').value.toLowerCase();
+  let items = repoItems.filter(i =>
+    i.filename.toLowerCase().includes(q) || i.folder.toLowerCase().includes(q)
+  );
+  if (repoFilter !== 'all') items = items.filter(i => i.type === repoFilter);
+  const grid = document.getElementById('repo-grid');
+  if (!items.length) { grid.innerHTML = '<div class="empty-state"><p>ไม่พบไฟล์</p></div>'; return; }
+  grid.innerHTML = items.map(i => `
+<div class="card resume-card">
+  <input type="checkbox" class="repo-check" data-folder="${i.folder}" data-filename="${i.filename}" style="margin-bottom:8px">
+  <div class="resume-top"><div class="file-icon">📄</div><span class="folder-tag ${i.type==='qualified'?'qualified':'pool'}">${i.type==='qualified'?'Qualified':'Talent Pool'}</span></div>
+  <div class="resume-name">${i.filename}</div>
+  <div class="resume-meta">${i.folder}<br>แก้ไข ${new Date(i.modified).toLocaleDateString('th-TH')}</div>
+  <div class="resume-actions">
+    <a class="mini-btn" href="/repository/download/${encodeURIComponent(i.folder)}/${encodeURIComponent(i.filename)}">ดาวน์โหลด</a>
+    <button class="mini-btn" onclick="deleteRepoFile('${i.folder}','${i.filename}')" style="color:var(--red)">ลบ</button>
   </div>
-  <div class="history-stats">
-    <span class="history-tag" style="background:var(--surface);color:var(--sub)">${it.resume_count} resume</span>
-    <span class="history-tag" style="background:var(--green-soft);color:var(--green)">ผ่าน ${s.passed ?? 0}</span>
-    <span class="history-tag" style="background:var(--amber-soft);color:var(--amber)">พิจารณา ${s.review ?? 0}</span>
-    <span class="history-tag" style="background:var(--red-soft);color:var(--red)">ไม่ผ่าน ${s.failed ?? 0}</span>
-    ${s.ai_used ? `<span class="history-tag" style="background:var(--purple-soft);color:var(--purple)">AI ${s.ai_used}</span>` : ''}
+</div>`).join('');
+}
+
+document.querySelectorAll('#repo-pills .pill').forEach(p => p.onclick = () => {
+  document.querySelectorAll('#repo-pills .pill').forEach(x=>x.classList.remove('on'));
+  p.classList.add('on'); repoFilter = p.dataset.f; renderRepoGrid();
+});
+
+// ═══════════════ History ═══════════════
+function fmtTime(iso){
+  if (!iso) return '';
+  const d = new Date(iso);
+  const sameDay = d.toDateString() === new Date().toDateString();
+  const t = d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  return sameDay ? `วันนี้ ${t}` : d.toLocaleDateString('th-TH',{day:'numeric',month:'short'}) + ' ' + t;
+}
+async function loadHistory(){
+  const el = document.getElementById('hist-timeline');
+  el.innerHTML = '<div class="empty-state"><div class="spinner"></div>กำลังโหลด...</div>';
+  try {
+    const res = await fetch('/history');
+    const data = await res.json();
+    const items = data.history || [];
+    if (!items.length) { el.innerHTML = '<div class="empty-state"><p>ยังไม่มีประวัติการวิเคราะห์</p></div>'; return; }
+    el.innerHTML = items.map((it,i) => {
+      const s = it.summary || {};
+      return `
+<div class="timeline-item" onclick="openHistoryModal('${it.id}')">
+  <div class="timeline-dot-col"><div class="timeline-dot"></div>${i<items.length-1?'<div class="timeline-line"></div>':''}</div>
+  <div class="hist-body">
+    <div class="hist-row-top">
+      <span class="hist-title">${it.jd_label || 'Job Description'}</span>
+      <span class="hist-time">${fmtTime(it.timestamp)}</span>
+    </div>
+    <div class="hist-tags">
+      <span class="htag n">${it.resume_count||0} resume</span>
+      <span class="htag pass">ผ่าน ${s.passed??0}</span>
+      <span class="htag rev">พิจารณา ${s.review??0}</span>
+      <span class="htag fail">ไม่ผ่าน ${s.failed??0}</span>
+      <button class="hist-del" onclick="event.stopPropagation();deleteHistory('${it.id}')">🗑</button>
+    </div>
   </div>
 </div>`;
-  }).join('');
-}
-
-async function loadHistory(id) {
-  try {
-    const resp = await fetch('/history/' + id);
-    const data = await resp.json();
-    if (data.error) { alert('Error: ' + data.error); return; }
-
-    allResults = data.results || [];
-    aiMode = (data.summary && data.summary.tokens_used !== undefined) ? 'hybrid' : aiMode;
-
-    document.getElementById('empty-state').style.display = 'none';
-    showSummary(data.summary || {});
-    renderResults(allResults);
-
-    // reset filter pills to "ทั้งหมด"
-    document.querySelectorAll('.pill').forEach(p=>p.classList.remove('on'));
-    const allPill = document.querySelector('.pill');
-    if (allPill) allPill.classList.add('on');
-
-    closeHistory();
-    window.scrollTo({top: document.querySelector('.results-head').offsetTop - 80, behavior:'smooth'});
+    }).join('');
   } catch(e) {
-    alert('โหลดประวัติไม่สำเร็จ: ' + e.message);
+    el.innerHTML = '<div class="empty-state"><p>โหลดประวัติไม่สำเร็จ</p></div>';
   }
 }
-
-async function deleteHistory(id) {
+async function deleteHistory(id){
   if (!confirm('ลบประวัตินี้?')) return;
+  await fetch('/history/' + id, {method:'DELETE'});
+  loadHistory();
+}
+async function openHistoryModal(id){
+  document.getElementById('hist-modal').classList.add('show');
+  document.getElementById('hm-results').innerHTML = '<div class="empty-state"><div class="spinner"></div>กำลังโหลด...</div>';
   try {
-    await fetch('/history/' + id, {method:'DELETE'});
-    openHistory(); // refresh list
+    const res = await fetch('/history/' + id);
+    const data = await res.json();
+    if (data.error) { document.getElementById('hm-results').innerHTML = '<div class="empty-state"><p>'+data.error+'</p></div>'; return; }
+    document.getElementById('hm-title').textContent = data.jd_label || 'Job Description';
+    document.getElementById('hm-time').textContent = fmtTime(data.timestamp);
+    const s = data.summary || {};
+    document.getElementById('hm-total').textContent = s.total ?? 0;
+    document.getElementById('hm-pass').textContent = s.passed ?? 0;
+    document.getElementById('hm-rev').textContent = s.review ?? 0;
+    document.getElementById('hm-fail').textContent = s.failed ?? 0;
+    const results = data.results || [];
+    document.getElementById('hm-results').innerHTML = results.length
+      ? results.map((c,i)=>renderMatchCard(c,i)).join('')
+      : '<div class="empty-state"><p>ไม่มีผลลัพธ์</p></div>';
+    currentHistoryId = id;
   } catch(e) {
-    alert('ลบไม่สำเร็จ: ' + e.message);
+    document.getElementById('hm-results').innerHTML = '<div class="empty-state"><p>โหลดไม่สำเร็จ</p></div>';
   }
 }
+function closeHistoryModal(){ document.getElementById('hist-modal').classList.remove('show'); }
+
+// ═══════════════ INIT ═══════════════
+runSearch();
 </script>
 </body>
 </html>

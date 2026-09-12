@@ -5,7 +5,7 @@
 # รัน:     python app_flask.py
 # เปิด:    http://localhost:5050
 # ============================================================
-# ⚠️ สถานะปัจจุบัน (ตามที่คุยกันไว้ในบทสนทนา):
+# ⚠️ สถานะปัจจุบัน:
 #   - import ยังชี้ไปที่ `database` (SQLite) ชั่วคราว เพราะ Postgres
 #     บน Railway ยัง offline อยู่ (billing) — สลับกลับเป็น
 #     `database_postgres` เมื่อแก้ billing เสร็จแล้ว
@@ -25,7 +25,10 @@ sys.path.append(".")
 from models import Config, ResumeScreener, extract_keywords_via_ai
 
 # TODO: สลับเป็น database_postgres เมื่อ Postgres กลับมาใช้ได้
-from database import init_db, save_history, get_history_list, get_history_by_id, delete_history, get_user_groq_key
+from database_postgres import (
+    init_db, save_history, get_history_list, get_history_by_id,
+    delete_history, get_user_groq_key, search_candidates,
+)
 
 from auth import auth
 
@@ -48,6 +51,7 @@ TOKEN_LIMIT_PER_MIN = 6000
 
 QUALIFIED_DIR   = Path("ResultFile/Qualified")
 TALENT_POOL_DIR = Path("ResultFile/TalentPool")
+UPLOADED_DIR = Path("ResultFile/Uploaded")
 
 EDU_MAP = {
     "1": ["diploma","ปวส","associate","อนุปริญญา",
@@ -86,12 +90,8 @@ def sort_resume_file(orig_name, tmp_path, recommendation, jd_label):
 
 
 @app.route("/")
-# TODO คืนค่า: ใส่ @login_required กลับก่อน deploy จริง
+@login_required 
 def index():
-    # TODO คืนค่า: ลบ 2 บรรทัดนี้ทิ้งเมื่อเอา @login_required กลับมา
-    if not session.get("user_id"):
-        session["user_id"] = 1
-        session["username"] = "test"
     return render_template("index.html", username=session.get("username"))
 
 
@@ -120,9 +120,7 @@ def analyze():
                 jd_text = " ".join(p.get_text() for p in doc).lower()
                 doc.close()
                 doc = None
-                print(f"[DEBUG JD] fitz length={len(jd_text)}")
                 if not jd_text.strip():
-                    print("[DEBUG JD] fitz อ่านไม่ออก → ลอง OCR")
                     try:
                         import pytesseract
                         from PIL import Image as PILImage
@@ -137,7 +135,6 @@ def analyze():
                             ocr_texts.append(pytesseract.image_to_string(img, lang='tha+eng'))
                         doc.close()
                         jd_text = " ".join(ocr_texts).lower()
-                        print(f"[DEBUG JD] OCR length={len(jd_text)} preview={repr(jd_text[:100])}")
                     except Exception as e:
                         print(f"[DEBUG JD] OCR error: {e}")
                 try: os.unlink(jd_tmp_path)
@@ -162,9 +159,7 @@ def analyze():
                 js_text = " ".join(p.get_text() for p in doc).lower()
                 doc.close()
                 doc = None
-                print(f"[DEBUG JS] fitz length={len(js_text)}")
                 if not js_text.strip():
-                    print("[DEBUG JS] fitz อ่านไม่ออก → ลอง OCR")
                     try:
                         import pytesseract
                         from PIL import Image as PILImage
@@ -179,7 +174,6 @@ def analyze():
                             ocr_texts.append(pytesseract.image_to_string(img, lang='tha+eng'))
                         doc.close()
                         js_text = " ".join(ocr_texts).lower()
-                        print(f"[DEBUG JS] OCR length={len(js_text)} preview={repr(js_text[:100])}")
                     except Exception as e:
                         print(f"[DEBUG JS] OCR error: {e}")
                 try: os.unlink(js_tmp_path)
@@ -203,11 +197,14 @@ def analyze():
             rf.save(tmp_path)
             resume_tmp.append((rf.filename, tmp_path))
 
-        req_kws  = [k.lower() for k in request.form.get("required","").split() if k]
-        bon_kws  = [k.lower() for k in request.form.get("bonus","").split() if k]
-        edu_kws  = EDU_MAP.get(request.form.get("edu",""), [])
-        pass_thr = int(request.form.get("pass_threshold", 60))
-        rev_thr  = int(request.form.get("review_threshold", 40))
+        req_kws     = [k.lower() for k in request.form.get("required","").split() if k]
+        bon_kws     = [k.lower() for k in request.form.get("bonus","").split() if k]
+        duties_kws  = [k.lower() for k in request.form.get("duties","").split() if k]
+        field_kws   = [k.lower() for k in request.form.get("field_of_study","").split() if k]
+        general_kws = [k.lower() for k in request.form.get("general","").split() if k]
+        edu_kws     = EDU_MAP.get(request.form.get("edu",""), [])
+        pass_thr    = int(request.form.get("pass_threshold", 60))
+        rev_thr     = int(request.form.get("review_threshold", 40))
         ai_mode      = request.form.get("ai_mode", "tfidf")
         ai_threshold = int(request.form.get("ai_threshold", 0))
 
@@ -260,13 +257,9 @@ def analyze():
             from groq import Groq as GroqClient
             _trans_client = GroqClient(api_key=translate_key)
             if has_thai(jd_text):
-                print(f"[TRANSLATE] JD มีภาษาไทย — กำลังแปล...")
                 jd_text = translate_to_english(jd_text, _trans_client)
-                print(f"[TRANSLATE] JD แปลเสร็จ: {jd_text[:100]}")
             if has_thai(js_text):
-                print(f"[TRANSLATE] JS มีภาษาไทย — กำลังแปล...")
                 js_text = translate_to_english(js_text, _trans_client)
-                print(f"[TRANSLATE] JS แปลเสร็จ: {js_text[:100]}")
 
         combined_jd = f"{jd_text} {js_text}".strip()
 
@@ -320,7 +313,10 @@ def analyze():
 
         config = Config(
             position_keywords=req_kws,
+            duties_keywords=duties_kws,
             skill_keywords=bon_kws,
+            field_of_study_keywords=field_kws,
+            general_keywords=general_kws,
             edu_level_keywords=edu_kws,
             min_gpa=min_gpa,
             age_range=age_range,
@@ -481,5 +477,114 @@ def export_excel(history_id):
                       download_name=f"cvscreener_{safe_id}.xlsx")
 
 
+@app.route("/api/candidates/search", methods=["GET"])
+@login_required
+def api_search_candidates():
+    """'ค้นหาจากคลัง' — ค้นหาผู้สมัครข้าม session ทั้งหมดของ user"""
+    results = search_candidates(
+        user_id=session["user_id"],
+        min_score=request.args.get("min_score", type=float),
+        min_gpa=request.args.get("min_gpa", type=float),
+        min_experience=request.args.get("min_experience", type=float),
+        jd_label_contains=request.args.get("jd_label_contains"),
+    )
+    return jsonify({"candidates": results})
+
+
+@app.route("/repository", methods=["GET"])
+@login_required
+def repository_list():
+    """หน้า 'คลัง Resume' — list ไฟล์จาก ResultFile/Qualified และ TalentPool"""
+    items = []
+    for base_dir, folder_type in [(QUALIFIED_DIR, "qualified"), (TALENT_POOL_DIR, "pool")]:
+        if not base_dir.exists():
+            continue
+        for subfolder in base_dir.iterdir():
+            if not subfolder.is_dir():
+                continue
+            for f in subfolder.iterdir():
+                if f.suffix.lower() == ".pdf":
+                    items.append({
+                        "filename": f.name,
+                        "folder": subfolder.name,
+                        "type": folder_type,
+                        "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
+                    })
+
+    if UPLOADED_DIR.exists():
+        for f in UPLOADED_DIR.iterdir():
+            if f.suffix.lower() == ".pdf":
+                items.append({
+                    "filename": f.name, "folder": "Uploaded", "type": "unsorted",
+                    "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
+                })
+                    
+    items.sort(key=lambda x: x["modified"], reverse=True)
+    return jsonify({
+        "items": items,
+        "stats": {
+            "total": len(items),
+            "qualified": sum(1 for i in items if i["type"] == "qualified"),
+            "pool": sum(1 for i in items if i["type"] == "pool"),
+        }
+    })
+
+
+@app.route("/repository/download/<folder>/<filename>")
+@login_required
+def repository_download(folder, filename):
+    safe_folder = "".join(c for c in folder if c.isalnum() or c in "_-")
+    safe_name = os.path.basename(filename)
+    for base_dir in [QUALIFIED_DIR, TALENT_POOL_DIR]:
+        candidate = base_dir / safe_folder / safe_name
+        if candidate.exists():
+            return send_file(candidate, as_attachment=True)
+    return jsonify({"error": "ไม่พบไฟล์"}), 404
+
+
+
+# ═══ เพิ่ม 3 endpoint ใหม่ตรงนี้ ═══
+
+@app.route("/repository/upload", methods=["POST"])
+@login_required
+def repository_upload():
+    """อัปโหลด Resume เข้าคลังตรงๆ โดยไม่ต้องวิเคราะห์ก่อน"""
+    files = request.files.getlist("resumes")
+    if not files or not files[0].filename:
+        return jsonify({"error": "กรุณาเลือกไฟล์"}), 400
+
+    UPLOADED_DIR.mkdir(parents=True, exist_ok=True)
+    saved = []
+    for f in files:
+        if not f.filename.lower().endswith(".pdf"):
+            continue
+        safe_name = os.path.basename(f.filename)
+        f.save(UPLOADED_DIR / safe_name)
+        saved.append(safe_name)
+
+    return jsonify({"saved": saved, "count": len(saved)})
+
+
+@app.route("/repository/delete/<folder>/<filename>", methods=["DELETE"])
+@login_required
+def repository_delete(folder, filename):
+    """ลบไฟล์จากคลัง Resume"""
+    safe_folder = "".join(c for c in folder if c.isalnum() or c in "_-")
+    safe_name = os.path.basename(filename)
+    for base_dir in [QUALIFIED_DIR, TALENT_POOL_DIR]:
+        candidate = base_dir / safe_folder / safe_name
+        if candidate.exists():
+            candidate.unlink()
+            return jsonify({"deleted": True})
+    if safe_folder == "Uploaded":
+        candidate = UPLOADED_DIR / safe_name
+        if candidate.exists():
+            candidate.unlink()
+            return jsonify({"deleted": True})
+    return jsonify({"error": "ไม่พบไฟล์"}), 404
+
+
+
+
 if __name__ == "__main__":
-    app.run(debug=True, port=5050)
+    app.run(debug=False, port=5050)

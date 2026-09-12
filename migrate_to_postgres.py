@@ -64,17 +64,23 @@ def main():
             skipped += 1
             continue
 
-        pg.save_history(
-            history_id=h["id"],
-            user_id=new_user_id,
-            timestamp=h["timestamp"],
-            jd_label=h["jd_label"],
-            resume_count=h["resume_count"],
-            summary=summary,
-            results=results,
-        )
-        migrated += 1
-
+        try:
+            pg.save_history(
+                history_id=h["id"],
+                user_id=new_user_id,
+                timestamp=h["timestamp"],
+                jd_label=h["jd_label"],
+                resume_count=h["resume_count"],
+                summary=summary,
+                results=results,
+            )
+            migrated += 1
+        except Exception as e:
+            if "duplicate key" in str(e) or "UniqueViolation" in str(e):
+                print(f"  [skip] history {h['id']} — มีอยู่แล้วใน PostgreSQL")
+            else:
+                print(f"  [skip] history {h['id']} — error: {e}")
+            skipped += 1
     src.close()
 
     print(f"\n[migrate] เสร็จสิ้น")

@@ -346,7 +346,7 @@ class Analyzer:
         )
 
         return ResumeResult(
-            name=self._extract_name(text), file=filename, score=total,
+            name=filename, file=filename, score=total,
             recommendation=rec,
             keyword_score=round(keyword_score, 1), ai_score=round(ai_score, 1),
             struct_score=round(struct["score"], 1), special_score=round(special_score, 1),
@@ -461,12 +461,6 @@ class Analyzer:
 
         return score
 
-    def _extract_name(self, text):
-        for line in text.strip().split('\n')[:5]:
-            line = line.strip()
-            if 2 < len(line) < 50 and not any(c in line for c in ['@', ':', '/', 'http', '.']):
-                return line.title()
-        return "ไม่ทราบชื่อ"
 
 
 # ============================================================
