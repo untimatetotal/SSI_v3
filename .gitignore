@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+cvscreener.db
+history/
+*.json
+.env
+.venv/
+ResultFile/
+_backup_bugfix/
+railway.exe
+test_page.png

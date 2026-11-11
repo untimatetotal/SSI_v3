@@ -54,3 +54,26 @@ create index if not exists idx_candidates_active
 
 create index if not exists idx_candidates_jd_label_search   
 on candidates using GIN (to_tsvector('simple' , coalesce(jd_label, ''))) ;
+
+alter table candidates add column if not exists age integer;
+alter table candidates add column if not exists gender varchar(10);
+alter table candidates add column if not exists salary_expectation numeric(12,2);
+alter table candidates add column if not exists reject_reasons jsonb;
+
+create table if not exists resume_library (
+    id serial primary key,
+    user_id integer not null references users(id) on delete cascade,
+    sha1 char(40) not null,
+    folder text,
+    file_name text,
+    file_mtime double precision,
+    text text,
+    gpa numeric(3,2),
+    experience_years numeric(5,1),
+    age integer,
+    gender varchar(10),
+    salary_expectation numeric(12,2),
+    indexed_at timestamptz not null default now(),
+    unique (user_id, sha1)
+);
+create index if not exists idx_resume_library_user on resume_library(user_id);

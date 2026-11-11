@@ -3,448 +3,509 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CV-Screener — SSI v3</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@100..900&family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<title>CV-Screener | SSI Group</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#fafafb; --paper:#ffffff; --border:#e8e8ec; --border-strong:#d5d5dc;
-  --ink:#14151c; --sub:#6b6d78; --faint:#a4a6b0;
-  --brand:#c22731;
-  --repo:#b45309; --repo-soft:#fdf2e3; --repo-line:#f2dcb8;
-  --hist:#0f766e; --hist-soft:#e7f7f5; --hist-line:#c7ece7;
-  --search:#4338ca; --search-soft:#eef0fd; --search-line:#d6d9f8;
-  --green:#16a34a; --green-soft:#eafaf0;
-  --amber:#d97706; --amber-soft:#fef6e7;
-  --red:#dc2626; --red-soft:#fdeded;
-  --radius-lg:18px; --radius:14px; --radius-sm:9px;
+  --canvas:#eef1f4; --paper:#ffffff; --line:#d5dbe1; --line-soft:#e7ebef;
+  --ink:#1d2329; --muted:#56616b; --faint:#87919a;
+  --brand:#b8202b; --brand-dark:#93161f;
+  --steel:#2f3b46; --steel-soft:#e9edf1;
+  --focus:#2f6fb0;
+  --ok:#1f7a4d; --ok-bg:#e5f2eb;
+  --warn:#8a5a00; --warn-bg:#fbf0d9;
+  --bad:#b3261e; --bad-bg:#fbe8e6;
+  --r-panel:6px; --r-ctl:4px;
 }
-body{font-family:'Inter','Noto Sans Thai',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
-h1,h2,h3{font-family:'Sora','Noto Sans Thai',sans-serif}
-mark{background:#fde68a;color:var(--ink);padding:0 2px;border-radius:2px}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:15px;line-height:1.6;background:var(--canvas);color:var(--ink);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+mark{background:#fde68a;color:var(--ink)}
+b{font-weight:600}
 
-.shell{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
-.sidebar{background:var(--paper);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:22px 16px}
-.brand{display:flex;align-items:center;gap:10px;padding:6px 8px 26px}
-.brand-mark{width:34px;height:34px;border-radius:9px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Sora',sans-serif;font-weight:700;font-size:14px}
-.brand-name{font-family:'Sora',sans-serif;font-weight:700;font-size:15px}
-.brand-sub{font-size:10.5px;color:var(--faint)}
-.nav-group{display:flex;flex-direction:column;gap:4px;flex:1}
-.nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;cursor:pointer;color:var(--sub);border:1px solid transparent}
-.nav-item:hover{background:var(--bg)}
-.nav-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--bg)}
-.nav-label{font-size:13.5px;font-weight:600}
-.nav-desc{font-size:10.5px;color:var(--faint)}
-.nav-item.active{color:var(--ink)}
-.nav-item[data-view="repo"].active{background:var(--repo-soft);border-color:var(--repo-line)}
-.nav-item[data-view="repo"].active .nav-icon{background:var(--repo);color:#fff}
-.nav-item[data-view="hist"].active{background:var(--hist-soft);border-color:var(--hist-line)}
-.nav-item[data-view="hist"].active .nav-icon{background:var(--hist);color:#fff}
-.nav-item[data-view="search"].active{background:var(--search-soft);border-color:var(--search-line)}
-.nav-item[data-view="search"].active .nav-icon{background:var(--search);color:#fff}
-.sidebar-foot{border-top:1px solid var(--border);padding-top:14px;display:flex;align-items:center;gap:10px}
-.avatar{width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
-.user-name{font-size:12.5px;font-weight:600}
-.user-role{font-size:10.5px;color:var(--faint)}
-.logout-link{font-size:11px;color:var(--faint);margin-left:auto;cursor:pointer}
+.topbar{background:var(--paper);border-top:4px solid var(--brand);border-bottom:1px solid var(--line)}
+.topbar-inner{max-width:1240px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:20px;height:64px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand img{height:38px;width:38px;object-fit:contain}
+.brand-name{font-size:17px;font-weight:700;letter-spacing:-.1px;line-height:1.2}
+.brand-sub{font-size:12.5px;color:var(--muted);line-height:1.3}
+.user-box{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:14px}
+.user-name{font-weight:600}
+.logout-form{display:inline}
+.logout-link{background:none;border:1px solid var(--line);border-radius:var(--r-ctl);padding:5px 12px;font-size:13.5px;color:var(--muted);cursor:pointer}
+.logout-link:hover{border-color:var(--steel);color:var(--ink)}
 
-.main{padding:28px 40px 100px;max-width:1180px}
-.page-head{margin-bottom:22px}
-.page-eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px}
-.page-title{font-size:25px;font-weight:700;letter-spacing:-.4px;margin-bottom:5px}
-.page-desc{font-size:13.5px;color:var(--sub);max-width:640px;line-height:1.5}
+.tabs{background:var(--steel)}
+.tabs-inner{max-width:1240px;margin:0 auto;padding:0 24px;display:flex;gap:4px;overflow-x:auto}
+.nav-item{color:#c9d2da;padding:12px 16px 10px;font-size:14.5px;font-weight:500;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;background:none;border-top:0;border-left:0;border-right:0}
+.nav-item:hover{color:#fff}
+.nav-item.active{color:#fff;border-bottom-color:var(--brand);font-weight:600}
+
+.main{max-width:1240px;margin:0 auto;padding:28px 24px 80px;min-width:0}
 .view{display:none}
 .view.active{display:block}
+.page-head{margin-bottom:22px;max-width:760px}
+.page-title{font-size:24px;font-weight:700;line-height:1.3;letter-spacing:-.2px;margin-bottom:4px}
+.page-desc{color:var(--muted);font-size:15px}
 
-.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
-.search-box{flex:1;min-width:220px;position:relative}
-.search-box input{width:100%;padding:11px 14px 11px 38px;border:1px solid var(--border);border-radius:11px;font-size:13.5px;font-family:inherit;background:var(--paper);outline:none}
-.search-box .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;opacity:.5}
-.pill-group{display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:100px;border:1px solid var(--border)}
-.pill{padding:7px 14px;border-radius:100px;font-size:12.5px;font-weight:600;color:var(--sub);cursor:pointer;white-space:nowrap}
-.pill.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.card{background:var(--paper);border:1px solid var(--border);border-radius:var(--radius)}
-.card:hover{border-color:var(--border-strong)}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-panel)}
+.panel-head{padding:14px 18px;border-bottom:1px solid var(--line-soft);display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.panel-title{font-size:16px;font-weight:600}
+.panel-note{font-size:13px;color:var(--faint)}
+.panel-body{padding:18px}
 
-.mode-seg{display:inline-flex;background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:4px;margin-bottom:20px}
-.mode-btn{padding:9px 20px;border-radius:100px;border:none;background:transparent;font-size:13px;font-weight:600;color:var(--sub);cursor:pointer;font-family:inherit}
-.mode-btn.on{background:var(--search);color:#fff}
+.search-layout{display:grid;grid-template-columns:400px minmax(0,1fr);gap:20px;align-items:start}
+.criteria{display:flex;flex-direction:column;gap:16px}
+.results-col{min-width:0}
 
-.search-hero{background:linear-gradient(135deg,var(--search-soft),#fff);border:1px solid var(--search-line);border-radius:var(--radius-lg);padding:26px;margin-bottom:22px}
-.search-hero-label{font-size:12px;font-weight:700;color:var(--search);margin-bottom:10px}
-.tag-input-box{display:flex;flex-wrap:wrap;gap:7px;padding:10px;border:1.5px solid var(--search-line);border-radius:13px;background:#fff;min-height:52px;align-items:center}
-.tag-input-box:focus-within{border-color:var(--search)}
-.jtag{display:inline-flex;align-items:center;gap:6px;background:var(--search);color:#fff;padding:6px 12px;border-radius:100px;font-size:13px;font-weight:500}
-.jtag button{background:none;border:none;color:#fff;opacity:.8;cursor:pointer;font-size:12px;padding:0}
-.tag-input-box input{border:none;flex:1;min-width:140px;padding:6px;font-size:14px;font-family:inherit;outline:none}
-.hero-hint{font-size:11.5px;color:var(--faint);margin-top:8px}
+.mode-seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:var(--r-ctl);overflow:hidden;background:var(--paper)}
+.mode-btn{padding:10px 12px;border:0;background:transparent;font-size:14.5px;font-weight:500;color:var(--muted);cursor:pointer}
+.mode-btn+.mode-btn{border-left:1px solid var(--line)}
+.mode-btn.on{background:var(--steel);color:#fff;font-weight:600}
 
-.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
-.upload-box{border:1.5px dashed var(--border-strong);border-radius:13px;padding:22px 16px;text-align:center;background:#fff;cursor:pointer}
-.upload-box:hover,.upload-box.dragover{border-color:var(--search);background:var(--search-soft)}
-.upload-box .ic{font-size:22px;display:block;margin-bottom:6px;opacity:.7}
-.upload-box p{font-size:12.5px;color:var(--sub)}
-.upload-box p b{color:var(--ink)}
-.upload-full{grid-column:1/-1}
-.resume-drop-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.drop-chip{font-size:11.5px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px}
-.drop-chip button{background:none;border:none;color:var(--faint);cursor:pointer}
+.f-label{display:block;font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.hint{font-size:13px;color:var(--faint);margin-top:6px;line-height:1.5}
+.req{color:var(--brand)}
 
-.filter-toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
-.filter-section-label{font-size:13px;font-weight:600;display:flex;align-items:center;gap:12px}
-.clear-link{font-size:11.5px;color:var(--faint);cursor:pointer;text-decoration:underline;background:none;border:none;font-family:inherit}
-.clear-link:hover{color:var(--red)}
-.result-count{font-size:13px;color:var(--sub)}
+.tag-input-box{display:flex;flex-wrap:wrap;gap:6px;padding:6px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--paper);min-height:44px;align-items:center}
+.tag-input-box:focus-within{border-color:var(--focus);box-shadow:0 0 0 3px rgba(47,111,176,.15)}
+.tag-input-box input{border:0;flex:1;min-width:120px;padding:5px 6px;font-size:15px;outline:none;background:transparent}
+.jtag{display:inline-flex;align-items:center;gap:6px;background:var(--steel-soft);color:var(--steel);border:1px solid #cfd7de;padding:2px 4px 2px 10px;border-radius:3px;font-size:14px;font-weight:500}
+.jtag button{background:none;border:0;color:var(--muted);cursor:pointer;font-size:12px;width:22px;height:22px;border-radius:3px}
+.jtag button:hover{background:#d9e0e6;color:var(--ink)}
 
-.adv-filters{background:var(--paper);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:20px;display:flex;flex-direction:column;gap:18px}
-.adv-block-label{font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:-4px}
-.adv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-.f-field{display:flex;flex-direction:column;gap:5px}
-.f-field.f-wide{grid-column:span 2}
-.f-label{font-size:11px;font-weight:600;color:var(--sub)}
-.f-field input,.f-field select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;font-family:inherit}
-.opt-label{display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer}
-.opt-label input{width:auto;accent-color:var(--search)}
-.opt-row{display:flex;gap:14px;padding-top:4px;flex-wrap:wrap}
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.upload-box{border:1px dashed #b7c0c8;border-radius:var(--r-ctl);padding:16px 12px;text-align:center;background:#fafbfc;cursor:pointer;font-size:14px;color:var(--muted)}
+.upload-box b{display:block;color:var(--ink);font-weight:600}
+.upload-box:hover,.upload-box.dragover{border-color:var(--steel);background:var(--steel-soft)}
+.upload-box.is-set{border-style:solid;border-color:var(--ok);background:var(--ok-bg);color:var(--ok)}
+.resume-drop-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.drop-chip{font-size:13px;background:var(--steel-soft);border:1px solid #cfd7de;border-radius:3px;padding:2px 4px 2px 10px;display:flex;align-items:center;gap:4px;max-width:100%}
+.drop-chip button{background:none;border:0;color:var(--muted);cursor:pointer;width:22px;height:22px}
 
-.special-inline{border-top:1px dashed var(--border);padding-top:16px}
-.special-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer}
-.switch{position:relative;width:36px;height:21px;background:var(--border-strong);border-radius:100px;flex-shrink:0}
-.switch.on{background:var(--search)}
-.switch::after{content:'';position:absolute;top:2px;left:2px;width:17px;height:17px;background:#fff;border-radius:50%;transition:left .15s}
-.switch.on::after{left:17px}
-.special-body{display:none}
+.criteria-head{display:flex;align-items:baseline;justify-content:space-between}
+.clear-link{font-size:13.5px;color:var(--focus);cursor:pointer;background:none;border:0;text-decoration:underline;text-underline-offset:2px}
+.clear-link:hover{color:var(--brand)}
+
+.adv-filters{display:flex;flex-direction:column}
+.adv-block{padding:16px 18px;border-top:1px solid var(--line-soft)}
+.adv-block:first-child{border-top:0}
+.adv-block-label{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;font-weight:600;margin-bottom:12px}
+.adv-block-label span{font-size:13px;font-weight:400;color:var(--faint)}
+.adv-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.f-field{display:flex;flex-direction:column;min-width:0}
+.f-field.f-wide{grid-column:1/-1}
+.f-field .f-label{font-weight:500;color:var(--muted);font-size:13.5px;margin-bottom:4px}
+.f-field input,.f-field select,.inline-num{height:38px;padding:0 10px;border:1px solid var(--line);border-radius:var(--r-ctl);font-size:14.5px;background:var(--paper);width:100%}
+.f-field input:focus,.f-field select:focus,.inline-num:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px rgba(47,111,176,.15)}
+.opt-row{display:flex;gap:6px 16px;flex-wrap:wrap}
+.opt-label{display:inline-flex;align-items:center;gap:7px;font-size:14.5px;cursor:pointer}
+.opt-label input{width:16px;height:16px;accent-color:var(--steel)}
+.only-new-field.is-disabled{opacity:.45}
+.only-new-field.is-disabled input,.only-new-field.is-disabled select{background:#f3f5f7;cursor:not-allowed}
+.only-new-note{font-size:13px;color:var(--faint);padding:0 18px 14px}
+
+.special-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
+.switch{position:relative;width:38px;height:22px;background:#c3cbd2;border-radius:11px;flex-shrink:0}
+.switch.on{background:var(--steel)}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left .15s}
+.switch.on::after{left:19px}
+.special-body{display:none;margin-top:14px}
 .special-body.show{display:block}
+.inline-num{width:96px;display:inline-block;margin-left:8px}
 
-.results-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px}
-.select-all-label{font-size:12.5px;color:var(--sub);display:flex;align-items:center;gap:6px}
-.results-actions{display:flex;gap:8px}
-.action-btn{padding:8px 14px;border-radius:9px;border:1px solid var(--border);background:#fff;font-size:12.5px;font-weight:600;color:var(--sub);cursor:pointer}
-.action-btn:hover{border-color:var(--search);color:var(--search)}
-.action-btn.primary{background:var(--search);color:#fff;border-color:var(--search)}
-.run-btn-main{width:100%;padding:14px;background:var(--ink);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:'Sora',sans-serif;cursor:pointer;margin-bottom:20px}
-.run-btn-main:hover{background:var(--search)}
-.run-btn-main:disabled{background:var(--faint);cursor:not-allowed}
+.run-box{display:flex;flex-direction:column;gap:14px}
+.run-btn-main{width:100%;height:46px;background:var(--brand);color:#fff;border:0;border-radius:var(--r-ctl);font-size:16px;font-weight:600;cursor:pointer}
+.run-btn-main:hover{background:var(--brand-dark)}
+.run-btn-main:disabled{background:#b9c1c8;cursor:progress}
 
-.match-grid{display:flex;flex-direction:column;gap:10px}
-.match-card{padding:0;overflow:hidden}
-.match-row{padding:15px 18px;display:flex;align-items:center;gap:14px;cursor:pointer}
-.match-check{width:auto;accent-color:var(--search)}
-.match-avatar{width:42px;height:42px;border-radius:11px;background:var(--search-soft);color:var(--search);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Sora',sans-serif;font-size:13px;flex-shrink:0}
-.match-rank{font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:var(--faint);width:20px;text-align:center;flex-shrink:0}
+.results-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.results-title{font-size:18px;font-weight:600}
+.results-tools{display:flex;align-items:center;gap:14px}
+.select-all-label{font-size:14px;color:var(--muted);display:inline-flex;align-items:center;gap:7px;cursor:pointer}
+.action-btn{height:36px;padding:0 14px;border-radius:var(--r-ctl);border:1px solid var(--line);background:var(--paper);font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.action-btn:hover{border-color:var(--steel)}
+.result-count{font-size:14.5px;color:var(--muted);margin-bottom:12px}
+.result-count:empty{display:none}
+.count-row{display:flex;flex-wrap:wrap;gap:4px 18px}
+.notice{margin-top:8px;padding:8px 12px;border-left:3px solid var(--warn);background:var(--warn-bg);color:#5c3d00;font-size:14px;border-radius:0 var(--r-ctl) var(--r-ctl) 0}
+
+.match-grid{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-panel);overflow:hidden}
+.match-grid:empty{display:none}
+.match-card{position:relative;border-top:1px solid var(--line-soft)}
+.match-card:first-child{border-top:0}
+.match-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--line)}
+.match-card.st-pass::before{background:var(--ok)}
+.match-card.st-rev::before{background:#d39a1c}
+.match-card.st-fail::before{background:var(--bad)}
+.match-row{padding:14px 18px 14px 22px;display:flex;align-items:center;gap:14px;cursor:pointer}
+.match-row:hover{background:#f7f9fa}
+.match-check{width:16px;height:16px;accent-color:var(--steel);flex-shrink:0}
+.match-rank{font-size:14px;color:var(--faint);width:22px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
+.match-avatar{display:none}
 .match-info{flex:1;min-width:0}
-.match-name{font-size:14px;font-weight:600}
-.match-sub{font-size:11.5px;color:var(--sub);display:flex;gap:10px;margin-top:2px;flex-wrap:wrap}
-.match-bars{display:flex;flex-direction:column;gap:4px;width:150px;flex-shrink:0}
-.mbar-row{display:flex;align-items:center;gap:6px}
-.mbar-lbl{font-size:9.5px;color:var(--faint);width:38px}
-.mbar-track{flex:1;height:4px;background:var(--bg);border-radius:2px;overflow:hidden}
-.mbar-fill{height:100%;border-radius:2px}
-.match-score{text-align:right;flex-shrink:0;width:56px}
-.match-score-num{font-family:'Sora',sans-serif;font-size:19px;font-weight:700;color:var(--search)}
-.match-score-lbl{font-size:9.5px;color:var(--faint)}
-.match-badge{font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:100px;margin-top:3px;display:inline-block}
-.match-badge.pass{background:var(--green-soft);color:var(--green)}
-.match-badge.rev{background:var(--amber-soft);color:var(--amber)}
-.match-badge.fail{background:var(--red-soft);color:var(--red)}
-.match-detail{max-height:0;overflow:hidden;transition:max-height .25s ease;border-top:1px solid transparent;background:var(--bg)}
-.match-detail.open{max-height:500px;border-top-color:var(--border)}
-.match-detail-inner{padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.dd-label{font-size:10.5px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.dd-preview{background:#fff;border:1px solid var(--border);border-radius:9px;padding:12px;font-size:12px;line-height:1.7;color:var(--sub);max-height:160px;overflow-y:auto}
+.match-name{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.match-sub{font-size:13.5px;color:var(--muted);display:flex;gap:2px 16px;flex-wrap:wrap}
+.match-sub span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.match-bars{display:grid;grid-template-columns:auto 96px;gap:3px 8px;align-items:center;flex-shrink:0}
+.mbar-row{display:contents}
+.mbar-lbl{font-size:12px;color:var(--faint);text-align:right}
+.mbar-track{height:5px;background:var(--line-soft);border-radius:1px;overflow:hidden}
+.mbar-fill{height:100%;background:var(--steel)!important}
+.match-score{text-align:right;flex-shrink:0;width:92px}
+.match-score-num{font-size:26px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;display:inline}
+.match-score-lbl{font-size:13px;color:var(--faint);display:inline;margin-left:2px}
+.match-badge{display:block;width:max-content;margin:4px 0 0 auto;font-size:12.5px;font-weight:600;padding:1px 8px;border-radius:3px}
+.match-badge.pass{background:var(--ok-bg);color:var(--ok)}
+.match-badge.rev{background:var(--warn-bg);color:var(--warn)}
+.match-badge.fail{background:var(--bad-bg);color:var(--bad)}
+.match-terms{margin-top:4px;font-size:13.5px;color:var(--ok)}
+.match-score-num.na{color:var(--faint)}
+.match-badge.na{background:var(--steel-soft);color:var(--muted)}
+.reject-reasons{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px}
+.reject-tag{background:var(--bad-bg);color:var(--bad);border-radius:3px;padding:1px 8px;font-size:13px;font-weight:500}
+.match-detail{display:none;border-top:1px solid var(--line-soft);background:#f7f9fa}
+.match-detail.open{display:block}
+.match-detail-inner{padding:16px 22px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dd-label{font-size:13.5px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.dd-preview{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
 .missing-tags{display:flex;flex-wrap:wrap;gap:6px}
-.mtag{font-size:11px;padding:3px 10px;border-radius:100px;background:var(--red-soft);color:var(--red);font-weight:500}
-.detail-foot{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px dashed var(--border);font-size:11.5px;color:var(--faint)}
+.mtag{font-size:13px;padding:1px 8px;border-radius:3px;background:var(--paper);border:1px solid var(--line);color:var(--muted)}
+.detail-foot{grid-column:1/-1;font-size:13px;color:var(--faint)}
+.detail-foot:has(span:empty){display:none}
 
-.repo-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
-.stat-card{background:var(--paper);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
-.stat-num{font-family:'Sora',sans-serif;font-size:26px;font-weight:700}
-.stat-lbl{font-size:11.5px;color:var(--sub);margin-top:2px}
-.resume-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
-.resume-card{padding:16px}
-.resume-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
-.file-icon{width:38px;height:38px;border-radius:9px;background:var(--repo-soft);color:var(--repo);display:flex;align-items:center;justify-content:center;font-size:16px}
-.folder-tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:100px}
-.folder-tag.qualified{background:var(--green-soft);color:var(--green)}
-.folder-tag.pool{background:var(--amber-soft);color:var(--amber)}
-.resume-name{font-size:13.5px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.resume-meta{font-size:11.5px;color:var(--sub);line-height:1.6}
-.resume-actions{display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
-.mini-btn{flex:1;padding:7px;border-radius:8px;border:1px solid var(--border);background:var(--paper);font-size:11.5px;font-weight:600;color:var(--sub);cursor:pointer;text-decoration:none;text-align:center;display:block}
-.mini-btn:hover{border-color:var(--repo);color:var(--repo)}
-
-.timeline{display:flex;flex-direction:column;gap:2px}
-.timeline-item{display:flex;gap:16px;padding:18px 4px;border-bottom:1px solid var(--border);cursor:pointer}
-.timeline-item:hover .hist-title{color:var(--hist)}
-.timeline-dot-col{display:flex;flex-direction:column;align-items:center;padding-top:3px}
-.timeline-dot{width:10px;height:10px;border-radius:50%;background:var(--hist)}
-.timeline-line{width:1.5px;flex:1;background:var(--border);margin-top:4px}
-.hist-body{flex:1}
-.hist-row-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.hist-title{font-size:14px;font-weight:600}
-.hist-time{font-size:11.5px;color:var(--faint);white-space:nowrap}
-.hist-tags{display:flex;gap:6px;flex-wrap:wrap}
-.htag{font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px}
-.htag.n{background:var(--bg);color:var(--sub)}
-.htag.pass{background:var(--green-soft);color:var(--green)}
-.htag.rev{background:var(--amber-soft);color:var(--amber)}
-.htag.fail{background:var(--red-soft);color:var(--red)}
-.hist-del{background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px}
-
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,21,28,.4);z-index:300;align-items:center;justify-content:center;padding:24px}
-.modal-overlay.show{display:flex}
-.modal-box{background:#fff;border-radius:18px;max-width:820px;width:100%;max-height:85vh;overflow-y:auto}
-.modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;border-radius:18px 18px 0 0}
-.modal-title{font-size:16px;font-weight:700}
-.modal-close{background:var(--bg);border:none;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:14px}
-.modal-body{padding:20px 24px}
-.empty-state{text-align:center;padding:60px 20px;color:var(--sub)}
-.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--search);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+.empty-state{text-align:center;padding:48px 20px;color:var(--muted);background:var(--paper);border:1px solid var(--line);border-radius:var(--r-panel)}
+.match-grid .empty-state,.list-panel .empty-state{border:0;border-radius:0}
+.spinner{width:24px;height:24px;border:3px solid var(--line);border-top-color:var(--steel);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-@media(max-width:900px){
-  .shell{grid-template-columns:1fr}
-  .sidebar{display:none}
-  .adv-grid,.upload-grid{grid-template-columns:1fr 1fr}
-  .repo-stats{grid-template-columns:1fr 1fr}
-  .match-bars{display:none}
+.repo-stats{display:flex;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-panel);margin-bottom:16px}
+.stat-card{flex:1;padding:14px 18px;border-left:1px solid var(--line-soft)}
+.stat-card:first-child{border-left:0}
+.stat-num{font-size:26px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums}
+.stat-lbl{font-size:13.5px;color:var(--muted)}
+.repo-upload{margin-bottom:16px}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.search-box{flex:1;min-width:220px}
+.search-box input{width:100%;height:38px;padding:0 12px;border:1px solid var(--line);border-radius:var(--r-ctl);font-size:14.5px;background:var(--paper)}
+.search-box input:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px rgba(47,111,176,.15)}
+.pill-group{display:flex;border:1px solid var(--line);border-radius:var(--r-ctl);overflow:hidden;background:var(--paper)}
+.pill{padding:0 14px;height:36px;display:flex;align-items:center;font-size:14px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.pill+.pill{border-left:1px solid var(--line)}
+.pill.on{background:var(--steel);color:#fff;font-weight:500}
+
+.list-panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-panel);overflow:hidden}
+.repo-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:12px 18px;border-top:1px solid var(--line-soft)}
+.repo-row:first-child{border-top:0}
+.repo-row:hover{background:#f7f9fa}
+.repo-check{width:16px;height:16px;accent-color:var(--steel)}
+.resume-name{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.resume-meta{font-size:13px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.folder-tag{font-size:12.5px;font-weight:600;padding:1px 8px;border-radius:3px;white-space:nowrap}
+.folder-tag.qualified{background:var(--ok-bg);color:var(--ok)}
+.folder-tag.pool{background:var(--warn-bg);color:var(--warn)}
+.folder-tag.unsorted{background:var(--steel-soft);color:var(--muted)}
+.resume-actions{display:flex;gap:6px}
+.mini-btn{height:32px;padding:0 12px;border-radius:var(--r-ctl);border:1px solid var(--line);background:var(--paper);font-size:13.5px;color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.mini-btn:hover{border-color:var(--steel)}
+.mini-btn.danger{color:var(--bad)}
+.mini-btn.danger:hover{border-color:var(--bad)}
+
+.timeline{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-panel);overflow:hidden}
+.timeline .empty-state{border:0}
+.timeline-item{display:flex;gap:14px;padding:14px 18px;border-top:1px solid var(--line-soft);cursor:pointer}
+.timeline-item:first-child{border-top:0}
+.timeline-item:hover{background:#f7f9fa}
+.timeline-dot-col{display:flex;flex-direction:column;align-items:center;padding-top:8px}
+.timeline-dot{width:9px;height:9px;border-radius:50%;background:var(--steel)}
+.timeline-line{display:none}
+.hist-body{flex:1;min-width:0}
+.hist-row-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.hist-title{font-size:15.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-time{font-size:13.5px;color:var(--faint);white-space:nowrap;font-variant-numeric:tabular-nums}
+.hist-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px}
+.htag{font-size:13px;font-weight:500;padding:0 8px;border-radius:3px}
+.htag.n{background:var(--steel-soft);color:var(--muted)}
+.htag.pass{background:var(--ok-bg);color:var(--ok)}
+.htag.rev{background:var(--warn-bg);color:var(--warn)}
+.htag.fail{background:var(--bad-bg);color:var(--bad)}
+.hist-del{margin-left:auto;background:none;border:1px solid transparent;border-radius:var(--r-ctl);color:var(--faint);cursor:pointer;font-size:13.5px;padding:2px 10px}
+.hist-del:hover{border-color:var(--bad);color:var(--bad)}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(29,35,41,.5);z-index:300;align-items:flex-start;justify-content:center;padding:48px 16px;overflow-y:auto}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--canvas);border-radius:var(--r-panel);max-width:980px;width:100%;box-shadow:0 20px 50px rgba(29,35,41,.25)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 22px;background:var(--paper);border-bottom:1px solid var(--line);border-top:4px solid var(--brand);border-radius:var(--r-panel) var(--r-panel) 0 0}
+.modal-title{font-size:18px;font-weight:600}
+.modal-time{font-size:13.5px;color:var(--faint)}
+.modal-close{background:var(--paper);border:1px solid var(--line);height:34px;padding:0 14px;border-radius:var(--r-ctl);cursor:pointer;font-size:14px}
+.modal-close:hover{border-color:var(--steel)}
+.modal-body{padding:18px 22px 22px}
+
+@media(max-width:1100px){
+  .search-layout{grid-template-columns:1fr}
 }
+@media(max-width:720px){
+  .topbar-inner{height:auto;padding:10px 16px;flex-wrap:wrap;gap:10px}
+  .brand-sub{display:none}
+  .tabs-inner,.main{padding-left:16px;padding-right:16px}
+  .main{padding-top:20px}
+  .page-title{font-size:21px}
+  .match-bars{display:none}
+  .match-row{gap:10px;padding-right:14px}
+  .match-rank{display:none}
+  .match-score{width:auto}
+  .match-detail-inner{grid-template-columns:1fr}
+  .upload-grid{grid-template-columns:1fr}
+  .repo-row{grid-template-columns:auto minmax(0,1fr) auto}
+  .repo-row .resume-actions{grid-column:2/-1}
+  .repo-stats .stat-card{padding:10px 12px}
+  .stat-num{font-size:21px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 
-<div class="shell">
-  <aside class="sidebar">
+<header class="topbar">
+  <div class="topbar-inner">
     <div class="brand">
-      <div class="brand-mark">SSI</div>
-      <div><div class="brand-name">CV-Screener</div><div class="brand-sub">SSI Group · Recruitment Center</div></div>
+      <img src="/static/SSI-Group-logo-transparent.png" alt="SSI Group" onerror="this.style.display='none'">
+      <div><div class="brand-name">CV-Screener</div><div class="brand-sub">ระบบคัดกรองใบสมัครงาน ฝ่ายทรัพยากรบุคคล SSI Group</div></div>
     </div>
-    <div class="nav-group">
-      <div class="nav-item active" data-view="search" onclick="switchView('search',this)">
-        <div class="nav-icon">🔎</div>
-        <div><div class="nav-label">คัดกรองตำแหน่งงาน</div><div class="nav-desc">ค้นหา + วิเคราะห์ผู้สมัคร</div></div>
-      </div>
-      <div class="nav-item" data-view="repo" onclick="switchView('repo',this)">
-        <div class="nav-icon">🗂️</div>
-        <div><div class="nav-label">คลัง Resume</div><div class="nav-desc">ไฟล์ทั้งหมดในระบบ</div></div>
-      </div>
-      <div class="nav-item" data-view="hist" onclick="switchView('hist',this)">
-        <div class="nav-icon">🕘</div>
-        <div><div class="nav-label">History</div><div class="nav-desc">ประวัติการคัดกรอง</div></div>
-      </div>
+    <div class="user-box">
+      <span>ผู้ใช้: <span class="user-name">{{ username }}</span></span>
+      <form class="logout-form" method="post" action="/logout"><button type="submit" class="logout-link">ออกจากระบบ</button></form>
     </div>
-    <div class="sidebar-foot">
-      <div class="avatar">HR</div>
-      <div><div class="user-name">{{ username }}</div><div class="user-role">Recruitment Center</div></div>
-      <a class="logout-link" href="/logout">ออกจากระบบ</a>
+  </div>
+</header>
+<nav class="tabs" aria-label="เมนูหลัก">
+  <div class="tabs-inner">
+    <button type="button" class="nav-item active" data-view="search" onclick="switchView('search',this)">คัดกรองผู้สมัคร</button>
+    <button type="button" class="nav-item" data-view="repo" onclick="switchView('repo',this)">คลังใบสมัคร</button>
+    <button type="button" class="nav-item" data-view="hist" onclick="switchView('hist',this)">ประวัติการคัดกรอง</button>
+  </div>
+</nav>
+
+<main class="main">
+
+  <section class="view active" id="view-search">
+    <div class="page-head">
+      <h1 class="page-title">คัดกรองผู้สมัคร</h1>
+      <p class="page-desc">ค้นหาผู้สมัครจากใบสมัครที่เคยวิเคราะห์ไว้ หรือวิเคราะห์ใบสมัครชุดใหม่เทียบกับ Job Description</p>
     </div>
-  </aside>
 
-  <main class="main">
+    <div class="search-layout">
+      <div class="criteria">
+        <div class="mode-seg" role="group" aria-label="รูปแบบการคัดกรอง">
+          <button type="button" class="mode-btn on" id="mode-existing" onclick="setMode('existing')">ค้นหาในคลัง</button>
+          <button type="button" class="mode-btn" id="mode-new" onclick="setMode('new')">วิเคราะห์ชุดใหม่</button>
+        </div>
 
-    <!-- ═══════════ VIEW: คัดกรองตำแหน่งงาน ═══════════ -->
-    <section class="view active" id="view-search">
-      <div class="page-head">
-        <div class="page-eyebrow" style="color:var(--search)">คัดกรองตำแหน่งงาน</div>
-        <h1 class="page-title">ค้นหาและวิเคราะห์ผู้สมัคร</h1>
-        <p class="page-desc">ค้นหาจาก Resume ที่มีอยู่ในคลัง หรืออัปโหลด Job Description ใหม่เพื่อวิเคราะห์ Resume ชุดใหม่</p>
-      </div>
-
-      <div class="mode-seg">
-        <button class="mode-btn on" id="mode-existing" onclick="setMode('existing')">ค้นหาจากคลัง</button>
-        <button class="mode-btn" id="mode-new" onclick="setMode('new')">อัปโหลด + วิเคราะห์ใหม่</button>
-      </div>
-
-      <div id="mode-body-existing">
-        <div class="search-hero">
-          <div class="search-hero-label">🔎 ชื่อตำแหน่งงาน</div>
+        <div class="panel panel-body">
+          <label class="f-label" for="jobtitle-input">ตำแหน่งงาน</label>
           <div class="tag-input-box" id="jobtitle-box">
-            <input type="text" placeholder="พิมพ์แล้วกด Enter เช่น Marketing Officer" id="jobtitle-input">
+            <input type="text" placeholder="เช่น Marketing Officer" id="jobtitle-input">
           </div>
-          <div class="hero-hint">คั่นด้วย Enter หรือเครื่องหมาย , — ตำแหน่งใดตำแหน่งหนึ่งตรงกันถือว่าเกี่ยวข้อง</div>
-        </div>
-      </div>
-
-      <div id="mode-body-new" style="display:none">
-        <div class="card" style="padding:22px;margin-bottom:20px">
-          <div class="f-label" style="margin-bottom:10px">Job Description / Job Specification <span style="color:var(--red)">*</span></div>
-          <div class="upload-grid">
-            <div>
-              <input type="file" id="jd-input" accept=".txt,.pdf" style="display:none">
-              <div class="upload-box" id="jd-drop"><span class="ic">📋</span><p id="jd-label"><b>Job Description</b><br>คลิกหรือลากไฟล์ .txt / .pdf</p></div>
-            </div>
-            <div>
-              <input type="file" id="js-input" accept=".txt,.pdf" style="display:none">
-              <div class="upload-box" id="js-drop"><span class="ic">📄</span><p id="js-label"><b>Job Specification</b><br>คลิกหรือลากไฟล์ .txt / .pdf</p></div>
-            </div>
-          </div>
-          <div class="hero-hint" style="margin-bottom:16px">ต้องมีอย่างน้อย 1 อย่าง</div>
-
-          <div class="f-label" style="margin-bottom:10px">Resume (PDF) <span style="color:var(--red)">*</span></div>
-          <input type="file" id="resume-input" accept=".pdf" multiple style="display:none">
-          <div class="upload-box upload-full" id="resume-drop"><span class="ic">📁</span><p>คลิกหรือลากไฟล์ <b>Resume PDF</b> มาวาง — เลือกได้หลายไฟล์</p></div>
-          <div class="resume-drop-list" id="resume-list"></div>
-        </div>
-      </div>
-
-      <div class="filter-toggle-row">
-        <div class="filter-section-label">⚙️ ตัวกรอง / เงื่อนไขการให้คะแนน <button class="clear-link" onclick="clearAllFilters()">ล้างทั้งหมด</button></div>
-        <div class="result-count" id="result-count"></div>
-      </div>
-
-      <div class="adv-filters" id="adv-filters">
-        <div class="adv-block-label">เงื่อนไขหลัก · 60 คะแนน</div>
-        <div class="adv-grid">
-          <div class="f-field f-wide"><div class="f-label">ลักษณะงานที่ทำมา</div><input type="text" id="f-duties" placeholder="เช่น คัดเลือกใบสมัคร, สรรหาบุคลากร"></div>
-          <div class="f-field f-wide"><div class="f-label">ทักษะความสามารถ</div><input type="text" id="f-skills" placeholder="เช่น BOQ, VLOOKUP, เขียนแบบ"></div>
-          <div class="f-field"><div class="f-label">ประสบการณ์ขั้นต่ำ (ปี)</div><input type="number" id="f-exp" placeholder="เช่น 3"></div>
-          <div class="f-field"><div class="f-label">GPA ขั้นต่ำ</div><input type="number" step="0.01" id="f-gpa" placeholder="2.80"></div>
-
-          <div class="f-field"><div class="f-label">คณะ</div>
-            <select id="faculty-select" onchange="updateMajors()">
-              <option value="">เลือกคณะ</option>
-              <option value="eng">วิศวกรรมศาสตร์</option>
-              <option value="biz">บริหารธุรกิจ</option>
-              <option value="sci">วิทยาศาสตร์</option>
-              <option value="other">อื่นๆ (พิมพ์เอง)</option>
-            </select>
-          </div>
-          <div class="f-field"><div class="f-label">สาขาวิชา</div><select id="major-select"><option value="">เลือกคณะก่อน</option></select></div>
-          <div class="f-field f-wide" id="faculty-other" style="display:none"><div class="f-label">ระบุคณะ/สาขาเอง</div><input type="text" id="f-field-other" placeholder="พิมพ์คณะ/สาขาที่ไม่มีในตัวเลือก"></div>
-          <div class="f-field f-wide"><div class="f-label">คำค้นหาทั่วไป (Keywords)</div><input type="text" id="f-general" placeholder="เช่น ม.เชียงใหม่, ม.เกษตรศาสตร์"></div>
+          <p class="hint">กด Enter เพื่อเพิ่มตำแหน่ง ระบบจะแสดงผู้สมัครที่ตรงกับตำแหน่งใดตำแหน่งหนึ่ง</p>
         </div>
 
-        <div class="adv-block-label">ข้อมูลพื้นฐาน · 8 คะแนน</div>
-        <div class="adv-grid">
-          <div class="f-field f-wide"><div class="f-label">วุฒิการศึกษา (เลือกได้หลายรายการ)</div>
-            <div class="opt-row">
-              <label class="opt-label"><input type="checkbox" name="edu-lvl" value="1"> ปวช./ปวส.</label>
-              <label class="opt-label"><input type="checkbox" name="edu-lvl" value="2" checked> ปริญญาตรี</label>
-              <label class="opt-label"><input type="checkbox" name="edu-lvl" value="3"> ปริญญาโท</label>
-            </div>
-          </div>
-          <div class="f-field f-wide"><div class="f-label">เพศ</div>
-            <div class="opt-row">
-              <label class="opt-label"><input type="radio" name="gender" value="" checked> ไม่ระบุ</label>
-              <label class="opt-label"><input type="radio" name="gender" value="male"> ชาย</label>
-              <label class="opt-label"><input type="radio" name="gender" value="female"> หญิง</label>
-            </div>
-          </div>
-          <div class="f-field"><div class="f-label">อายุ ต่ำสุด</div><input type="number" id="f-age-min" placeholder="22"></div>
-          <div class="f-field"><div class="f-label">อายุ สูงสุด</div><input type="number" id="f-age-max" placeholder="35"></div>
-          <div class="f-field"><div class="f-label">เงินเดือน ต่ำสุด</div><input type="number" id="f-salary-min" placeholder="15,000"></div>
-          <div class="f-field"><div class="f-label">เงินเดือน สูงสุด</div><input type="number" id="f-salary-max" placeholder="25,000"></div>
-        </div>
+        <div id="mode-body-existing"></div>
 
-        <div class="special-inline">
-          <div class="special-toggle" onclick="toggleSpecial()">
-            <div><div class="f-label" style="color:var(--search)">เงื่อนไขพิเศษ — เฉพาะบางตำแหน่ง</div><div style="font-size:11px;color:var(--faint)">คะแนนเสริม 15 คะแนน นอกเหนือจาก 100 คะแนนหลัก</div></div>
-            <div class="switch" id="special-switch"></div>
-          </div>
-          <div class="special-body" id="special-body">
-            <div class="adv-grid" style="margin-top:14px">
-              <div class="f-field f-wide"><div class="f-label">ยานพาหนะ / ใบขับขี่ (5 คะแนน)</div>
-                <div class="opt-row">
-                  <label class="opt-label"><input type="checkbox" id="f-vehicle"> ต้องมีรถยนต์ส่วนตัว</label>
-                  <label class="opt-label"><input type="checkbox" id="f-license"> ต้องมีใบขับขี่</label>
+        <div id="mode-body-new" style="display:none">
+          <div class="panel">
+            <div class="panel-head"><div class="panel-title">เอกสารประกอบ</div></div>
+            <div class="panel-body">
+              <span class="f-label">Job Description หรือ Job Specification</span>
+              <div class="upload-grid">
+                <div>
+                  <input type="file" id="jd-input" accept=".txt,.pdf" hidden>
+                  <div class="upload-box" id="jd-drop" role="button" tabindex="0"><p id="jd-label"><b>Job Description</b>ไฟล์ .pdf หรือ .txt</p></div>
+                </div>
+                <div>
+                  <input type="file" id="js-input" accept=".txt,.pdf" hidden>
+                  <div class="upload-box" id="js-drop" role="button" tabindex="0"><p id="js-label"><b>Job Specification</b>ไฟล์ .pdf หรือ .txt</p></div>
                 </div>
               </div>
-              <div class="f-field f-wide"><div class="f-label">ทักษะด้านภาษา (10 คะแนน)</div>
-                <label class="opt-label">คะแนน TOEIC ขั้นต่ำ <input type="number" id="f-toeic" placeholder="600" style="width:80px;margin-left:6px"></label>
-              </div>
+              <p class="hint" style="margin-bottom:16px">ไม่บังคับ ถ้าไม่ใส่ ระบบจะคัดกรองตามตำแหน่งและเงื่อนไขที่กรอก</p>
+
+              <span class="f-label">ใบสมัคร (PDF) <span class="req">*</span></span>
+              <input type="file" id="resume-input" accept=".pdf" multiple hidden>
+              <div class="upload-box" id="resume-drop" role="button" tabindex="0"><p><b>เลือกไฟล์ใบสมัคร</b>คลิกหรือลากไฟล์ PDF มาวาง เลือกได้หลายไฟล์</p></div>
+              <div class="resume-drop-list" id="resume-list"></div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div id="mode-new-runbox" style="display:none">
-        <div class="adv-grid" style="margin-bottom:14px">
-          <div class="f-field"><div class="f-label">เกณฑ์ผ่าน ≥</div><input type="number" id="f-pass" value="60"></div>
-          <div class="f-field"><div class="f-label">เกณฑ์พิจารณา ≥</div><input type="number" id="f-review" value="40"></div>
-          <div class="f-field f-wide" style="justify-content:flex-end;flex-direction:row;align-items:center;gap:8px">
-            <label class="opt-label"><input type="checkbox" id="f-ai-mode"> เปิดใช้ AI Score (ต้องมี Groq API Key)</label>
+        <div class="panel adv-panel">
+          <div class="panel-head">
+            <div class="panel-title">เงื่อนไขการคัดกรอง</div>
+            <button type="button" class="clear-link" onclick="clearAllFilters()">ล้างเงื่อนไข</button>
+          </div>
+          <div class="adv-filters" id="adv-filters">
+            <div class="adv-block">
+              <div class="adv-block-label">เงื่อนไขหลัก <span>60 คะแนน</span></div>
+              <div class="adv-grid">
+                <div class="only-new-field f-field f-wide"><label class="f-label" for="f-duties">ลักษณะงานที่เคยทำ</label><input type="text" id="f-duties" placeholder="เช่น สรรหาบุคลากร, คัดเลือกใบสมัคร"></div>
+                <div class="only-new-field f-field f-wide"><label class="f-label" for="f-skills">ทักษะ</label><input type="text" id="f-skills" placeholder="เช่น BOQ, VLOOKUP, เขียนแบบ"></div>
+                <div class="f-field"><label class="f-label" for="f-exp">ประสบการณ์ขั้นต่ำ (ปี)</label><input type="number" id="f-exp" min="0" placeholder="3"></div>
+                <div class="f-field"><label class="f-label" for="f-gpa">GPA ขั้นต่ำ</label><input type="number" step="0.01" min="0" max="4" id="f-gpa" placeholder="2.80"></div>
+                <div class="only-new-field f-field"><label class="f-label" for="faculty-select">คณะ</label>
+                  <select id="faculty-select" onchange="updateMajors()">
+                    <option value="">ไม่ระบุ</option>
+                    <option value="eng">วิศวกรรมศาสตร์</option>
+                    <option value="biz">บริหารธุรกิจ</option>
+                    <option value="sci">วิทยาศาสตร์</option>
+                    <option value="other">อื่น ๆ (ระบุเอง)</option>
+                  </select>
+                </div>
+                <div class="only-new-field f-field"><label class="f-label" for="major-select">สาขาวิชา</label><select id="major-select"><option value="">เลือกคณะก่อน</option></select></div>
+                <div class="f-field f-wide" id="faculty-other" style="display:none"><label class="f-label" for="f-field-other">คณะหรือสาขาที่ต้องการ</label><input type="text" id="f-field-other" placeholder="พิมพ์ชื่อคณะหรือสาขา"></div>
+                <div class="only-new-field f-field f-wide"><label class="f-label" for="f-general">คำค้นหาอื่น</label><input type="text" id="f-general" placeholder="เช่น ม.เชียงใหม่, ม.เกษตรศาสตร์"></div>
+              </div>
+            </div>
+
+            <div class="adv-block">
+              <div class="adv-block-label">ข้อมูลพื้นฐาน <span>8 คะแนน</span></div>
+              <div class="adv-grid">
+                <div class="only-new-field f-field f-wide"><span class="f-label">วุฒิการศึกษา</span>
+                  <div class="opt-row">
+                    <label class="opt-label"><input type="checkbox" name="edu-lvl" value="1"> ปวช./ปวส.</label>
+                    <label class="opt-label"><input type="checkbox" name="edu-lvl" value="2" checked> ปริญญาตรี</label>
+                    <label class="opt-label"><input type="checkbox" name="edu-lvl" value="3"> ปริญญาโท</label>
+                  </div>
+                </div>
+                <div class="f-field f-wide"><span class="f-label">เพศ</span>
+                  <div class="opt-row">
+                    <label class="opt-label"><input type="radio" name="gender" value="" checked> ไม่ระบุ</label>
+                    <label class="opt-label"><input type="radio" name="gender" value="male"> ชาย</label>
+                    <label class="opt-label"><input type="radio" name="gender" value="female"> หญิง</label>
+                  </div>
+                </div>
+                <div class="f-field"><label class="f-label" for="f-age-min">อายุตั้งแต่</label><input type="number" id="f-age-min" placeholder="22"></div>
+                <div class="f-field"><label class="f-label" for="f-age-max">อายุไม่เกิน</label><input type="number" id="f-age-max" placeholder="35"></div>
+                <div class="f-field"><label class="f-label" for="f-salary-min">เงินเดือนตั้งแต่</label><input type="number" id="f-salary-min" placeholder="15000"></div>
+                <div class="f-field"><label class="f-label" for="f-salary-max">เงินเดือนไม่เกิน</label><input type="number" id="f-salary-max" placeholder="25000"></div>
+              </div>
+            </div>
+
+            <div class="adv-block">
+              <div class="special-toggle" onclick="toggleSpecial()">
+                <div><div class="adv-block-label" style="margin-bottom:0">เงื่อนไขพิเศษ <span></span></div><div class="hint" style="margin-top:0">คะแนนเสริม 15 คะแนน สำหรับตำแหน่งที่ต้องใช้รถหรือภาษา</div></div>
+                <div class="switch" id="special-switch" role="switch" aria-label="เปิดเงื่อนไขพิเศษ"></div>
+              </div>
+              <div class="special-body" id="special-body">
+                <div class="adv-grid">
+                  <div class="f-field f-wide"><span class="f-label">ยานพาหนะ (5 คะแนน)</span>
+                    <div class="opt-row">
+                      <label class="opt-label"><input type="checkbox" id="f-vehicle"> มีรถยนต์ส่วนตัว</label>
+                      <label class="opt-label"><input type="checkbox" id="f-license"> มีใบขับขี่</label>
+                    </div>
+                  </div>
+                  <div class="f-field f-wide"><span class="f-label">ภาษาอังกฤษ (10 คะแนน)</span>
+                    <label class="opt-label">TOEIC ขั้นต่ำ <input type="number" id="f-toeic" class="inline-num" placeholder="600"></label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="only-new-note">ช่องสีจางใช้ได้เฉพาะเมื่อวิเคราะห์ชุดใหม่</p>
+        </div>
+
+        <div id="mode-new-runbox" style="display:none">
+          <div class="panel panel-body run-box">
+            <div class="adv-grid">
+              <div class="f-field"><label class="f-label" for="f-pass">คะแนนผ่าน</label><input type="number" id="f-pass" value="60"></div>
+              <div class="f-field"><label class="f-label" for="f-review">คะแนนพิจารณาเพิ่มเติม</label><input type="number" id="f-review" value="40"></div>
+            </div>
+            <label class="opt-label"><input type="checkbox" id="f-ai-mode"> ใช้ AI ช่วยให้คะแนนและแปลเอกสารภาษาไทย</label>
+            <button type="button" class="run-btn-main" id="run-btn" onclick="runAnalyze()">วิเคราะห์ใบสมัคร</button>
           </div>
         </div>
-        <button class="run-btn-main" id="run-btn" onclick="runAnalyze()">วิเคราะห์ Resume</button>
       </div>
 
-      <div class="results-head">
-        <div><label class="select-all-label"><input type="checkbox" class="match-check" id="select-all" onclick="toggleSelectAll(this)"> เลือกทั้งหมด</label></div>
-        <div class="results-actions">
-          <button class="action-btn" onclick="exportExcel()">📊 Export Excel</button>
+      <div class="results-col">
+        <div class="results-head">
+          <h2 class="results-title">ผลการคัดกรอง</h2>
+          <div class="results-tools">
+            <label class="select-all-label"><input type="checkbox" class="match-check" id="select-all" onclick="toggleSelectAll(this)"> เลือกทั้งหมด</label>
+            <button type="button" class="action-btn" onclick="exportExcel()">ส่งออก Excel</button>
+          </div>
+        </div>
+        <div class="result-count" id="result-count"></div>
+        <div id="results-container">
+          <div class="empty-state"><p>ตั้งเงื่อนไขการค้นหา แล้วผลการคัดกรองจะแสดงที่นี่</p></div>
         </div>
       </div>
+    </div>
+  </section>
 
-      <div id="results-container">
-        <div class="empty-state"><p>ค้นหาหรือวิเคราะห์เพื่อดูผลลัพธ์</p></div>
+  <section class="view" id="view-repo">
+    <div class="page-head">
+      <h1 class="page-title">คลังใบสมัคร</h1>
+      <p class="page-desc">ใบสมัครทั้งหมดของบัญชีคุณ จัดเก็บแยกตามผลการคัดกรองล่าสุด</p>
+    </div>
+    <div class="repo-stats">
+      <div class="stat-card"><div class="stat-num" id="rp-total">–</div><div class="stat-lbl">ไฟล์ทั้งหมด</div></div>
+      <div class="stat-card"><div class="stat-num" id="rp-qualified">–</div><div class="stat-lbl">ผ่านเกณฑ์</div></div>
+      <div class="stat-card"><div class="stat-num" id="rp-pool">–</div><div class="stat-lbl">Talent Pool</div></div>
+    </div>
+    <div class="repo-upload">
+      <input type="file" id="repo-upload-input" accept=".pdf" multiple hidden>
+      <div class="upload-box" id="repo-upload-drop" role="button" tabindex="0"><p><b>เพิ่มใบสมัครเข้าคลัง</b>คลิกหรือลากไฟล์ PDF มาวาง ไฟล์จะถูกเก็บไว้โดยยังไม่วิเคราะห์</p></div>
+    </div>
+    <div class="toolbar">
+      <div class="search-box"><input id="repo-search" type="search" placeholder="ค้นหาชื่อไฟล์หรือตำแหน่งงาน" aria-label="ค้นหาในคลัง" oninput="renderRepoGrid()"></div>
+      <div class="pill-group" id="repo-pills">
+        <div class="pill on" data-f="all">ทั้งหมด</div>
+        <div class="pill" data-f="qualified">ผ่านเกณฑ์</div>
+        <div class="pill" data-f="pool">Talent Pool</div>
+        <div class="pill" data-f="unsorted">ยังไม่วิเคราะห์</div>
       </div>
-    </section>
+      <button type="button" class="action-btn" onclick="downloadSelected()">ดาวน์โหลดที่เลือก</button>
+    </div>
+    <div class="list-panel" id="repo-grid"><div class="empty-state"><div class="spinner"></div>กำลังโหลด</div></div>
+  </section>
 
-    <!-- ═══════════ VIEW: คลัง Resume ═══════════ -->
+  <section class="view" id="view-hist">
+    <div class="page-head">
+      <h1 class="page-title">ประวัติการคัดกรอง</h1>
+      <p class="page-desc">เลือกรายการเพื่อดูผลการคัดกรองฉบับเต็ม</p>
+    </div>
+    <div class="timeline" id="hist-timeline"><div class="empty-state"><div class="spinner"></div>กำลังโหลด</div></div>
+  </section>
 
-<div class="card" style="padding:16px;margin-bottom:16px">
-  <input type="file" id="repo-upload-input" accept=".pdf" multiple style="display:none">
-  <div class="upload-box" id="repo-upload-drop" style="padding:14px">
-    <span class="ic">📁</span><p>คลิกหรือลากไฟล์ Resume มาวางเพื่อเก็บเข้าคลังโดยตรง (ยังไม่วิเคราะห์)</p>
-  </div>
-</div>
-
-    <section class="view" id="view-repo">
-      <div class="page-head">
-        <div class="page-eyebrow" style="color:var(--repo)">คลัง Resume</div>
-        <h1 class="page-title">ไฟล์ Resume ทั้งหมดในระบบ</h1>
-        <p class="page-desc">Resume ทุกไฟล์ที่เคยอัปโหลด จัดเก็บและแยกหมวดอัตโนมัติตามผลการคัดกรองล่าสุด</p>
-      </div>
-      <div class="repo-stats">
-        <div class="stat-card"><div class="stat-num" id="rp-total">–</div><div class="stat-lbl">ไฟล์ทั้งหมด</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:var(--green)" id="rp-qualified">–</div><div class="stat-lbl">Qualified Candidates</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:var(--amber)" id="rp-pool">–</div><div class="stat-lbl">Talent Pool</div></div>
-      </div>
-      <div class="toolbar">
-        <div class="search-box"><span class="ic">🔍</span><input id="repo-search" placeholder="ค้นหาชื่อไฟล์หรือตำแหน่งงาน..." oninput="renderRepoGrid()"></div>
-        <button class="action-btn" onclick="downloadSelected()">⬇ ดาวน์โหลดที่เลือก</button>
-          <div class="pill on" data-f="all">ทั้งหมด</div>
-          <div class="pill" data-f="qualified">Qualified</div>
-          <div class="pill" data-f="pool">Talent Pool</div>
-          <div class="pill" data-f="unsorted">ยังไม่วิเคราะห์</div>
-        </div>
-      </div>
-      <div class="resume-grid" id="repo-grid"><div class="empty-state"><div class="spinner"></div>กำลังโหลด...</div></div>
-    </section>
-
-    <!-- ═══════════ VIEW: History ═══════════ -->
-    <section class="view" id="view-hist">
-      <div class="page-head">
-        <div class="page-eyebrow" style="color:var(--hist)">History</div>
-        <h1 class="page-title">ประวัติการคัดกรอง</h1>
-        <p class="page-desc">คลิกแต่ละรายการเพื่อดูรายงานผลลัพธ์ฉบับเต็ม</p>
-      </div>
-      <div class="timeline" id="hist-timeline"><div class="empty-state"><div class="spinner"></div>กำลังโหลด...</div></div>
-    </section>
-
-  </main>
-</div>
+</main>
 
 <div class="modal-overlay" id="hist-modal" onclick="if(event.target===this)closeHistoryModal()">
-  <div class="modal-box">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="hm-title">
     <div class="modal-head">
-      <div><div class="modal-title" id="hm-title"></div><div style="font-size:11.5px;color:var(--faint)" id="hm-time"></div></div>
-      <button class="modal-close" onclick="closeHistoryModal()">✕</button>
+      <div><div class="modal-title" id="hm-title"></div><div class="modal-time" id="hm-time"></div></div>
+      <button type="button" class="modal-close" onclick="closeHistoryModal()">ปิด</button>
     </div>
     <div class="modal-body">
-      <div class="repo-stats" style="margin-bottom:18px">
+      <div class="repo-stats">
         <div class="stat-card"><div class="stat-num" id="hm-total">–</div><div class="stat-lbl">ทั้งหมด</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:var(--green)" id="hm-pass">–</div><div class="stat-lbl">ผ่าน</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:var(--amber)" id="hm-rev">–</div><div class="stat-lbl">พิจารณา</div></div>
-        <div class="stat-card"><div class="stat-num" style="color:var(--red)" id="hm-fail">–</div><div class="stat-lbl">ไม่ผ่าน</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--ok)" id="hm-pass">–</div><div class="stat-lbl">ผ่าน</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--warn)" id="hm-rev">–</div><div class="stat-lbl">พิจารณาเพิ่มเติม</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--bad)" id="hm-fail">–</div><div class="stat-lbl">ไม่ผ่าน</div></div>
       </div>
       <div class="match-grid" id="hm-results"></div>
     </div>
   </div>
 </div>
 
-
 <script>
+const nativeFetch = window.fetch.bind(window);
+window.fetch = async (...args) => {
+  const res = await nativeFetch(...args);
+  if (res.status === 401) window.location.href = '/login';
+  return res;
+};
 // ═══════════════ NAV ═══════════════
 function switchView(name, el){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -464,11 +525,19 @@ function setMode(m){
   document.getElementById('mode-body-new').style.display = m==='new' ? 'block' : 'none';
   document.getElementById('mode-new-runbox').style.display = m==='new' ? 'block' : 'none';
   currentMode = m;
+  document.querySelectorAll('.only-new-note').forEach(n => { n.style.display = m === 'existing' ? '' : 'none'; });
+  document.querySelectorAll('.only-new-field').forEach(el => {
+    el.classList.toggle('is-disabled', m === 'existing');
+    el.querySelectorAll('input,select').forEach(i => { i.disabled = m === 'existing'; });
+  });
   document.getElementById('results-container').innerHTML = '<div class="empty-state"><p>ค้นหาหรือวิเคราะห์เพื่อดูผลลัพธ์</p></div>';
   document.getElementById('result-count').textContent = '';
 }
 
 let currentMode = 'existing';
+if (!document.querySelector('input[name=gender]:checked')) document.querySelector('input[name=gender][value=""]').checked = true;
+document.querySelectorAll('#adv-filters input, #jobtitle-input, #repo-search').forEach(i => i.setAttribute('autocomplete', 'off'));
+setMode('existing');
 
 
 
@@ -484,7 +553,10 @@ jtInput.addEventListener('keydown', e => {
     e.preventDefault();
     const tag = document.createElement('span');
     tag.className = 'jtag';
-    tag.innerHTML = jtInput.value.trim() + ' <button onclick="this.parentElement.remove();runSearch()">✕</button>';
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = '✕';
+    removeBtn.onclick = () => { tag.remove(); runSearch(); };
+    tag.append(document.createTextNode(jtInput.value.trim() + ' '), removeBtn);
     document.getElementById('jobtitle-box').insertBefore(tag, jtInput);
     jtInput.value = '';
     runSearch();
@@ -518,6 +590,7 @@ function setupDrop(dropId, inputId, onFile, multi){
   const zone = document.getElementById(dropId);
   const input = document.getElementById(inputId);
   zone.onclick = () => input.click();
+  zone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
   ['dragover','dragleave','drop'].forEach(evt => zone.addEventListener(evt, e => e.preventDefault()));
   zone.addEventListener('dragenter', () => zone.classList.add('dragover'));
   zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
@@ -531,8 +604,8 @@ function setupDrop(dropId, inputId, onFile, multi){
     if (files.length) onFile(multi ? files : files[0]);
   });
 }
-setupDrop('jd-drop','jd-input', f => document.getElementById('jd-label').innerHTML = '✓ ' + f.name, false);
-setupDrop('js-drop','js-input', f => document.getElementById('js-label').innerHTML = '✓ ' + f.name, false);
+setupDrop('jd-drop','jd-input', f => { document.getElementById('jd-label').innerHTML = '<b>Job Description</b>' + esc(f.name); document.getElementById('jd-drop').classList.add('is-set'); }, false);
+setupDrop('js-drop','js-input', f => { document.getElementById('js-label').innerHTML = '<b>Job Specification</b>' + esc(f.name); document.getElementById('js-drop').classList.add('is-set'); }, false);
 setupDrop('resume-drop','resume-input', files => {
   files.forEach(f => { if (!resumeFiles.find(x=>x.name===f.name)) resumeFiles.push(f); });
   renderResumeList();
@@ -564,10 +637,10 @@ function downloadSelected(){
 // ═══ จบส่วนที่เพิ่มใหม่ ═══
 
 function renderResumeList(){
-  document.getElementById('resume-list').innerHTML = resumeFiles.map(f =>
-    `<span class="drop-chip">📄 ${f.name} <button onclick="removeResume('${f.name}')">✕</button></span>`).join('');
+  document.getElementById('resume-list').innerHTML = resumeFiles.map((f, i) =>
+    `<span class="drop-chip">${esc(f.name)} <button type="button" aria-label="นำออก" onclick="removeResume(${i})">✕</button></span>`).join('');
 }
-function removeResume(name){ resumeFiles = resumeFiles.filter(f=>f.name!==name); renderResumeList(); }
+function removeResume(index){ resumeFiles = resumeFiles.filter((f, i) => i !== index); renderResumeList(); }
 
 
 // ═══════════════ CLEAR FILTERS ═══════════════
@@ -580,27 +653,47 @@ function clearAllFilters(){
 }
 
 // ═══════════════ RENDER MATCH CARD ═══════════════
+function esc(v){
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function jsq(v){ return encodeURIComponent(String(v ?? '')).replace(/'/g, '%27'); }
+function fmtGpa(v){
+  const n = Number(v);
+  return (v === null || v === undefined || v === '' || Number.isNaN(n)) ? 'ไม่พบ' : n.toFixed(2);
+}
+function fmtScore(v){
+  const n = Number(v);
+  return Number.isNaN(n) ? 0 : Math.round(n * 100) / 100;
+}
 function fmtNum(n){ return (n===null||n===undefined) ? '–' : n; }
 function renderMatchCard(c, idx){
-  const rec = c.recommendation || 'ไม่ผ่าน';
-  const badgeClass = rec==='ผ่าน' ? 'pass' : rec==='พิจารณาเพิ่มเติม' ? 'rev' : 'fail';
-  const keyword = c.keyword_score ?? 0, ai = c.ai_score ?? 0, struct = c.struct_score ?? 0;
-  const missing = (c.missing_keywords || []).map(m => `<span class="mtag">${m}</span>`).join('') || '<span style="color:var(--faint);font-size:12px">ไม่มีคุณสมบัติที่ขาด</span>';
+  const rec = c.recommendation || '';
+  const badgeClass = !rec ? 'na' : rec==='ผ่าน' ? 'pass' : rec==='พิจารณาเพิ่มเติม' ? 'rev' : 'fail';
+  const matchedTerms = Array.isArray(c.matched_terms) ? c.matched_terms : [];
+  const keyword = fmtScore(c.keyword_score), ai = fmtScore(c.ai_score), struct = fmtScore(c.struct_score);
+  const rejectReasons = Array.isArray(c.reject_reasons) ? c.reject_reasons : [];
+  const rejectHtml = rejectReasons.length ? `<div class="reject-reasons">${rejectReasons.map(x => `<span class="reject-tag">${esc(x)}</span>`).join('')}</div>` : '';
+  const fileName = c.file || c.file_name || '';
+  const displayName = c.name || fileName || 'ไม่ทราบชื่อ';
+  const expText = c.experience || (c.experience_years != null ? Number(c.experience_years) + ' ปี' : 'ไม่ระบุ');
+  const missing = (c.missing_keywords || []).map(m => `<span class="mtag">${esc(m)}</span>`).join('') || '<span style="color:var(--faint);font-size:12px">ไม่มีคุณสมบัติที่ขาด</span>';
   const uid = 'd' + idx + '_' + Math.random().toString(36).slice(2,7);
   return `
-<div class="card match-card">
+<div class="card match-card st-${badgeClass}">
   <div class="match-row" onclick="document.getElementById('${uid}').classList.toggle('open')">
     <input type="checkbox" class="match-check" onclick="event.stopPropagation()">
     <div class="match-rank">${idx+1}</div>
-    <div class="match-avatar">${(c.name||'?').slice(0,2)}</div>
+    <div class="match-avatar">${esc(displayName.slice(0,2))}</div>
     <div class="match-info">
-      <div class="match-name">${c.name || 'ไม่ทราบชื่อ'}</div>
+      <div class="match-name">${esc(displayName)}</div>
       <div class="match-sub">
-        <span>🎓 GPA ${c.gpa!=null ? c.gpa.toFixed(2) : 'ไม่พบ'}</span>
-        <span>⏱ ${c.experience || 'ไม่ระบุ'}</span>
-        <span>📁 ${c.file || ''}</span>
-        ${c.jd_label ? `<span>🏷 ${c.jd_label}</span>` : ''}
+        <span>GPA ${fmtGpa(c.gpa)}</span>
+        <span>ประสบการณ์ ${esc(expText)}</span>
+        <span>${esc(fileName)}</span>
+        ${c.jd_label ? `<span>วิเคราะห์กับ ${esc(c.jd_label)}</span>` : ''}
       </div>
+      ${matchedTerms.length ? `<div class="match-terms">ตรงกับตำแหน่ง: ${matchedTerms.map(esc).join(', ')}</div>` : ''}
+      ${rejectHtml}
     </div>
     <div class="match-bars">
       <div class="mbar-row"><span class="mbar-lbl">Keyword</span><div class="mbar-track"><div class="mbar-fill" style="width:${keyword/60*100}%;background:var(--search)"></div></div></div>
@@ -608,17 +701,18 @@ function renderMatchCard(c, idx){
       <div class="mbar-row"><span class="mbar-lbl">Struct</span><div class="mbar-track"><div class="mbar-fill" style="width:${struct/15*100}%;background:var(--repo)"></div></div></div>
     </div>
     <div class="match-score">
-      <div class="match-score-num">${c.score ?? 0}</div><div class="match-score-lbl">/ 100</div>
-      <div class="match-badge ${badgeClass}">${rec}</div>
+      ${c.score != null ? `<div class="match-score-num">${fmtScore(c.score)}</div><div class="match-score-lbl">/ 100</div>` : '<div class="match-score-num na">–</div>'}
+      <div class="match-badge ${badgeClass}">${rec || 'ยังไม่วิเคราะห์'}</div>
     </div>
   </div>
   <div class="match-detail" id="${uid}">
     <div class="match-detail-inner">
+      ${rejectReasons.length ? `<div><div class="dd-label">เหตุผลที่ไม่ผ่าน</div>${rejectHtml}</div>` : ''}
       <div><div class="dd-label">คุณสมบัติที่ขาด</div><div class="missing-tags">${missing}</div></div>
       <div><div class="dd-label">รายละเอียดคะแนน</div>
-        <div class="dd-preview">Keyword ${keyword}/60 · AI ${ai}/25 · Structure ${struct}/15${c.special_score ? ' · พิเศษ '+c.special_score+'/15' : ''}</div>
+        <div class="dd-preview">Keyword ${keyword}/60, AI ${ai}/25, โครงสร้างเอกสาร ${struct}/15${c.special_score ? ', คะแนนพิเศษ '+c.special_score+'/15' : ''}</div>
       </div>
-      <div class="detail-foot"><span>${c.created_at || ''}</span></div>
+      <div class="detail-foot"><span>${esc(c.created_at || '')}</span></div>
     </div>
   </div>
 </div>`;
@@ -640,45 +734,57 @@ async function runSearch(){
   if (currentMode !== 'existing') return;
   const params = new URLSearchParams();
   const titles = getJobTitles();
-  if (titles.length) params.set('jd_label_contains', titles[0]);
-  const gpa = document.getElementById('f-gpa').value;
-  if (gpa) params.set('min_gpa', gpa);
-  const exp = document.getElementById('f-exp').value;
-  if (exp) params.set('min_experience', exp);
+  titles.forEach(title => params.append('position', title));
+  const addParam = (key, id) => { const v = document.getElementById(id).value; if (v !== '') params.set(key, v); };
+  addParam('min_gpa', 'f-gpa');
+  addParam('min_experience', 'f-exp');
+  addParam('age_min', 'f-age-min');
+  addParam('age_max', 'f-age-max');
+  addParam('salary_min', 'f-salary-min');
+  addParam('salary_max', 'f-salary-max');
+  const genderValue = (document.querySelector('input[name=gender]:checked') || {}).value;
+  if (genderValue === 'male' || genderValue === 'female') params.set('gender', genderValue);
 
   document.getElementById('results-container').innerHTML = '<div class="empty-state"><div class="spinner"></div>กำลังค้นหา...</div>';
   try {
     const res = await fetch('/api/candidates/search?' + params.toString());
-    const data = await res.json();
+    const data = await res.json().catch(() => ({ error: 'เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (HTTP ' + res.status + ')' }));
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
     lastResults = data.candidates || [];
     renderResults(lastResults, `พบผู้สมัครที่เกี่ยวข้อง <b style="color:var(--ink)">${lastResults.length}</b> คน`);
   } catch(e) {
-    document.getElementById('results-container').innerHTML = '<div class="empty-state"><p>ค้นหาไม่สำเร็จ: '+e.message+'</p></div>';
+    document.getElementById('results-container').innerHTML = '<div class="empty-state"><p>ค้นหาไม่สำเร็จ: '+esc(e.message)+'</p></div>';
   }
 }
-['f-gpa','f-exp'].forEach(id => document.getElementById(id).addEventListener('change', runSearch));
+['f-gpa','f-exp','f-age-min','f-age-max','f-salary-min','f-salary-max'].forEach(id => document.getElementById(id).addEventListener('change', runSearch));
+document.querySelectorAll('input[name=gender]').forEach(r => r.addEventListener('change', runSearch));
 
 // ═══════════════ อัปโหลด + วิเคราะห์ใหม่ ═══════════════
 async function runAnalyze(){
   const fd = new FormData();
   if (document.getElementById('jd-input').files[0]) fd.append('jd_file', document.getElementById('jd-input').files[0]);
   if (document.getElementById('js-input').files[0]) fd.append('js_file', document.getElementById('js-input').files[0]);
-  if (!resumeFiles.length) return alert('กรุณาอัปโหลด Resume อย่างน้อย 1 ไฟล์');
+  if (!resumeFiles.length) return alert('กรุณาเลือกไฟล์ใบสมัครอย่างน้อยหนึ่งไฟล์');
   resumeFiles.forEach(f => fd.append('resumes', f));
 
   fd.append('required', getJobTitles().join(' '));
   fd.append('duties', document.getElementById('f-duties').value);
   fd.append('bonus', document.getElementById('f-skills').value);
-  fd.append('field_of_study', document.getElementById('f-field-other').value);
+  const facultyOther = document.getElementById('f-field-other').value.trim();
+  const majorValue = document.getElementById('major-select').value;
+  fd.append('field_of_study', [majorValue, facultyOther].filter(Boolean).join(' '));
+  fd.append('min_experience', document.getElementById('f-exp').value);
   fd.append('general', document.getElementById('f-general').value);
   fd.append('min_gpa', document.getElementById('f-gpa').value);
-  fd.append('edu', (document.querySelector('input[name=edu-lvl]:checked') || {}).value || '');
+  const eduLevels = Array.from(document.querySelectorAll('input[name=edu-lvl]:checked')).map(x => Number(x.value));
+  fd.append('edu', eduLevels.length ? String(Math.min(...eduLevels)) : '');
   fd.append('pass_threshold', document.getElementById('f-pass').value || 60);
   fd.append('review_threshold', document.getElementById('f-review').value || 40);
   fd.append('ai_mode', document.getElementById('f-ai-mode').checked ? 'hybrid' : 'tfidf');
   fd.append('age_min', document.getElementById('f-age-min').value);
   fd.append('age_max', document.getElementById('f-age-max').value);
-  fd.append('gender', (document.querySelector('input[name=gender]:checked')||{}).value || '');
+  const genderPick = (document.querySelector('input[name=gender]:checked') || {}).value;
+  fd.append('gender', genderPick === 'male' || genderPick === 'female' ? genderPick : '');
   fd.append('salary_min', document.getElementById('f-salary-min').value);
   fd.append('salary_max', document.getElementById('f-salary-max').value);
   fd.append('enable_special', document.getElementById('special-switch').classList.contains('on') ? 'on' : '');
@@ -691,16 +797,18 @@ async function runAnalyze(){
   document.getElementById('results-container').innerHTML = '<div class="empty-state"><div class="spinner"></div>กำลังวิเคราะห์ Resume...</div>';
   try {
     const res = await fetch('/analyze', {method:'POST', body: fd});
-    const data = await res.json();
+    const data = await res.json().catch(() => ({ error: 'เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (HTTP ' + res.status + ')' }));
     if (data.error) { alert('Error: ' + data.error); return; }
     lastResults = data.results || [];
     currentHistoryId = data.history_id;
     const s = data.summary || {};
-    renderResults(lastResults, `${s.total||0} resume · ผ่าน ${s.passed||0} · พิจารณา ${s.review||0} · ไม่ผ่าน ${s.failed||0} · เต็ม ${s.max_possible_score||100} คะแนน`);
+    const countParts = [`<b>${s.total||0}</b> ใบสมัคร`, `ผ่าน <b>${s.passed||0}</b>`, `พิจารณาเพิ่มเติม <b>${s.review||0}</b>`, `ไม่ผ่าน <b>${s.failed||0}</b>`, `คะแนนเต็ม ${s.max_possible_score||100}`].map(x => `<span>${x}</span>`).join('');
+    const notes = [s.ai_warning, s.keyword_warning, (s.auto_filled && s.auto_filled.length) ? 'AI เติมเงื่อนไขจาก ' + (s.auto_filled_source || 'Job Description') + ' ให้: ' + s.auto_filled.join(', ') : null].filter(Boolean).map(n => `<div class="notice">${esc(n)}</div>`).join('');
+    renderResults(lastResults, `<div class="count-row">${countParts}</div>${notes}`);
   } catch(e) {
     document.getElementById('results-container').innerHTML = '<div class="empty-state"><p>วิเคราะห์ไม่สำเร็จ: '+e.message+'</p></div>';
   } finally {
-    btn.disabled = false; btn.textContent = 'วิเคราะห์ Resume';
+    btn.disabled = false; btn.textContent = 'วิเคราะห์ใบสมัคร';
   }
 }
 let currentHistoryId = null;
@@ -734,15 +842,15 @@ function renderRepoGrid(){
   if (repoFilter !== 'all') items = items.filter(i => i.type === repoFilter);
   const grid = document.getElementById('repo-grid');
   if (!items.length) { grid.innerHTML = '<div class="empty-state"><p>ไม่พบไฟล์</p></div>'; return; }
+  const typeLabel = {qualified:'ผ่านเกณฑ์', pool:'Talent Pool', unsorted:'ยังไม่วิเคราะห์'};
   grid.innerHTML = items.map(i => `
-<div class="card resume-card">
-  <input type="checkbox" class="repo-check" data-folder="${i.folder}" data-filename="${i.filename}" style="margin-bottom:8px">
-  <div class="resume-top"><div class="file-icon">📄</div><span class="folder-tag ${i.type==='qualified'?'qualified':'pool'}">${i.type==='qualified'?'Qualified':'Talent Pool'}</span></div>
-  <div class="resume-name">${i.filename}</div>
-  <div class="resume-meta">${i.folder}<br>แก้ไข ${new Date(i.modified).toLocaleDateString('th-TH')}</div>
+<div class="repo-row">
+  <input type="checkbox" class="repo-check" aria-label="เลือก ${esc(i.filename)}" data-folder="${esc(i.folder)}" data-filename="${esc(i.filename)}">
+  <div style="min-width:0"><div class="resume-name">${esc(i.filename)}</div><div class="resume-meta">${i.type==='unsorted' ? 'อัปโหลดเข้าคลัง' : esc(i.folder)}, แก้ไขล่าสุด ${new Date(i.modified).toLocaleDateString('th-TH')}</div></div>
+  <span class="folder-tag ${i.type}">${typeLabel[i.type] || i.type}</span>
   <div class="resume-actions">
     <a class="mini-btn" href="/repository/download/${encodeURIComponent(i.folder)}/${encodeURIComponent(i.filename)}">ดาวน์โหลด</a>
-    <button class="mini-btn" onclick="deleteRepoFile('${i.folder}','${i.filename}')" style="color:var(--red)">ลบ</button>
+    <button type="button" class="mini-btn danger" onclick="deleteRepoFile(decodeURIComponent('${jsq(i.folder)}'),decodeURIComponent('${jsq(i.filename)}'))">ลบ</button>
   </div>
 </div>`).join('');
 }
@@ -771,11 +879,11 @@ async function loadHistory(){
     el.innerHTML = items.map((it,i) => {
       const s = it.summary || {};
       return `
-<div class="timeline-item" onclick="openHistoryModal('${it.id}')">
+<div class="timeline-item" onclick="openHistoryModal(decodeURIComponent('${jsq(it.id)}'))">
   <div class="timeline-dot-col"><div class="timeline-dot"></div>${i<items.length-1?'<div class="timeline-line"></div>':''}</div>
   <div class="hist-body">
     <div class="hist-row-top">
-      <span class="hist-title">${it.jd_label || 'Job Description'}</span>
+      <span class="hist-title">${esc(it.jd_label || 'Job Description')}</span>
       <span class="hist-time">${fmtTime(it.timestamp)}</span>
     </div>
     <div class="hist-tags">
@@ -783,7 +891,7 @@ async function loadHistory(){
       <span class="htag pass">ผ่าน ${s.passed??0}</span>
       <span class="htag rev">พิจารณา ${s.review??0}</span>
       <span class="htag fail">ไม่ผ่าน ${s.failed??0}</span>
-      <button class="hist-del" onclick="event.stopPropagation();deleteHistory('${it.id}')">🗑</button>
+      <button class="hist-del" onclick="event.stopPropagation();deleteHistory(decodeURIComponent('${jsq(it.id)}'))">ลบ</button>
     </div>
   </div>
 </div>`;

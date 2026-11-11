@@ -3,126 +3,92 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>สมัครสมาชิก — CV-Screener</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
+<title>สมัครใช้งาน | CV-Screener</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#ffffff;--surface:#f7f7f8;--border:#e7e7ea;
-  --ink:#18181b;--sub:#71717a;--faint:#a1a1aa;
-  --accent:#4338ca;--accent-soft:#eef0fd;
-  --red:#dc2626;--red-soft:#fdeded;
-  --amber:#d97706;--amber-soft:#fef6e7;
-  --radius:14px;--radius-sm:9px;
-}
-body{font-family:'Noto Sans Thai','Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
-
-nav{border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;background:#c22731}
-.logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;color:#fff}
-.logo img{height:36px;width:auto;object-fit:contain}
-
-main{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 24px}
-.card{width:100%;max-width:440px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:36px}
-.card-title{font-size:22px;font-weight:700;margin-bottom:4px}
-.card-sub{font-size:13px;color:var(--sub);margin-bottom:28px}
-
-.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
-.field label{font-size:12px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:6px}
-.field label .req{color:var(--red);font-size:11px}
-.field-hint{font-size:11px;color:var(--faint);line-height:1.5}
-.field-hint a{color:var(--accent);text-decoration:none}
-.field-hint a:hover{text-decoration:underline}
-
-input[type=text],input[type=email],input[type=password]{
-  width:100%;padding:10px 12px;background:#fff;
-  border:1px solid var(--border);border-radius:var(--radius-sm);
-  color:var(--ink);font-size:13px;font-family:'Noto Sans Thai','Inter',sans-serif;
-  outline:none;transition:border-color .15s
-}
-input:focus{border-color:var(--accent)}
-input::placeholder{color:var(--faint)}
-
-/* API Key field — highlight เพิ่ม */
-.api-key-field{background:var(--amber-soft);border:1px solid #fae3bd;border-radius:var(--radius-sm);padding:14px;margin-bottom:16px}
-.api-key-field .field-label-main{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:6px}
-.api-key-field input{margin-bottom:6px}
-.api-key-field .field-hint{color:#92400e}
-
-.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
-
-.btn{width:100%;padding:13px;background:var(--ink);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;margin-top:4px;font-family:'Noto Sans Thai','Inter',sans-serif}
-.btn:hover{background:var(--accent)}
-
-.error-box{background:var(--red-soft);border:1px solid #fad4d4;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:16px}
-
-.footer-link{text-align:center;margin-top:20px;font-size:13px;color:var(--sub)}
-.footer-link a{color:var(--accent);text-decoration:none;font-weight:500}
-.footer-link a:hover{text-decoration:underline}
+:root{--canvas:#eef1f4;--paper:#fff;--line:#d5dbe1;--line-soft:#e7ebef;--ink:#1d2329;--muted:#56616b;--faint:#87919a;--brand:#b8202b;--brand-dark:#93161f;--steel:#2f3b46;--focus:#2f6fb0;--bad:#b3261e;--bad-bg:#fbe8e6;--r-panel:6px;--r-ctl:4px}
+body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:15px;line-height:1.6;background:var(--canvas);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.topbar{background:var(--paper);border-top:4px solid var(--brand);border-bottom:1px solid var(--line)}
+.topbar-inner{max-width:1240px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;gap:12px}
+.topbar img{height:38px;width:38px;object-fit:contain}
+.brand-name{font-size:17px;font-weight:700;line-height:1.2}
+.brand-sub{font-size:12.5px;color:var(--muted);line-height:1.3}
+main{flex:1;display:flex;justify-content:center;align-items:flex-start;padding:56px 16px}
+.panel{width:100%;max-width:440px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-panel)}
+.panel-head{padding:22px 28px 0}
+.panel-title{font-size:22px;font-weight:700;line-height:1.3}
+.panel-sub{color:var(--muted);margin-top:2px}
+form{padding:20px 28px 24px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:14px;font-weight:600;margin-bottom:5px}
+.req{color:var(--brand);font-weight:500}
+.field input{width:100%;height:42px;padding:0 12px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--paper);font-size:15px}
+.field input:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px rgba(47,111,176,.15)}
+.field input::placeholder{color:#a5aeb6}
+.hint{font-size:13px;color:var(--faint);margin-top:6px;line-height:1.5}
+.hint a{color:var(--focus)}
+.group{border-top:1px solid var(--line-soft);margin:22px -28px 18px;padding:18px 28px 0}
+.group-title{font-size:15px;font-weight:600;margin-bottom:10px}
+.btn{width:100%;height:46px;background:var(--brand);color:#fff;border:0;border-radius:var(--r-ctl);font-size:16px;font-weight:600;cursor:pointer;margin-top:4px}
+.btn:hover{background:var(--brand-dark)}
+.error-box{margin:16px 28px 0;padding:10px 14px;border-left:3px solid var(--bad);background:var(--bad-bg);color:var(--bad);font-size:14px;border-radius:0 var(--r-ctl) var(--r-ctl) 0}
+.panel-foot{border-top:1px solid var(--line-soft);padding:14px 28px;font-size:14px;color:var(--muted);text-align:center;background:#fafbfc;border-radius:0 0 var(--r-panel) var(--r-panel)}
+.panel-foot a{color:var(--focus);font-weight:500}
+@media(max-width:520px){.brand-sub{display:none}main{padding-top:28px}.panel-head,form,.panel-foot{padding-left:20px;padding-right:20px}.group{margin-left:-20px;margin-right:-20px;padding-left:20px;padding-right:20px}.error-box{margin-left:20px;margin-right:20px}}
 </style>
 </head>
 <body>
-
-<nav>
-  <div class="logo">
-    <img src="/static/SSI-Group-logo-transparent.png" onerror="this.style.display='none'">
-    CV-Screener
-  </div>
-</nav>
-
+<header class="topbar"><div class="topbar-inner">
+  <img src="/static/SSI-Group-logo-transparent.png" alt="SSI Group" onerror="this.style.display='none'">
+  <div><div class="brand-name">CV-Screener</div><div class="brand-sub">ระบบคัดกรองใบสมัครงาน ฝ่ายทรัพยากรบุคคล SSI Group</div></div>
+</div></header>
 <main>
-  <div class="card">
-    <div class="card-title">สมัครสมาชิก</div>
-    <div class="card-sub">สร้างบัญชีเพื่อเริ่มใช้งาน CV-Screener</div>
-
-    {% if error %}
-    <div class="error-box">{{ error }}</div>
-    {% endif %}
-
-    <form method="POST" action="/register">
-
-      <div class="field">
-        <label>Username <span class="req">*</span></label>
-        <input type="text" name="username" placeholder="อย่างน้อย 3 ตัวอักษร" required autofocus autocomplete="off">
-      </div>
-
-      <div class="field">
-        <label>Email <span class="req">*</span></label>
-        <input type="email" name="email" placeholder="example@ssi.co.th" required autocomplete="off">
-      </div>
-
-      <div class="field">
-        <label>Password <span class="req">*</span></label>
-        <input type="password" name="password" placeholder="อย่างน้อย 6 ตัวอักษร" required>
-      </div>
-
-      <div class="field">
-        <label>ยืนยัน Password <span class="req">*</span></label>
-        <input type="password" name="password2" placeholder="กรอก Password อีกครั้ง" required>
-      </div>
-
-      <hr class="divider">
-
-      <!-- Groq API Key — บังคับ -->
-      <div class="api-key-field">
-        <div class="field-label-main">
-          🔑 Groq API Key <span class="req" style="color:var(--red)">* จำเป็น</span>
-        </div>
-        <input type="password" name="groq_api_key" placeholder="gsk_..." required autocomplete="off">
-        <div class="field-hint">
-          ใช้สำหรับ AI วิเคราะห์และแปลภาษาไทย — กรอกครั้งเดียว ระบบจำไว้ให้ตลอด<br>
-          ขอได้ฟรีที่ <a href="https://console.groq.com" target="_blank">console.groq.com</a>
-          → API Keys → Create API Key
-        </div>
-      </div>
-
-      <button type="submit" class="btn">สมัครสมาชิก</button>
-    </form>
-
-    <div class="footer-link">
-      มีบัญชีแล้ว? <a href="/login">เข้าสู่ระบบ</a>
-    </div>
+<div class="panel">
+  <div class="panel-head">
+    <h1 class="panel-title">สมัครใช้งาน</h1>
+    <p class="panel-sub">สร้างบัญชีสำหรับเจ้าหน้าที่ฝ่ายทรัพยากรบุคคล</p>
   </div>
-</main>
+  {% if error %}
+  <div class="error-box" role="alert">{{ error }}</div>
+  {% endif %}
+  <form method="POST" action="/register">
+    <div class="field">
+      <label for="username">ชื่อผู้ใช้ <span class="req">*</span></label>
+      <input type="text" id="username" name="username" minlength="3" autocomplete="username" required autofocus>
+      <p class="hint">อย่างน้อย 3 ตัวอักษร</p>
+    </div>
+    <div class="field">
+      <label for="email">อีเมล <span class="req">*</span></label>
+      <input type="email" id="email" name="email" autocomplete="email" required>
+    </div>
+    <div class="field">
+      <label for="password">รหัสผ่าน <span class="req">*</span></label>
+      <input type="password" id="password" name="password" minlength="6" autocomplete="new-password" required>
+      <p class="hint">อย่างน้อย 6 ตัวอักษร</p>
+    </div>
+    <div class="field">
+      <label for="password2">ยืนยันรหัสผ่าน <span class="req">*</span></label>
+      <input type="password" id="password2" name="password2" autocomplete="new-password" required>
+    </div>
 
+    <div class="group">
+      <div class="group-title">การเชื่อมต่อ AI</div>
+      <div class="field" style="margin-bottom:0">
+        <label for="groq_api_key">Groq API Key <span class="req">*</span></label>
+        <input type="password" id="groq_api_key" name="groq_api_key" placeholder="gsk_" autocomplete="off" required>
+        <p class="hint">ใช้สำหรับให้คะแนนด้วย AI และแปลเอกสารภาษาไทย ระบบเก็บแบบเข้ารหัส สร้าง key ได้ที่ <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a></p>
+      </div>
+    </div>
+
+    <button type="submit" class="btn">สร้างบัญชี</button>
+  </form>
+  <div class="panel-foot">มีบัญชีอยู่แล้ว <a href="/login">เข้าสู่ระบบ</a></div>
+</div>
+</main>
 </body>
 </html>

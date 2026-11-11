@@ -19,14 +19,14 @@ def encrypt_value(plain:str) -> str :
    if not plain: return ""
    return _fernet.encrypt(plain.encode()).decode()
 
-def decrypt_value(encryptted: str) -> str:
+def decrypt_value(encrypted: str) -> str:
     """ถอดรหัส string ที่เข้ารหัสด้วย encrypt_value — คืนค่าดั้งเดิม
     ถ้าถอดรหัสไม่ได้ (key ผิด/ข้อมูลเสีย) คืนค่าว่างแทนที่จะทำให้ทั้งระบบ crash"""
 
     if not encrypted:
        return ""
     try: 
-       return fernet.decrypt(encrypted.encode()).decode()
+       return _fernet.decrypt(encrypted.encode()).decode()
     except Exception:
        return ""
 

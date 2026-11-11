@@ -13,21 +13,28 @@
 #     ต้องเอากลับคืนก่อน deploy จริง (ดูจุดที่มี "TODO คืนค่า" กำกับ)
 # ============================================================
 
-import os, json, tempfile, gc, uuid, shutil
+import os, json, tempfile, gc, uuid, shutil, hashlib, re
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
+from decimal import Decimal
+from urllib.parse import urlparse
+import traceback
 from functools import wraps
+from flask.json.provider import DefaultJSONProvider
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
 from flask_bcrypt import Bcrypt
 import sys
 sys.path.append(".")
 
-from models import Config, ResumeScreener, extract_keywords_via_ai
+from models import (Config, ResumeScreener, extract_jd_profile_via_ai, PDFReader,
+                    extract_gpa, extract_experience_years, extract_age,
+                    extract_gender, extract_salary_expectation)
 
 # TODO: สลับเป็น database_postgres เมื่อ Postgres กลับมาใช้ได้
 from database_postgres import (
     init_db, save_history, get_history_list, get_history_by_id,
     delete_history, get_user_groq_key, search_candidates,
+    library_index, library_apply, library_search,
 )
 
 from auth import auth
@@ -40,6 +47,21 @@ except ImportError:
 app = Flask(__name__)
 app.secret_key = os.environ["SECRET_KEY"]
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("COOKIE_SECURE") == "1",
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+)
+app.json.default = lambda o: float(o) if isinstance(o, Decimal) else DefaultJSONProvider.default(o)
+
+
+@app.before_request
+def verify_request_origin():
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        source = request.headers.get("Origin") or request.headers.get("Referer")
+        if source and urlparse(source).netloc != request.host:
+            return jsonify({"error": "คำขอไม่ผ่านการตรวจสอบต้นทาง"}), 403
 
 bcrypt = Bcrypt(app)
 app.register_blueprint(auth)
@@ -47,11 +69,25 @@ app.register_blueprint(auth)
 with app.app_context():
     init_db()
 
-TOKEN_LIMIT_PER_MIN = 6000
+TOKEN_LIMIT_PER_MIN = int(os.environ.get("GROQ_TPM_LIMIT", "8000"))
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 
-QUALIFIED_DIR   = Path("ResultFile/Qualified")
-TALENT_POOL_DIR = Path("ResultFile/TalentPool")
-UPLOADED_DIR = Path("ResultFile/Uploaded")
+RESULT_ROOT = Path("ResultFile")
+
+
+def user_dirs(user_id):
+    root = RESULT_ROOT / f"user_{int(user_id)}"
+    return root / "Qualified", root / "TalentPool", root / "Uploaded"
+
+
+def clean_folder(name):
+    return "".join(c for c in (name or "") if c.isalnum() or c in " _-").strip()
+
+
+def clean_filename(name):
+    base = (name or "").replace("\\", "/").split("/")[-1].strip()
+    base = "".join(c for c in base if c.isprintable())
+    return "" if base in ("", ".", "..") or base.startswith(".") else base
 
 EDU_MAP = {
     "1": ["diploma","ปวส","associate","อนุปริญญา",
@@ -67,24 +103,40 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("user_id"):
-            return redirect(url_for("auth.login"))
+            if _wants_html():
+                return redirect(url_for("auth.login"))
+            return jsonify({"error": "หมดเวลาการใช้งาน กรุณาเข้าสู่ระบบใหม่", "login_required": True}), 401
         return f(*args, **kwargs)
     return decorated
 
 
-def sort_resume_file(orig_name, tmp_path, recommendation, jd_label):
-    """FR-5.3 (ผ่าน→Qualified Candidates) / FR-5.4 (ไม่ผ่าน→Talent Pool)"""
-    safe_position = "".join(c for c in (jd_label or "unknown") if c.isalnum() or c in " _-")[:50] or "unknown"
+def _wants_html():
+    return request.accept_mimetypes.best == "text/html"
+
+
+@app.errorhandler(500)
+def handle_server_error(e):
+    traceback.print_exc()
+    if _wants_html():
+        return "เกิดข้อผิดพลาดภายในระบบ", 500
+    return jsonify({"error": "เกิดข้อผิดพลาดภายในระบบ ลองใหม่อีกครั้ง หากยังเป็นอยู่ให้แจ้งผู้ดูแล"}), 500
+
+
+def sort_resume_file(orig_name, tmp_path, recommendation, jd_label, user_id):
+    """FR-5.3 (ผ่าน→Qualified Candidates) / FR-5.4 (ไม่ผ่าน→Talent Pool) — แยกตาม user"""
+    qualified_dir, talent_pool_dir, _ = user_dirs(user_id)
+    safe_position = clean_folder(jd_label or "unknown")[:50] or "unknown"
     date_str = datetime.now().strftime("%Y-%m-%d")
+    file_name = clean_filename(orig_name) or "resume.pdf"
 
     if recommendation == "ผ่าน":
-        dest_dir = QUALIFIED_DIR / f"{safe_position}_{date_str}"
+        dest_dir = qualified_dir / f"{safe_position}_{date_str}"
     else:
-        dest_dir = TALENT_POOL_DIR / safe_position
+        dest_dir = talent_pool_dir / safe_position
 
     dest_dir.mkdir(parents=True, exist_ok=True)
     try:
-        shutil.copy(tmp_path, dest_dir / orig_name)
+        shutil.copy(tmp_path, dest_dir / file_name)
     except Exception as e:
         print(f"[warn] sort_resume_file failed: {e}")
 
@@ -184,8 +236,26 @@ def analyze():
 
         jd_text = f"{jd_text} {js_text}".strip()
 
+        jd_from_criteria = False
         if not jd_text:
-            return jsonify({"error": "อ่านไฟล์ไม่ออก — PDF อาจเป็นไฟล์สแกน ลองใช้แท็บ 'พิมพ์เอง' แทน หรือแปลงเป็น .txt ก่อน"}), 400
+            has_jd_file = any(request.files.get(k) and request.files[k].filename for k in ("jd_file", "js_file"))
+            if has_jd_file:
+                return jsonify({"error": "อ่านข้อความจากไฟล์ Job Description / Job Specification ไม่ได้ ไฟล์อาจเป็นภาพสแกนและระบบอ่านภาพ (OCR) ไม่สำเร็จ ลองใช้ไฟล์ PDF ที่เลือกข้อความได้ บันทึกเป็น .txt หรือนำไฟล์ออกแล้วคัดกรองตามเงื่อนไขอย่างเดียว"}), 400
+            criteria_text = " ".join(
+                request.form.get(k, "").strip()
+                for k in ("required", "duties", "bonus", "field_of_study", "general")
+                if request.form.get(k, "").strip()
+            )
+            numeric_given = any(
+                request.form.get(k, "").strip()
+                for k in ("min_gpa", "min_experience", "age_min", "age_max", "salary_min", "salary_max", "gender")
+            )
+            if not criteria_text and not numeric_given:
+                return jsonify({"error": "กรุณาเลือกไฟล์ Job Description / Job Specification หรือกรอกเงื่อนไขการคัดกรองอย่างน้อยหนึ่งข้อ"}), 400
+            jd_text = criteria_text.lower()
+            jd_from_criteria = True
+            titles = request.form.get("required", "").strip()
+            jd_label = (f"เงื่อนไข {titles}" if titles else "คัดกรองตามเงื่อนไข")[:60]
 
         resume_files = request.files.getlist("resumes")
         if not resume_files or not resume_files[0].filename:
@@ -203,10 +273,12 @@ def analyze():
         field_kws   = [k.lower() for k in request.form.get("field_of_study","").split() if k]
         general_kws = [k.lower() for k in request.form.get("general","").split() if k]
         edu_kws     = EDU_MAP.get(request.form.get("edu",""), [])
-        pass_thr    = int(request.form.get("pass_threshold", 60))
-        rev_thr     = int(request.form.get("review_threshold", 40))
+        try:
+            pass_thr = int(request.form.get("pass_threshold") or 60)
+            rev_thr  = int(request.form.get("review_threshold") or 40)
+        except ValueError:
+            return jsonify({"error": "เกณฑ์ผ่าน/เกณฑ์พิจารณาต้องเป็นตัวเลขจำนวนเต็ม"}), 400
         ai_mode      = request.form.get("ai_mode", "tfidf")
-        ai_threshold = int(request.form.get("ai_threshold", 0))
 
         groq_key = session.get("groq_api_key", "") or get_user_groq_key(session["user_id"])
 
@@ -228,6 +300,9 @@ def analyze():
         require_vehicle = request.form.get("require_vehicle") == "on"
         require_license = request.form.get("require_license") == "on"
         min_toeic       = request.form.get("min_toeic", type=float)
+        min_experience  = request.form.get("min_experience", type=float)
+
+        ai_usage = {"in": 0, "out": 0}
 
         def has_thai(text: str) -> bool:
             return any('\u0e00' <= c <= '\u0e7f' for c in text)
@@ -235,7 +310,7 @@ def analyze():
         def translate_to_english(text: str, client) -> str:
             try:
                 resp = client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
+                    model=GROQ_MODEL,
                     messages=[
                         {"role": "system", "content": (
                             "You are a professional translator. "
@@ -246,10 +321,15 @@ def analyze():
                         {"role": "user", "content": text[:2000]},
                     ],
                     temperature=0.1,
-                    max_tokens=1000,
+                    max_tokens=2000,
+                    extra_body={"reasoning_effort": "low"},
                 )
+                usage = getattr(resp, "usage", None)
+                ai_usage["in"]  += getattr(usage, "prompt_tokens", 0) or 0
+                ai_usage["out"] += getattr(usage, "completion_tokens", 0) or 0
                 return resp.choices[0].message.content.strip()
-            except Exception:
+            except Exception as e:
+                print(f"[warn] translate_to_english failed: {e}")
                 return text
 
         translate_key = groq_key
@@ -305,11 +385,24 @@ def analyze():
 
         # ── FR-4.6: สกัด keyword master list จาก JD/JS ด้วย AI (ครั้งเดียว) ──
         ai_masterlist = []
-        if ai_mode == "hybrid" and groq_key:
+        auto_filled = []
+        if ai_mode == "hybrid" and groq_key and combined_jd:
             from groq import Groq as GroqClient
             _kw_client = GroqClient(api_key=groq_key)
-            ai_masterlist = extract_keywords_via_ai(combined_jd, _kw_client)
+            jd_profile = extract_jd_profile_via_ai(combined_jd, _kw_client)
+            ai_masterlist = jd_profile["all"]
+            ai_usage["in"]  += jd_profile.get("usage", {}).get("in", 0)
+            ai_usage["out"] += jd_profile.get("usage", {}).get("out", 0)
             print(f"[FR-4.6] AI master list: {ai_masterlist}")
+            if not req_kws and jd_profile["position"]:
+                req_kws = jd_profile["position"]
+                auto_filled.append("ตำแหน่งงาน")
+            if not duties_kws and jd_profile["duties"]:
+                duties_kws = jd_profile["duties"]
+                auto_filled.append("ลักษณะงาน")
+            if not bon_kws and jd_profile["skills"]:
+                bon_kws = jd_profile["skills"]
+                auto_filled.append("ทักษะ")
 
         config = Config(
             position_keywords=req_kws,
@@ -319,6 +412,7 @@ def analyze():
             general_keywords=general_kws,
             edu_level_keywords=edu_kws,
             min_gpa=min_gpa,
+            min_experience_years=min_experience,
             age_range=age_range,
             gender=gender,
             salary_range=salary_range,
@@ -349,14 +443,20 @@ def analyze():
                         matched = orig
                         break
             if matched:
+                if r.name == Path(r.file).name or r.name == r.file:
+                    r.name = Path(matched).stem
                 r.file = matched
 
         ai_insights = {}  # เก็บไว้เผื่อ frontend เดิมอ้างถึง (ไม่ใช้จริงแล้ว — AI คำนวณใน models.py แล้ว)
-        total_input_tokens  = 0
-        total_output_tokens = 0
-        total_tokens_used   = 0
+        total_input_tokens  = ai_usage["in"]
+        total_output_tokens = ai_usage["out"]
+        total_tokens_used   = total_input_tokens + total_output_tokens
 
         output = []
+        for r in results:
+            if r.error and not r.recommendation:
+                r.recommendation = "ไม่ผ่าน"
+
         for rank, r in enumerate(results, 1):
             d = r.to_dict()
             d["rank"]    = rank
@@ -366,7 +466,7 @@ def analyze():
             # FR-5.3/5.4: sort resume ลงโฟลเดอร์
             tmp_path = next((p for orig, p in resume_tmp if orig == r.file), None)
             if tmp_path:
-                sort_resume_file(r.file, tmp_path, r.recommendation, jd_label)
+                sort_resume_file(r.file, tmp_path, r.recommendation, jd_label, session["user_id"])
 
         tokens_remaining = max(0, TOKEN_LIMIT_PER_MIN - total_tokens_used)
 
@@ -376,7 +476,13 @@ def analyze():
             "review":  sum(1 for r in results if r.recommendation == "พิจารณาเพิ่มเติม"),
             "failed":  sum(1 for r in results if r.recommendation == "ไม่ผ่าน"),
             "ai_used": len(output) if ai_masterlist else 0,
+            "ai_warning": ("AI ไม่ทำงาน (ไม่มี Groq key หรือเรียก Groq ไม่สำเร็จ) — คะแนน AI เป็น 0"
+                           if ai_mode == "hybrid" and not ai_masterlist else None),
             "max_possible_score": 100 if ai_masterlist else 75,
+            "auto_filled": auto_filled,
+            "auto_filled_source": "ตำแหน่งและเงื่อนไขที่กรอก" if jd_from_criteria else "Job Description",
+            "keyword_warning": (None if config.has_keyword_criteria() else
+                                "ยังไม่ได้ตั้งเงื่อนไข Keyword — คะแนนส่วน Keyword เป็น 0 (เปิดโหมด AI เพื่อให้เติมจาก JD อัตโนมัติ)"),
             "tokens_input":     total_input_tokens,
             "tokens_output":    total_output_tokens,
             "tokens_used":      total_tokens_used,
@@ -389,19 +495,22 @@ def analyze():
             save_history(
                 history_id   = history_id,
                 user_id      = session["user_id"],
-                timestamp    = datetime.now().isoformat(timespec="seconds"),
+                timestamp    = datetime.now().astimezone().isoformat(timespec="seconds"),
                 jd_label     = jd_label,
                 resume_count = len(resume_tmp),
                 summary      = summary,
                 results      = output,
+                ai_mode      = ai_mode,
             )
         except Exception:
-            pass
+            traceback.print_exc()
 
+        _last_sync.pop(session["user_id"], None)
         return jsonify({"results": output, "summary": summary, "history_id": history_id})
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        traceback.print_exc()
+        return jsonify({"error": "เกิดข้อผิดพลาดภายในระบบ ลองใหม่อีกครั้ง หากยังเป็นอยู่ให้แจ้งผู้ดูแล"}), 500
 
     finally:
         gc.collect()
@@ -460,7 +569,7 @@ def export_excel(history_id):
     ws.title = "ผลการคัดกรอง"
     ws.append(["Rank", "ชื่อไฟล์", "คะแนนรวม", "สถานะ",
                "Keyword Score", "AI Score", "Structure Score",
-               "GPA", "ประสบการณ์", "ขาดคุณสมบัติ"])
+               "GPA", "ประสบการณ์", "ขาดคุณสมบัติ", "เหตุผลที่ไม่ผ่าน"])
 
     for r in data.get("results", []):
         ws.append([
@@ -468,6 +577,7 @@ def export_excel(history_id):
             r.get("keyword_score"), r.get("ai_score"), r.get("struct_score"),
             r.get("gpa"), r.get("experience"),
             ", ".join(r.get("missing_keywords", [])),
+            "; ".join(r.get("reject_reasons") or []),
         ])
 
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
@@ -477,26 +587,150 @@ def export_excel(history_id):
                       download_name=f"cvscreener_{safe_id}.xlsx")
 
 
+_hash_cache = {}
+
+
+def _file_sha1(path):
+    st = path.stat()
+    key = (str(path), st.st_mtime, st.st_size)
+    digest = _hash_cache.get(key)
+    if digest is None:
+        digest = hashlib.sha1(path.read_bytes()).hexdigest()
+        _hash_cache[key] = digest
+    return digest, st.st_mtime
+
+
+def _user_pdf_files(user_id):
+    qualified_dir, talent_pool_dir, uploaded_dir = user_dirs(user_id)
+    files = []
+    for base in (qualified_dir, talent_pool_dir):
+        if base.exists():
+            for sub in base.iterdir():
+                if sub.is_dir():
+                    files.extend((sub.name, f) for f in sub.iterdir() if f.suffix.lower() == ".pdf")
+    if uploaded_dir.exists():
+        files.extend(("Uploaded", f) for f in uploaded_dir.iterdir() if f.suffix.lower() == ".pdf")
+    return files
+
+
+_last_sync = {}
+SYNC_INTERVAL_SECONDS = 30
+
+
+def sync_library(user_id, force=False):
+    """อ่านไฟล์ใบสมัครในคลังของ user เข้าตาราง resume_library (เฉพาะไฟล์ใหม่/ย้ายที่/ถูกลบ)"""
+    now = datetime.now().timestamp()
+    if not force and now - _last_sync.get(user_id, 0) < SYNC_INTERVAL_SECONDS:
+        return
+    _last_sync[user_id] = now
+    current = {}
+    for folder, f in _user_pdf_files(user_id):
+        try:
+            digest, mtime = _file_sha1(f)
+        except OSError:
+            continue
+        if digest not in current or mtime > current[digest][2]:
+            current[digest] = (folder, f, mtime)
+
+    existing = library_index(user_id)
+    reader = PDFReader()
+    inserts, updates = [], []
+    for digest, (folder, f, mtime) in current.items():
+        row = existing.get(digest)
+        if row is None:
+            text = reader.read(str(f))
+            inserts.append({
+                "sha1": digest, "folder": folder, "file_name": f.name, "file_mtime": mtime,
+                "text": text, "gpa": extract_gpa(text) if text else None,
+                "experience_years": extract_experience_years(text) if text else None,
+                "age": extract_age(text) if text else None,
+                "gender": extract_gender(text) if text else None,
+                "salary_expectation": extract_salary_expectation(text) if text else None,
+            })
+        elif row["folder"] != folder or row["file_name"] != f.name:
+            updates.append((row["id"], folder, f.name, mtime))
+    deletes = [row["id"] for digest, row in existing.items() if digest not in current]
+    if inserts or updates or deletes:
+        library_apply(user_id, inserts, updates, deletes)
+
+
+def match_position_terms(text, terms):
+    """คืน (คะแนนความเกี่ยวข้อง, คำที่ตรง) — วลีตรงทั้งก้อนได้น้ำหนักมากกว่าตรงทีละคำ"""
+    text = re.sub(r"\s+", " ", (text or "").lower())
+    relevance, matched = 0.0, []
+    for term in terms:
+        if term in text:
+            relevance += 3 + min(text.count(term), 5) * 0.2
+            matched.append(term)
+        else:
+            words = [w for w in term.split() if len(w) > 1]
+            if len(words) > 1 and all(w in text for w in words):
+                relevance += 1
+                matched.append(term)
+    return relevance, matched
+
+
+def _number_arg(name, low, high):
+    raw = request.args.get(name)
+    if raw is None or raw.strip() == "":
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ValueError(f"{name} ต้องเป็นตัวเลข")
+    if not (low <= value <= high):
+        raise ValueError(f"{name} ต้องอยู่ระหว่าง {low:g} ถึง {high:g}")
+    return value
+
+
 @app.route("/api/candidates/search", methods=["GET"])
 @login_required
 def api_search_candidates():
-    """'ค้นหาจากคลัง' — ค้นหาผู้สมัครข้าม session ทั้งหมดของ user"""
-    results = search_candidates(
-        user_id=session["user_id"],
-        min_score=request.args.get("min_score", type=float),
-        min_gpa=request.args.get("min_gpa", type=float),
-        min_experience=request.args.get("min_experience", type=float),
-        jd_label_contains=request.args.get("jd_label_contains"),
-    )
-    return jsonify({"candidates": results})
+    """'ค้นหาจากคลัง' — จับคู่ตำแหน่งงานกับเนื้อหาใบสมัครทุกไฟล์ในคลังของ user"""
+    try:
+        gender = request.args.get("gender", "").strip() or None
+        if gender not in (None, "male", "female"):
+            print(f"[warn] search: unexpected gender value {gender!r} — ignored")
+            gender = None
+        filters = dict(
+            min_gpa=_number_arg("min_gpa", 0, 4),
+            min_experience=_number_arg("min_experience", 0, 60),
+            age_min=_number_arg("age_min", 15, 100),
+            age_max=_number_arg("age_max", 15, 100),
+            gender=gender,
+            salary_min=_number_arg("salary_min", 0, 10_000_000),
+            salary_max=_number_arg("salary_max", 0, 10_000_000),
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    user_id = session["user_id"]
+    try:
+        sync_library(user_id)
+    except Exception:
+        traceback.print_exc()
+
+    terms = [t.strip().lower() for t in
+             request.args.getlist("position") + request.args.getlist("jd_label_contains") if t.strip()]
+    results = []
+    for row in library_search(user_id, **filters):
+        relevance, matched = match_position_terms(row.pop("text", ""), terms)
+        if terms and not matched:
+            continue
+        row["matched_terms"] = matched
+        row["relevance"] = relevance
+        results.append(row)
+    results.sort(key=lambda r: (-r["relevance"], -(r["score"] if r["score"] is not None else -1)))
+    return jsonify({"candidates": results[:200]})
 
 
 @app.route("/repository", methods=["GET"])
 @login_required
 def repository_list():
-    """หน้า 'คลัง Resume' — list ไฟล์จาก ResultFile/Qualified และ TalentPool"""
+    """หน้า 'คลัง Resume' — list ไฟล์ของ user ที่ล็อกอินอยู่เท่านั้น"""
+    qualified_dir, talent_pool_dir, uploaded_dir = user_dirs(session["user_id"])
     items = []
-    for base_dir, folder_type in [(QUALIFIED_DIR, "qualified"), (TALENT_POOL_DIR, "pool")]:
+    for base_dir, folder_type in [(qualified_dir, "qualified"), (talent_pool_dir, "pool")]:
         if not base_dir.exists():
             continue
         for subfolder in base_dir.iterdir():
@@ -511,14 +745,14 @@ def repository_list():
                         "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
                     })
 
-    if UPLOADED_DIR.exists():
-        for f in UPLOADED_DIR.iterdir():
+    if uploaded_dir.exists():
+        for f in uploaded_dir.iterdir():
             if f.suffix.lower() == ".pdf":
                 items.append({
                     "filename": f.name, "folder": "Uploaded", "type": "unsorted",
                     "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
                 })
-                    
+
     items.sort(key=lambda x: x["modified"], reverse=True)
     return jsonify({
         "items": items,
@@ -530,20 +764,29 @@ def repository_list():
     })
 
 
+def _find_user_file(user_id, folder, filename):
+    qualified_dir, talent_pool_dir, uploaded_dir = user_dirs(user_id)
+    safe_folder = clean_folder(folder)
+    safe_name = clean_filename(filename)
+    if not safe_name:
+        return None
+    if safe_folder == "Uploaded":
+        candidates = [uploaded_dir / safe_name]
+    elif safe_folder:
+        candidates = [qualified_dir / safe_folder / safe_name, talent_pool_dir / safe_folder / safe_name]
+    else:
+        candidates = []
+    return next((c for c in candidates if c.is_file()), None)
+
+
 @app.route("/repository/download/<folder>/<filename>")
 @login_required
 def repository_download(folder, filename):
-    safe_folder = "".join(c for c in folder if c.isalnum() or c in "_-")
-    safe_name = os.path.basename(filename)
-    for base_dir in [QUALIFIED_DIR, TALENT_POOL_DIR]:
-        candidate = base_dir / safe_folder / safe_name
-        if candidate.exists():
-            return send_file(candidate, as_attachment=True)
+    path = _find_user_file(session["user_id"], folder, filename)
+    if path:
+        return send_file(path.resolve(), as_attachment=True)
     return jsonify({"error": "ไม่พบไฟล์"}), 404
 
-
-
-# ═══ เพิ่ม 3 endpoint ใหม่ตรงนี้ ═══
 
 @app.route("/repository/upload", methods=["POST"])
 @login_required
@@ -553,14 +796,20 @@ def repository_upload():
     if not files or not files[0].filename:
         return jsonify({"error": "กรุณาเลือกไฟล์"}), 400
 
-    UPLOADED_DIR.mkdir(parents=True, exist_ok=True)
+    _, _, uploaded_dir = user_dirs(session["user_id"])
+    uploaded_dir.mkdir(parents=True, exist_ok=True)
     saved = []
     for f in files:
-        if not f.filename.lower().endswith(".pdf"):
+        safe_name = clean_filename(f.filename)
+        if not safe_name or not safe_name.lower().endswith(".pdf"):
             continue
-        safe_name = os.path.basename(f.filename)
-        f.save(UPLOADED_DIR / safe_name)
+        f.save(uploaded_dir / safe_name)
         saved.append(safe_name)
+
+    try:
+        sync_library(session["user_id"], force=True)
+    except Exception:
+        traceback.print_exc()
 
     return jsonify({"saved": saved, "count": len(saved)})
 
@@ -568,22 +817,13 @@ def repository_upload():
 @app.route("/repository/delete/<folder>/<filename>", methods=["DELETE"])
 @login_required
 def repository_delete(folder, filename):
-    """ลบไฟล์จากคลัง Resume"""
-    safe_folder = "".join(c for c in folder if c.isalnum() or c in "_-")
-    safe_name = os.path.basename(filename)
-    for base_dir in [QUALIFIED_DIR, TALENT_POOL_DIR]:
-        candidate = base_dir / safe_folder / safe_name
-        if candidate.exists():
-            candidate.unlink()
-            return jsonify({"deleted": True})
-    if safe_folder == "Uploaded":
-        candidate = UPLOADED_DIR / safe_name
-        if candidate.exists():
-            candidate.unlink()
-            return jsonify({"deleted": True})
+    """ลบไฟล์จากคลัง Resume ของ user ที่ล็อกอินอยู่"""
+    path = _find_user_file(session["user_id"], folder, filename)
+    if path:
+        path.unlink()
+        _last_sync.pop(session["user_id"], None)
+        return jsonify({"deleted": True})
     return jsonify({"error": "ไม่พบไฟล์"}), 404
-
-
 
 
 if __name__ == "__main__":

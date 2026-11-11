@@ -5,10 +5,15 @@
 import os
 import re
 import json
+import time
+import threading
+import traceback
+from decimal import Decimal
 from contextlib import contextmanager
 
 import psycopg2
 import psycopg2.extras
+from psycopg2 import pool as pg_pool
 
 from crypto_utils import encrypt_value, decrypt_value
 
@@ -17,14 +22,68 @@ if not DATABASE_URL:
     raise RuntimeError("ไม่พบ DATABASE_URL ใน environment variables — ต้องตั้งค่าก่อนรัน")
 
 
+POOL_MAX = int(os.environ.get("DB_POOL_MAX", "10"))
+IDLE_PING_SECONDS = 20
+
+_pool = None
+_pool_lock = threading.Lock()
+_last_used = {}
+
+
+def _get_pool():
+    global _pool
+    if _pool is None:
+        with _pool_lock:
+            if _pool is None:
+                _pool = pg_pool.ThreadedConnectionPool(
+                    1, POOL_MAX, DATABASE_URL,
+                    cursor_factory=psycopg2.extras.RealDictCursor,
+                    keepalives=1, keepalives_idle=30,
+                    keepalives_interval=10, keepalives_count=3,
+                )
+    return _pool
+
+
+def _is_healthy(conn):
+    if conn.closed:
+        return False
+    if time.time() - _last_used.get(id(conn), 0) < IDLE_PING_SECONDS:
+        return True
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+        conn.rollback()
+        return True
+    except Exception:
+        return False
+
+
 @contextmanager
-def get_db():
-    """เปิด connection แบบ context manager — ปิด connection ให้อัตโนมัติเสมอ"""
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+def get_db(readonly=False):
+    """ยืม connection จาก pool — ตรวจสุขภาพก่อนใช้ และคืนเข้า pool เสมอ"""
+    db_pool = _get_pool()
+    conn = db_pool.getconn()
+    if not _is_healthy(conn):
+        db_pool.putconn(conn, close=True)
+        conn = db_pool.getconn()
+    broken = False
+    if readonly:
+        conn.autocommit = True
     try:
         yield conn
+    except (psycopg2.OperationalError, psycopg2.InterfaceError):
+        broken = True
+        raise
     finally:
-        conn.close()
+        try:
+            if readonly and not broken and not conn.closed:
+                conn.autocommit = False
+            elif not broken and not conn.closed:
+                conn.rollback()
+        except Exception:
+            broken = True
+        _last_used[id(conn)] = time.time()
+        db_pool.putconn(conn, close=broken or bool(conn.closed))
 
 
 def init_db():
@@ -44,6 +103,35 @@ def parse_experience_years(exp_text):
         return None
     match = re.search(r'(\d+(?:\.\d+)?)', str(exp_text))
     return float(match.group(1)) if match else None
+
+
+SECTION_HEADERS = {
+    "education", "other activities", "experience", "work experience", "skills",
+    "summary", "profile", "objective", "references", "projects", "contact",
+    "personal information", "languages", "certifications", "activities",
+    "ประวัติการศึกษา", "ประสบการณ์", "ทักษะ", "ข้อมูลส่วนตัว",
+}
+
+
+def clean_name(name, file_name):
+    n = (name or "").strip()
+    if not n or n.lower() in SECTION_HEADERS:
+        stem = os.path.splitext(os.path.basename(file_name or ""))[0]
+        return stem or "ไม่ทราบชื่อ"
+    return n
+
+
+def _to_number(value):
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _escape_like(text):
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 # ── User functions ────────────────────────────────────────────
@@ -67,14 +155,14 @@ def create_user(username, email, hashed_password, groq_api_key=""):
 
 
 def get_user_by_username(username):
-    with get_db() as conn:
+    with get_db(readonly=True) as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM users WHERE username = %s", (username.strip(),))
         return c.fetchone()
 
 
 def get_user_by_id(user_id):
-    with get_db() as conn:
+    with get_db(readonly=True) as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM users WHERE id = %s", (user_id,))
         return c.fetchone()
@@ -82,7 +170,7 @@ def get_user_by_id(user_id):
 
 def get_user_groq_key(user_id) -> str:
     """ดึงและถอดรหัส Groq API Key ของ user"""
-    with get_db() as conn:
+    with get_db(readonly=True) as conn:
         c = conn.cursor()
         c.execute("SELECT groq_api_key_encrypted FROM users WHERE id = %s", (user_id,))
         row = c.fetchone()
@@ -106,6 +194,11 @@ def update_groq_key(user_id, api_key: str) -> bool:
 
 # ── Session (history) functions ───────────────────────────────
 
+def _valid_gpa(value):
+    v = _to_number(value)
+    return v if v is not None and 0 <= v <= 4 else None
+
+
 def save_history(history_id, user_id, timestamp, jd_label, resume_count, summary, results, ai_mode="tfidf"):
     with get_db() as conn:
         c = conn.cursor()
@@ -120,26 +213,29 @@ def save_history(history_id, user_id, timestamp, jd_label, resume_count, summary
         ))
 
         for r in results:
-            insight = r.get("insight") or {}
             c.execute("""
                 INSERT INTO candidates
                     (session_id, user_id, name, file_name, score, recommendation,
                      tfidf_score, keyword_score, struct_score, ai_score,
-                     gpa, experience_years, jd_label, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     gpa, experience_years, jd_label, created_at,
+                     age, gender, salary_expectation, reject_reasons)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
-                history_id, user_id, r.get("name"), r.get("file"), r.get("score"),
-                r.get("recommendation"), r.get("tfidf"), r.get("keyword"), r.get("struct"),
-                insight.get("ai_score"), r.get("gpa"),
+                history_id, user_id, clean_name(r.get("name"), r.get("file")), r.get("file"),
+                r.get("score"), r.get("recommendation") or None, None,
+                r.get("keyword_score"), r.get("struct_score"), r.get("ai_score"),
+                _valid_gpa(r.get("gpa")),
                 parse_experience_years(r.get("experience")),
                 jd_label, timestamp,
+                r.get("age"), r.get("gender"), r.get("salary_expectation"),
+                json.dumps(r.get("reject_reasons") or [], ensure_ascii=False),
             ))
 
         conn.commit()
 
 
 def get_history_list(user_id):
-    with get_db() as conn:
+    with get_db(readonly=True) as conn:
         c = conn.cursor()
         c.execute("""
             SELECT id, created_at AS timestamp, jd_label, resume_count, summary
@@ -150,7 +246,7 @@ def get_history_list(user_id):
 
 
 def get_history_by_id(history_id, user_id):
-    with get_db() as conn:
+    with get_db(readonly=True) as conn:
         c = conn.cursor()
         c.execute("""
             SELECT id, created_at AS timestamp, jd_label, resume_count, summary,
@@ -175,43 +271,160 @@ def delete_history(history_id, user_id):
 
 # ── Candidate search ──────────────────────────────────────────
 
+CANDIDATE_COLUMNS = (
+    "id, session_id, name, file_name, score, recommendation, tfidf_score, "
+    "keyword_score, struct_score, ai_score, gpa, experience_years, jd_label, "
+    "created_at, age, gender, salary_expectation, reject_reasons"
+)
+
+
+def _normalize_candidate(row):
+    d = dict(row)
+    for key, value in list(d.items()):
+        if isinstance(value, Decimal):
+            d[key] = float(value)
+    if d.get("created_at") is not None:
+        d["created_at"] = d["created_at"].isoformat(timespec="seconds")
+    d["name"] = clean_name(d.get("name"), d.get("file_name"))
+    d["file"] = d.get("file_name")
+    exp = d.get("experience_years")
+    d["experience"] = f"{exp:g} ปี" if exp is not None else None
+    return d
+
+
 def search_candidates(user_id, min_score=None, max_score=None, min_gpa=None,
                        min_experience=None, max_experience=None,
                        recommendation=None, jd_label_contains=None,
-                       date_from=None, date_to=None, limit=100):
-    """ค้นหาผู้สมัครข้าม session ทั้งหมดของ user ด้วยเงื่อนไขหลายมิติ"""
-    conditions = ["user_id = %s", "deleted_at IS NULL"]
-    params = [user_id]
+                       date_from=None, date_to=None,
+                       age_min=None, age_max=None, gender=None,
+                       salary_min=None, salary_max=None, limit=100):
+    """ค้นหาผู้สมัครข้าม session ของ user — คืนเฉพาะแถวล่าสุดต่อ (ไฟล์, JD)"""
+    conditions = []
+    params = []
 
-    if min_score is not None:
-        conditions.append("score >= %s"); params.append(min_score)
-    if max_score is not None:
-        conditions.append("score <= %s"); params.append(max_score)
-    if min_gpa is not None:
-        conditions.append("gpa >= %s"); params.append(min_gpa)
-    if min_experience is not None:
-        conditions.append("experience_years >= %s"); params.append(min_experience)
-    if max_experience is not None:
-        conditions.append("experience_years <= %s"); params.append(max_experience)
-    if recommendation:
-        conditions.append("recommendation = %s"); params.append(recommendation)
-    if jd_label_contains:
-        conditions.append("jd_label ILIKE %s"); params.append(f"%{jd_label_contains}%")
-    if date_from:
-        conditions.append("created_at >= %s"); params.append(date_from)
-    if date_to:
-        conditions.append("created_at <= %s"); params.append(date_to)
+    def add(sql, value):
+        conditions.append(sql)
+        params.append(value)
 
-    where_clause = " AND ".join(conditions)
+    if min_score is not None:      add("score >= %s", min_score)
+    if max_score is not None:      add("score <= %s", max_score)
+    if min_gpa is not None:        add("gpa >= %s", min_gpa)
+    if min_experience is not None: add("experience_years >= %s", min_experience)
+    if max_experience is not None: add("experience_years <= %s", max_experience)
+    if recommendation:             add("recommendation = %s", recommendation)
+    if age_min is not None:        add("age >= %s", age_min)
+    if age_max is not None:        add("age <= %s", age_max)
+    if gender:                     add("gender = %s", gender)
+    if salary_min is not None:     add("salary_expectation >= %s", salary_min)
+    if salary_max is not None:     add("salary_expectation <= %s", salary_max)
+    if date_from:                  add("created_at >= %s", date_from)
+    if date_to:                    add("created_at <= %s", date_to)
+
+    labels = [jd_label_contains] if isinstance(jd_label_contains, str) else list(jd_label_contains or [])
+    labels = [x.strip() for x in labels if x and x.strip()]
+    if labels:
+        conditions.append("(" + " OR ".join(["jd_label ILIKE %s"] * len(labels)) + ")")
+        params.extend(f"%{_escape_like(x)}%" for x in labels)
+
+    outer_where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     query = f"""
-        SELECT * FROM candidates
-        WHERE {where_clause}
-        ORDER BY score DESC
+        SELECT {CANDIDATE_COLUMNS} FROM (
+            SELECT DISTINCT ON (COALESCE(file_name, id::text), COALESCE(jd_label, ''))
+                   {CANDIDATE_COLUMNS}
+            FROM candidates
+            WHERE user_id = %s AND deleted_at IS NULL
+            ORDER BY COALESCE(file_name, id::text), COALESCE(jd_label, ''), created_at DESC
+        ) latest
+        {outer_where}
+        ORDER BY score DESC NULLS LAST
         LIMIT %s
     """
-    params.append(limit)
+    with get_db(readonly=True) as conn:
+        c = conn.cursor()
+        c.execute(query, [user_id] + params + [limit])
+        return [_normalize_candidate(row) for row in c.fetchall()]
 
+
+# ── Resume library (คลังใบสมัคร: ข้อความ + ข้อมูลที่สกัดจากไฟล์) ─────
+
+def library_index(user_id):
+    with get_db(readonly=True) as conn:
+        c = conn.cursor()
+        c.execute("SELECT id, sha1, folder, file_name, file_mtime FROM resume_library WHERE user_id = %s", (user_id,))
+        return {row["sha1"].strip(): dict(row) for row in c.fetchall()}
+
+
+def library_apply(user_id, inserts, updates, deletes):
     with get_db() as conn:
         c = conn.cursor()
+        for r in inserts:
+            c.execute("""
+                INSERT INTO resume_library
+                    (user_id, sha1, folder, file_name, file_mtime, text,
+                     gpa, experience_years, age, gender, salary_expectation)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (user_id, sha1) DO UPDATE
+                SET folder = EXCLUDED.folder, file_name = EXCLUDED.file_name,
+                    file_mtime = EXCLUDED.file_mtime
+            """, (user_id, r["sha1"], r["folder"], r["file_name"], r["file_mtime"], r["text"],
+                  _valid_gpa(r.get("gpa")), r.get("experience_years"), r.get("age"),
+                  r.get("gender"), r.get("salary_expectation")))
+        for row_id, folder, file_name, mtime in updates:
+            c.execute("""UPDATE resume_library SET folder = %s, file_name = %s, file_mtime = %s
+                         WHERE id = %s AND user_id = %s""", (folder, file_name, mtime, row_id, user_id))
+        if deletes:
+            c.execute("DELETE FROM resume_library WHERE user_id = %s AND id = ANY(%s)", (user_id, list(deletes)))
+        conn.commit()
+
+
+def library_search(user_id, min_gpa=None, min_experience=None, age_min=None, age_max=None,
+                   gender=None, salary_min=None, salary_max=None):
+    conditions = ["l.user_id = %s"]
+    params = [user_id]
+
+    def add(sql, value):
+        conditions.append(sql)
+        params.append(value)
+
+    if min_gpa is not None:        add("l.gpa >= %s", min_gpa)
+    if min_experience is not None: add("l.experience_years >= %s", min_experience)
+    if age_min is not None:        add("l.age >= %s", age_min)
+    if age_max is not None:        add("l.age <= %s", age_max)
+    if gender:                     add("l.gender = %s", gender)
+    if salary_min is not None:     add("l.salary_expectation >= %s", salary_min)
+    if salary_max is not None:     add("l.salary_expectation <= %s", salary_max)
+
+    query = f"""
+        SELECT l.id, l.folder, l.file_name, l.text, l.gpa, l.experience_years, l.age, l.gender,
+               l.salary_expectation, l.indexed_at,
+               c.name, c.score, c.recommendation, c.keyword_score, c.ai_score, c.struct_score,
+               c.jd_label, c.reject_reasons, c.created_at
+        FROM resume_library l
+        LEFT JOIN LATERAL (
+            SELECT name, score, recommendation, keyword_score, ai_score, struct_score,
+                   jd_label, reject_reasons, created_at
+            FROM candidates
+            WHERE user_id = l.user_id AND file_name = l.file_name AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1
+        ) c ON true
+        WHERE {" AND ".join(conditions)}
+    """
+    with get_db(readonly=True) as conn:
+        c = conn.cursor()
         c.execute(query, params)
-        return [dict(row) for row in c.fetchall()]
+        rows = []
+        for row in c.fetchall():
+            d = dict(row)
+            for key, value in list(d.items()):
+                if isinstance(value, Decimal):
+                    d[key] = float(value)
+            for key in ("created_at", "indexed_at"):
+                if d.get(key) is not None:
+                    d[key] = d[key].isoformat(timespec="seconds")
+            d["name"] = clean_name(d.get("name"), d.get("file_name"))
+            d["file"] = d.get("file_name")
+            exp = d.get("experience_years")
+            d["experience"] = f"{exp:g} ปี" if exp is not None else None
+            rows.append(d)
+        return rows

@@ -5,6 +5,7 @@
 #     + FR-4.6 AI Score เวอร์ชันจริง (master list ผ่าน Groq
 #     แทนที่ placeholder เดิม)
 # ============================================================
+import os
 
 import re
 import json
@@ -30,7 +31,7 @@ def extract_keywords_via_ai(jd_text: str, groq_client, max_keywords: int = 30) -
     import json as _json
     try:
         resp = groq_client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model=os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
             messages=[
                 {"role": "system", "content": (
                     "Extract the most important skill/requirement keywords "
@@ -41,7 +42,8 @@ def extract_keywords_via_ai(jd_text: str, groq_client, max_keywords: int = 30) -
                 {"role": "user", "content": jd_text[:2000]},
             ],
             temperature=0.1,
-            max_tokens=300,
+            max_tokens=1200,
+            extra_body={"reasoning_effort": "low"},
         )
         raw = resp.choices[0].message.content.strip()
         raw = raw.replace("```json", "").replace("```", "")
@@ -50,6 +52,58 @@ def extract_keywords_via_ai(jd_text: str, groq_client, max_keywords: int = 30) -
     except Exception as e:
         print(f"[warn] extract_keywords_via_ai failed: {e}")
         return []
+
+
+def extract_jd_profile_via_ai(jd_text: str, groq_client, max_keywords: int = 30) -> dict:
+    """สกัดตำแหน่ง / หน้าที่ / ทักษะ จาก JD-JS ในการเรียก AI ครั้งเดียว"""
+    import json as _json
+    empty = {"position": [], "duties": [], "skills": [], "all": []}
+    try:
+        resp = groq_client.chat.completions.create(
+            model=os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
+            messages=[
+                {"role": "system", "content": (
+                    "Analyze this job description. Respond ONLY with a JSON object "
+                    "with exactly three keys: position, duties, skills. "
+                    "position: up to 5 short job title words or phrases. "
+                    "duties: up to 10 keywords of 1-2 words describing the main responsibilities. "
+                    "skills: up to 15 keywords of 1-2 words for required skills, tools or qualifications. "
+                    "All values are arrays of lowercase English strings. No explanation."
+                )},
+                {"role": "user", "content": jd_text[:3000]},
+            ],
+            temperature=0.1,
+            max_tokens=1500,
+            extra_body={"reasoning_effort": "low"},
+        )
+        raw = resp.choices[0].message.content.strip().replace("```json", "").replace("```", "")
+        raw = raw[raw.index("{"):raw.rindex("}") + 1]
+        data = _json.loads(raw)
+
+        def clean(values, limit):
+            seen, out = set(), []
+            for v in values or []:
+                k = str(v).lower().strip()
+                if k and k not in seen:
+                    seen.add(k)
+                    out.append(k)
+            return out[:limit]
+
+        profile = {
+            "position": clean(data.get("position"), 5),
+            "duties":   clean(data.get("duties"), 10),
+            "skills":   clean(data.get("skills"), 15),
+        }
+        profile["all"] = clean(profile["position"] + profile["duties"] + profile["skills"], max_keywords)
+        usage = getattr(resp, "usage", None)
+        profile["usage"] = {
+            "in":  getattr(usage, "prompt_tokens", 0) or 0,
+            "out": getattr(usage, "completion_tokens", 0) or 0,
+        }
+        return profile
+    except Exception as e:
+        print(f"[warn] extract_jd_profile_via_ai failed: {e}")
+        return empty
 
 
 def extract_gpa(text: str) -> Optional[float]:
@@ -206,6 +260,7 @@ class ResumeResult:
     struct_checks: dict = field(default_factory=dict)
     keyword_breakdown: dict = field(default_factory=dict)
     missing_keywords: list = field(default_factory=list)
+    reject_reasons: list = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -221,6 +276,7 @@ class ResumeResult:
             "error": self.error, "struct_checks": self.struct_checks,
             "keyword_breakdown": self.keyword_breakdown,
             "missing_keywords": self.missing_keywords,
+            "reject_reasons": self.reject_reasons,
         }
 
     def passed(self) -> bool:
@@ -272,6 +328,16 @@ class Config:
 
         self.pass_threshold   = pass_threshold
         self.review_threshold = review_threshold
+
+    def has_keyword_criteria(self) -> bool:
+        return any([
+            self.position_keywords, self.duties_keywords, self.skill_keywords,
+            self.min_experience_years is not None,
+            self.field_of_study_keywords, self.min_gpa is not None,
+            self.general_keywords, self.edu_level_keywords,
+            self.age_range is not None, self.gender is not None,
+            self.salary_range is not None,
+        ])
 
     def validate(self):
         if not (0 <= self.review_threshold <= self.pass_threshold <= 100):
@@ -339,7 +405,10 @@ class Analyzer:
 
         total = round(keyword_score + ai_score + struct["score"] + special_score, 1)
 
+        reject_reasons = self._reject_reasons(gpa_value, exp_years, age_value)
+
         rec = (
+            "ไม่ผ่าน"           if reject_reasons else
             "ผ่าน"               if total >= self.config.pass_threshold else
             "พิจารณาเพิ่มเติม"  if total >= self.config.review_threshold else
             "ไม่ผ่าน"
@@ -356,34 +425,58 @@ class Analyzer:
             language_scores=lang_score,
             struct_checks=struct["checks"], keyword_breakdown=breakdown,
             missing_keywords=missing,
+            reject_reasons=reject_reasons,
         )
+
+    def _reject_reasons(self, gpa_value, exp_years, age_value):
+        c = self.config
+        reasons = []
+        if c.min_gpa is not None and gpa_value is not None and gpa_value < c.min_gpa:
+            reasons.append(f"GPA {gpa_value:.2f} ต่ำกว่าเกณฑ์ขั้นต่ำ {c.min_gpa:.2f}")
+        if c.min_experience_years is not None and exp_years is not None and exp_years < c.min_experience_years:
+            reasons.append(f"ประสบการณ์ {exp_years:g} ปี ต่ำกว่าเกณฑ์ขั้นต่ำ {c.min_experience_years:g} ปี")
+        if c.age_range is not None and age_value is not None:
+            lo, hi = c.age_range
+            if not (lo <= age_value <= hi):
+                reasons.append(f"อายุ {age_value} ปี อยู่นอกช่วงที่กำหนด {lo}-{hi} ปี")
+        return reasons
 
     def _keyword_score(self, text, gpa_value, exp_years, age_value, gender_val, salary_val):
         c = self.config
         breakdown = {}
         missing = []
 
-        def check(label, condition, points):
+        active_max = 0.0
+        earned = 0.0
+
+        def check(label, condition, points, active):
+            nonlocal active_max, earned
+            if not active:
+                return
+            active_max += points
             breakdown[label] = points if condition else 0.0
-            if not condition:
+            if condition:
+                earned += points
+            else:
                 missing.append(label)
 
-        check("ตำแหน่งงาน (FR-3.2)", self._any_keyword_found(text, c.position_keywords), 10.0)
-        check("ลักษณะงาน (FR-3.8)",   self._any_keyword_found(text, c.duties_keywords), 10.0)
-        check("ทักษะ (FR-3.9)",       self._any_keyword_found(text, c.skill_keywords), 8.0)
-        check("ประสบการณ์ (FR-3.7)",  self._meets_min(exp_years, c.min_experience_years), 6.0)
+        check("ตำแหน่งงาน (FR-3.2)", self._any_keyword_found(text, c.position_keywords), 10.0, bool(c.position_keywords))
+        check("ลักษณะงาน (FR-3.8)",   self._any_keyword_found(text, c.duties_keywords), 10.0, bool(c.duties_keywords))
+        check("ทักษะ (FR-3.9)",       self._any_keyword_found(text, c.skill_keywords), 8.0, bool(c.skill_keywords))
+        check("ประสบการณ์ (FR-3.7)",  self._meets_min(exp_years, c.min_experience_years), 6.0, c.min_experience_years is not None)
 
-        check("สาขาวิชา (FR-3.4)",    self._any_keyword_found(text, c.field_of_study_keywords), 8.0)
-        check("GPA (FR-3.12)",         self._meets_min(gpa_value, c.min_gpa), 6.0)
-        check("Keyword ทั่วไป (FR-3.3)", self._any_keyword_found(text, c.general_keywords), 5.0)
+        check("สาขาวิชา (FR-3.4)",    self._any_keyword_found(text, c.field_of_study_keywords), 8.0, bool(c.field_of_study_keywords))
+        check("GPA (FR-3.12)",         self._meets_min(gpa_value, c.min_gpa), 6.0, c.min_gpa is not None)
+        check("Keyword ทั่วไป (FR-3.3)", self._any_keyword_found(text, c.general_keywords), 5.0, bool(c.general_keywords))
 
-        check("วุฒิการศึกษา (FR-3.5)", self._any_keyword_found(text, c.edu_level_keywords), 2.0)
-        check("อายุ (FR-3.6)",         self._in_range(age_value, c.age_range), 2.0)
-        check("เพศ (FR-3.10)",         self._gender_match(gender_val, c.gender), 2.0)
-        check("เงินเดือน (FR-3.11)",   self._in_range(salary_val, c.salary_range), 2.0)
+        check("วุฒิการศึกษา (FR-3.5)", self._any_keyword_found(text, c.edu_level_keywords), 2.0, bool(c.edu_level_keywords))
+        check("อายุ (FR-3.6)",         self._in_range(age_value, c.age_range), 2.0, c.age_range is not None)
+        check("เพศ (FR-3.10)",         self._gender_match(gender_val, c.gender), 2.0, c.gender is not None)
+        check("เงินเดือน (FR-3.11)",   self._in_range(salary_val, c.salary_range), 2.0, c.salary_range is not None)
 
-        raw_total = sum(breakdown.values())
-        normalized = round((raw_total / 61.0) * 60, 2)
+        if active_max == 0:
+            return 0.0, breakdown, missing
+        normalized = round((earned / active_max) * 60, 2)
         return normalized, breakdown, missing
 
     def _any_keyword_found(self, text, keywords):
@@ -489,7 +582,7 @@ class ResumeScreener:
                 continue
             results.append(self.analyzer.analyze(jd_text, path))
 
-        results.sort(key=lambda r: r.score, reverse=True)
+        results.sort(key=lambda r: (bool(r.reject_reasons), -r.score))
         return [r for r in results
                 if r.score >= min_score and (not pass_only or r.passed())]
 

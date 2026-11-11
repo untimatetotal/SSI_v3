@@ -6,3 +6,6 @@ gunicorn
 flask-bcrypt
 pytesseract
 pillow
+psycopg2-binary
+cryptography
+openpyxl

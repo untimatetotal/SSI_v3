@@ -2,12 +2,46 @@
 # auth.py — Login / Register / Logout routes
 # ============================================================
 
+import time
+from collections import defaultdict, deque
 from flask import Blueprint, render_template, request, redirect, url_for, session
 from flask_bcrypt import Bcrypt
 from database_postgres import create_user, get_user_by_username
 
 auth = Blueprint("auth", __name__)
 bcrypt = Bcrypt()
+
+MAX_FAILED_LOGINS = 8
+LOGIN_WINDOW_SECONDS = 300
+_failed_logins = defaultdict(deque)
+
+
+def _login_keys(username):
+    forwarded = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+    ip = forwarded or request.remote_addr or "unknown"
+    return [f"ip:{ip}", f"user:{username.lower()}"]
+
+
+def _is_locked(keys):
+    now = time.time()
+    for key in keys:
+        attempts = _failed_logins[key]
+        while attempts and now - attempts[0] > LOGIN_WINDOW_SECONDS:
+            attempts.popleft()
+        if len(attempts) >= MAX_FAILED_LOGINS:
+            return True
+    return False
+
+
+def _record_failure(keys):
+    now = time.time()
+    for key in keys:
+        _failed_logins[key].append(now)
+
+
+def _clear_failures(keys):
+    for key in keys:
+        _failed_logins.pop(key, None)
 
 
 @auth.route("/login", methods=["GET", "POST"])
@@ -20,12 +54,17 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
-        user = get_user_by_username(username)
-        if not user:
-            error = "ไม่พบ username นี้ในระบบ"
-        elif not bcrypt.check_password_hash(user["password_hash"], password):
-            error = "รหัสผ่านไม่ถูกต้อง"
+        keys = _login_keys(username)
+        user = None if _is_locked(keys) else get_user_by_username(username)
+        if _is_locked(keys):
+            error = "พยายามเข้าสู่ระบบผิดหลายครั้งเกินไป กรุณารอ 5 นาทีแล้วลองใหม่"
+        elif not user or not bcrypt.check_password_hash(user["password_hash"], password):
+            _record_failure(keys)
+            error = "Username หรือรหัสผ่านไม่ถูกต้อง"
         else:
+            _clear_failures(keys)
+            session.clear()
+            session.permanent = True
             session["user_id"]      = user["id"]
             session["username"]     = user["username"]
             return redirect(url_for("index"))
@@ -70,15 +109,16 @@ def register():
             if user_id is None:
                 error = "Username หรือ Email นี้ถูกใช้ไปแล้ว"
             else:
+                session.clear()
+                session.permanent = True
                 session["user_id"]      = user_id
                 session["username"]     = username
-                session["groq_api_key"] = groq_api_key
                 return redirect(url_for("index"))
 
     return render_template("register.html", error=error)
 
 
-@auth.route("/logout")
+@auth.route("/logout", methods=["POST"])
 def logout():
     session.clear()
     return redirect(url_for("auth.login"))
