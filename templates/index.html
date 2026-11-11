@@ -87,6 +87,20 @@ b{font-weight:600}
 .drop-chip{font-size:13px;background:var(--steel-soft);border:1px solid #cfd7de;border-radius:3px;padding:2px 4px 2px 10px;display:flex;align-items:center;gap:4px;max-width:100%}
 .drop-chip button{background:none;border:0;color:var(--muted);cursor:pointer;width:22px;height:22px}
 
+.docs-summary{cursor:pointer;list-style:none;align-items:center}
+.docs-summary::-webkit-details-marker{display:none}
+.docs-summary::after{content:'';width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-left:auto;transition:transform .15s}
+.docs-panel[open] .docs-summary::after{transform:rotate(-135deg)}
+.docs-panel:not([open]) .docs-summary{border-bottom:0}
+.docs-summary:hover .panel-title{color:var(--focus)}
+.docs-status{font-size:13.5px;color:var(--muted);flex:1;text-align:right;margin-right:12px}
+.docs-status.is-empty{color:var(--brand)}
+.threshold-summary{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none;font-size:14.5px;font-weight:600}
+.threshold-summary::-webkit-details-marker{display:none}
+.threshold-summary::after{content:'';width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
+.threshold-box[open] .threshold-summary::after{transform:rotate(-135deg)}
+.threshold-summary .docs-status{font-weight:400}
+.threshold-box{padding-bottom:12px;border-bottom:1px solid var(--line-soft)}
 .criteria-head{display:flex;align-items:baseline;justify-content:space-between}
 .clear-link{font-size:13.5px;color:var(--focus);cursor:pointer;background:none;border:0;text-decoration:underline;text-underline-offset:2px}
 .clear-link:hover{color:var(--brand)}
@@ -116,7 +130,7 @@ b{font-weight:600}
 .switch.on::after{left:19px}
 .special-body{display:none;margin-top:14px}
 .special-body.show{display:block}
-.inline-num{width:96px;display:inline-block;margin-left:8px}
+.inline-num,.opt-label input.inline-num{width:110px;height:38px;display:inline-block;margin-left:8px;accent-color:auto}
 
 .run-box{display:flex;flex-direction:column;gap:14px}
 .run-btn-main{width:100%;height:46px;background:var(--brand);color:#fff;border:0;border-radius:var(--r-ctl);font-size:16px;font-weight:600;cursor:pointer}
@@ -166,6 +180,13 @@ b{font-weight:600}
 .match-terms{margin-top:4px;font-size:13.5px;color:var(--ok)}
 .match-score-num.na{color:var(--faint)}
 .match-badge.na{background:var(--steel-soft);color:var(--muted)}
+.review-tag{background:var(--warn-bg);color:var(--warn);border-radius:3px;padding:1px 8px;font-size:13px;font-weight:500}
+.evidence-list{list-style:none;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.evidence-list b{font-weight:600;margin-right:6px}
+.detail-wide{grid-column:1/-1}
+.ai-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;padding:12px 14px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-ctl)}
+.ai-summary ul{padding-left:18px;font-size:14px}
+.jd-extract{margin-top:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 .reject-reasons{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px}
 .reject-tag{background:var(--bad-bg);color:var(--bad);border-radius:3px;padding:1px 8px;font-size:13px;font-weight:500}
 .match-detail{display:none;border-top:1px solid var(--line-soft);background:#f7f9fa}
@@ -311,14 +332,17 @@ b{font-weight:600}
           <div class="tag-input-box" id="jobtitle-box">
             <input type="text" placeholder="เช่น Marketing Officer" id="jobtitle-input">
           </div>
-          <p class="hint">กด Enter เพื่อเพิ่มตำแหน่ง ระบบจะแสดงผู้สมัครที่ตรงกับตำแหน่งใดตำแหน่งหนึ่ง</p>
+          <p class="hint">กด Enter เพื่อเพิ่มตำแหน่ง ค้นได้ทั้งภาษาไทยและอังกฤษ เช่น "วิศวกรอุตสาหการ" จะพบ "Industrial Engineer" ด้วย</p>
         </div>
 
         <div id="mode-body-existing"></div>
 
         <div id="mode-body-new" style="display:none">
-          <div class="panel">
-            <div class="panel-head"><div class="panel-title">เอกสารประกอบ</div></div>
+          <details class="panel docs-panel" id="docs-panel">
+            <summary class="panel-head docs-summary">
+              <span class="panel-title">เอกสารประกอบ</span>
+              <span class="docs-status" id="docs-status">ยังไม่ได้เลือกใบสมัคร</span>
+            </summary>
             <div class="panel-body">
               <span class="f-label">Job Description หรือ Job Specification</span>
               <div class="upload-grid">
@@ -331,14 +355,18 @@ b{font-weight:600}
                   <div class="upload-box" id="js-drop" role="button" tabindex="0"><p id="js-label"><b>Job Specification</b>ไฟล์ .pdf หรือ .txt</p></div>
                 </div>
               </div>
-              <p class="hint" style="margin-bottom:16px">ไม่บังคับ ถ้าไม่ใส่ ระบบจะคัดกรองตามตำแหน่งและเงื่อนไขที่กรอก</p>
+              <p class="hint">ไม่บังคับ ถ้าไม่ใส่ ระบบจะคัดกรองตามตำแหน่งและเงื่อนไขที่กรอก</p>
+              <div class="jd-extract" style="margin-bottom:16px">
+                <button type="button" class="action-btn" id="jd-extract-btn" onclick="extractFromJD()">ให้ AI ดึงเงื่อนไขจาก Job Description</button>
+                <p class="hint" id="jd-extract-note" style="display:none;margin-top:0"></p>
+              </div>
 
               <span class="f-label">ใบสมัคร (PDF) <span class="req">*</span></span>
               <input type="file" id="resume-input" accept=".pdf" multiple hidden>
               <div class="upload-box" id="resume-drop" role="button" tabindex="0"><p><b>เลือกไฟล์ใบสมัคร</b>คลิกหรือลากไฟล์ PDF มาวาง เลือกได้หลายไฟล์</p></div>
               <div class="resume-drop-list" id="resume-list"></div>
             </div>
-          </div>
+          </details>
         </div>
 
         <div class="panel adv-panel">
@@ -350,8 +378,8 @@ b{font-weight:600}
             <div class="adv-block">
               <div class="adv-block-label">เงื่อนไขหลัก <span>60 คะแนน</span></div>
               <div class="adv-grid">
-                <div class="only-new-field f-field f-wide"><label class="f-label" for="f-duties">ลักษณะงานที่เคยทำ</label><input type="text" id="f-duties" placeholder="เช่น สรรหาบุคลากร, คัดเลือกใบสมัคร"></div>
-                <div class="only-new-field f-field f-wide"><label class="f-label" for="f-skills">ทักษะ</label><input type="text" id="f-skills" placeholder="เช่น BOQ, VLOOKUP, เขียนแบบ"></div>
+                <div class="only-new-field f-field f-wide"><label class="f-label" for="f-duties">ลักษณะงานที่เคยทำ</label><input type="text" id="f-duties" placeholder="คั่นด้วยจุลภาค เช่น ควบคุมการผลิต, ซ่อมบำรุงเครื่องจักร"></div>
+                <div class="only-new-field f-field f-wide"><label class="f-label" for="f-skills">ทักษะ</label><input type="text" id="f-skills" placeholder="คั่นด้วยจุลภาค เช่น AutoCAD, PLC, Excel"></div>
                 <div class="f-field"><label class="f-label" for="f-exp">ประสบการณ์ขั้นต่ำ (ปี)</label><input type="number" id="f-exp" min="0" placeholder="3"></div>
                 <div class="f-field"><label class="f-label" for="f-gpa">GPA ขั้นต่ำ</label><input type="number" step="0.01" min="0" max="4" id="f-gpa" placeholder="2.80"></div>
                 <div class="only-new-field f-field"><label class="f-label" for="faculty-select">คณะ</label>
@@ -407,7 +435,7 @@ b{font-weight:600}
                     </div>
                   </div>
                   <div class="f-field f-wide"><span class="f-label">ภาษาอังกฤษ (10 คะแนน)</span>
-                    <label class="opt-label">TOEIC ขั้นต่ำ <input type="number" id="f-toeic" class="inline-num" placeholder="600"></label>
+                    <label class="opt-label" for="f-toeic">TOEIC ขั้นต่ำ <input type="number" id="f-toeic" class="inline-num" min="10" max="990" placeholder="600"></label>
                   </div>
                 </div>
               </div>
@@ -418,11 +446,17 @@ b{font-weight:600}
 
         <div id="mode-new-runbox" style="display:none">
           <div class="panel panel-body run-box">
-            <div class="adv-grid">
-              <div class="f-field"><label class="f-label" for="f-pass">คะแนนผ่าน</label><input type="number" id="f-pass" value="60"></div>
-              <div class="f-field"><label class="f-label" for="f-review">คะแนนพิจารณาเพิ่มเติม</label><input type="number" id="f-review" value="40"></div>
-            </div>
-            <label class="opt-label"><input type="checkbox" id="f-ai-mode"> ใช้ AI ช่วยให้คะแนนและแปลเอกสารภาษาไทย</label>
+            <details class="threshold-box" id="threshold-box">
+              <summary class="threshold-summary">
+                <span>เกณฑ์คะแนน</span>
+                <span class="docs-status" id="threshold-status">ผ่าน 60, พิจารณา 40</span>
+              </summary>
+              <div class="adv-grid" style="margin-top:10px">
+                <div class="f-field"><label class="f-label" for="f-pass">คะแนนผ่าน</label><input type="number" id="f-pass" value="60" min="0" max="100"></div>
+                <div class="f-field"><label class="f-label" for="f-review">คะแนนพิจารณาเพิ่มเติม</label><input type="number" id="f-review" value="40" min="0" max="100"></div>
+              </div>
+            </details>
+            <label class="opt-label"><input type="checkbox" id="f-ai-mode"> ใช้ AI ช่วยอ่านใบสมัคร สรุปข้อกำหนด และสรุปผู้สมัครอันดับต้น</label>
             <button type="button" class="run-btn-main" id="run-btn" onclick="runAnalyze()">วิเคราะห์ใบสมัคร</button>
           </div>
         </div>
@@ -459,7 +493,7 @@ b{font-weight:600}
       <div class="upload-box" id="repo-upload-drop" role="button" tabindex="0"><p><b>เพิ่มใบสมัครเข้าคลัง</b>คลิกหรือลากไฟล์ PDF มาวาง ไฟล์จะถูกเก็บไว้โดยยังไม่วิเคราะห์</p></div>
     </div>
     <div class="toolbar">
-      <div class="search-box"><input id="repo-search" type="search" placeholder="ค้นหาชื่อไฟล์หรือตำแหน่งงาน" aria-label="ค้นหาในคลัง" oninput="renderRepoGrid()"></div>
+      <div class="search-box"><input id="repo-search" type="search" placeholder="กรองตามชื่อไฟล์หรือโฟลเดอร์" aria-label="ค้นหาในคลัง" oninput="renderRepoGrid()"></div>
       <div class="pill-group" id="repo-pills">
         <div class="pill on" data-f="all">ทั้งหมด</div>
         <div class="pill" data-f="qualified">ผ่านเกณฑ์</div>
@@ -535,7 +569,14 @@ function setMode(m){
 }
 
 let currentMode = 'existing';
-if (!document.querySelector('input[name=gender]:checked')) document.querySelector('input[name=gender][value=""]').checked = true;
+function updateThresholdStatus(){
+  const pass = document.getElementById('f-pass').value || 60, rev = document.getElementById('f-review').value || 40;
+  document.getElementById('threshold-status').textContent = `ผ่าน ${pass}, พิจารณา ${rev}`;
+}
+['f-pass', 'f-review'].forEach(id => document.getElementById(id).addEventListener('input', updateThresholdStatus));
+setTimeout(updateDocsStatus, 0);
+document.querySelector('input[name=gender][value=""]').checked = true;
+document.querySelectorAll('input[name=gender]').forEach(r => r.setAttribute('autocomplete', 'off'));
 document.querySelectorAll('#adv-filters input, #jobtitle-input, #repo-search').forEach(i => i.setAttribute('autocomplete', 'off'));
 setMode('existing');
 
@@ -551,18 +592,23 @@ const jtInput = document.getElementById('jobtitle-input');
 jtInput.addEventListener('keydown', e => {
   if ((e.key === 'Enter' || e.key === ',') && jtInput.value.trim()) {
     e.preventDefault();
-    const tag = document.createElement('span');
-    tag.className = 'jtag';
-    const removeBtn = document.createElement('button');
-    removeBtn.textContent = '✕';
-    removeBtn.onclick = () => { tag.remove(); runSearch(); };
-    tag.append(document.createTextNode(jtInput.value.trim() + ' '), removeBtn);
-    document.getElementById('jobtitle-box').insertBefore(tag, jtInput);
+    addJobTag(jtInput.value.trim());
     jtInput.value = '';
     runSearch();
   }
 });
 jtInput.addEventListener('blur', () => runSearch());
+function addJobTag(text){
+  const tag = document.createElement('span');
+  tag.className = 'jtag';
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.textContent = '✕';
+  removeBtn.setAttribute('aria-label', 'นำตำแหน่งนี้ออก');
+  removeBtn.onclick = () => { tag.remove(); runSearch(); };
+  tag.append(document.createTextNode(text + ' '), removeBtn);
+  document.getElementById('jobtitle-box').insertBefore(tag, document.getElementById('jobtitle-input'));
+}
 function getJobTitles(){
   return Array.from(document.querySelectorAll('#jobtitle-box .jtag')).map(t => t.textContent.replace('✕','').trim());
 }
@@ -604,8 +650,8 @@ function setupDrop(dropId, inputId, onFile, multi){
     if (files.length) onFile(multi ? files : files[0]);
   });
 }
-setupDrop('jd-drop','jd-input', f => { document.getElementById('jd-label').innerHTML = '<b>Job Description</b>' + esc(f.name); document.getElementById('jd-drop').classList.add('is-set'); }, false);
-setupDrop('js-drop','js-input', f => { document.getElementById('js-label').innerHTML = '<b>Job Specification</b>' + esc(f.name); document.getElementById('js-drop').classList.add('is-set'); }, false);
+setupDrop('jd-drop','jd-input', f => { document.getElementById('jd-label').innerHTML = '<b>Job Description</b>' + esc(f.name); document.getElementById('jd-drop').classList.add('is-set'); updateDocsStatus(); }, false);
+setupDrop('js-drop','js-input', f => { document.getElementById('js-label').innerHTML = '<b>Job Specification</b>' + esc(f.name); document.getElementById('js-drop').classList.add('is-set'); updateDocsStatus(); }, false);
 setupDrop('resume-drop','resume-input', files => {
   files.forEach(f => { if (!resumeFiles.find(x=>x.name===f.name)) resumeFiles.push(f); });
   renderResumeList();
@@ -636,9 +682,20 @@ function downloadSelected(){
 }
 // ═══ จบส่วนที่เพิ่มใหม่ ═══
 
+function updateDocsStatus(){
+  const el = document.getElementById('docs-status');
+  if (!el) return;
+  const jdCount = ['jd-input', 'js-input'].filter(id => document.getElementById(id).files.length).length;
+  const parts = [];
+  if (resumeFiles.length) parts.push(`ใบสมัคร ${resumeFiles.length} ไฟล์`);
+  if (jdCount) parts.push(`JD/JS ${jdCount} ไฟล์`);
+  el.textContent = parts.length ? parts.join(', ') : 'ยังไม่ได้เลือกใบสมัคร';
+  el.classList.toggle('is-empty', !resumeFiles.length);
+}
 function renderResumeList(){
   document.getElementById('resume-list').innerHTML = resumeFiles.map((f, i) =>
     `<span class="drop-chip">${esc(f.name)} <button type="button" aria-label="นำออก" onclick="removeResume(${i})">✕</button></span>`).join('');
+  updateDocsStatus();
 }
 function removeResume(index){ resumeFiles = resumeFiles.filter((f, i) => i !== index); renderResumeList(); }
 
@@ -657,6 +714,11 @@ function esc(v){
   return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
 function jsq(v){ return encodeURIComponent(String(v ?? '')).replace(/'/g, '%27'); }
+function fmtMonths(m){
+  if (m == null) return 'ไม่ระบุ';
+  const y = Math.floor(m / 12), r = m % 12;
+  return y && r ? `${y} ปี ${r} เดือน` : y ? `${y} ปี` : `${r} เดือน`;
+}
 function fmtGpa(v){
   const n = Number(v);
   return (v === null || v === undefined || v === '' || Number.isNaN(n)) ? 'ไม่พบ' : n.toFixed(2);
@@ -673,6 +735,13 @@ function renderMatchCard(c, idx){
   const keyword = fmtScore(c.keyword_score), ai = fmtScore(c.ai_score), struct = fmtScore(c.struct_score);
   const rejectReasons = Array.isArray(c.reject_reasons) ? c.reject_reasons : [];
   const rejectHtml = rejectReasons.length ? `<div class="reject-reasons">${rejectReasons.map(x => `<span class="reject-tag">${esc(x)}</span>`).join('')}</div>` : '';
+  const reviewReasons = Array.isArray(c.review_reasons) ? c.review_reasons : [];
+  const reviewHtml = reviewReasons.length ? `<div class="reject-reasons">${reviewReasons.map(x => `<span class="review-tag">${esc(x)}</span>`).join('')}</div>` : '';
+  const evidence = c.evidence && typeof c.evidence === 'object' ? Object.entries(c.evidence) : [];
+  const evidenceHtml = evidence.length ? `<ul class="evidence-list">${evidence.map(([k, v]) => `<li><b>${esc(k)}</b> ${esc(v)}</li>`).join('')}</ul>` : '<span class="hint">ไม่มีหลักฐานที่บันทึกไว้</span>';
+  const sm = c.ai_summary || null;
+  const summaryHtml = sm ? `<div class="ai-summary">${[['จุดเด่น', sm.strengths], ['ข้อควรพิจารณา', sm.concerns], ['คำถามสัมภาษณ์', sm.interview_questions]].filter(([, l]) => l && l.length).map(([t, l]) => `<div><div class="dd-label">${t}</div><ul>${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>` : '';
+  const relatedText = c.related_experience_months != null ? ` (ตรงสาย ${fmtMonths(c.related_experience_months)})` : '';
   const fileName = c.file || c.file_name || '';
   const displayName = c.name || fileName || 'ไม่ทราบชื่อ';
   const expText = c.experience || (c.experience_years != null ? Number(c.experience_years) + ' ปี' : 'ไม่ระบุ');
@@ -688,12 +757,14 @@ function renderMatchCard(c, idx){
       <div class="match-name">${esc(displayName)}</div>
       <div class="match-sub">
         <span>GPA ${fmtGpa(c.gpa)}</span>
-        <span>ประสบการณ์ ${esc(expText)}</span>
+        <span>ประสบการณ์ ${esc(expText)}${esc(relatedText)}</span>
+        ${c.degree_label ? `<span>${esc(c.degree_label)}</span>` : ''}
+        ${c.read_method === 'ocr' ? '<span>อ่านจากภาพสแกน</span>' : ''}
         <span>${esc(fileName)}</span>
         ${c.jd_label ? `<span>วิเคราะห์กับ ${esc(c.jd_label)}</span>` : ''}
       </div>
       ${matchedTerms.length ? `<div class="match-terms">ตรงกับตำแหน่ง: ${matchedTerms.map(esc).join(', ')}</div>` : ''}
-      ${rejectHtml}
+      ${rejectHtml}${reviewHtml}
     </div>
     <div class="match-bars">
       <div class="mbar-row"><span class="mbar-lbl">Keyword</span><div class="mbar-track"><div class="mbar-fill" style="width:${keyword/60*100}%;background:var(--search)"></div></div></div>
@@ -707,10 +778,11 @@ function renderMatchCard(c, idx){
   </div>
   <div class="match-detail" id="${uid}">
     <div class="match-detail-inner">
-      ${rejectReasons.length ? `<div><div class="dd-label">เหตุผลที่ไม่ผ่าน</div>${rejectHtml}</div>` : ''}
-      <div><div class="dd-label">คุณสมบัติที่ขาด</div><div class="missing-tags">${missing}</div></div>
+      ${summaryHtml ? `<div class="detail-wide">${summaryHtml}</div>` : ''}
+      <div class="detail-wide"><div class="dd-label">หลักฐานจากใบสมัคร</div>${evidenceHtml}</div>
+      <div><div class="dd-label">เงื่อนไขที่ไม่ตรง</div><div class="missing-tags">${missing}</div></div>
       <div><div class="dd-label">รายละเอียดคะแนน</div>
-        <div class="dd-preview">Keyword ${keyword}/60, AI ${ai}/25, โครงสร้างเอกสาร ${struct}/15${c.special_score ? ', คะแนนพิเศษ '+c.special_score+'/15' : ''}</div>
+        <div class="dd-preview">Keyword ${keyword}/60, AI ${ai}/25, ความครบถ้วนของข้อมูล ${struct}/15${c.special_score ? ', คะแนนพิเศษ '+c.special_score+'/15' : ''}</div>
       </div>
       <div class="detail-foot"><span>${esc(c.created_at || '')}</span></div>
     </div>
@@ -760,19 +832,17 @@ async function runSearch(){
 document.querySelectorAll('input[name=gender]').forEach(r => r.addEventListener('change', runSearch));
 
 // ═══════════════ อัปโหลด + วิเคราะห์ใหม่ ═══════════════
-async function runAnalyze(){
+function buildAnalyzeForm(){
   const fd = new FormData();
   if (document.getElementById('jd-input').files[0]) fd.append('jd_file', document.getElementById('jd-input').files[0]);
   if (document.getElementById('js-input').files[0]) fd.append('js_file', document.getElementById('js-input').files[0]);
-  if (!resumeFiles.length) return alert('กรุณาเลือกไฟล์ใบสมัครอย่างน้อยหนึ่งไฟล์');
   resumeFiles.forEach(f => fd.append('resumes', f));
-
-  fd.append('required', getJobTitles().join(' '));
+  fd.append('positions', JSON.stringify(getJobTitles()));
   fd.append('duties', document.getElementById('f-duties').value);
   fd.append('bonus', document.getElementById('f-skills').value);
   const facultyOther = document.getElementById('f-field-other').value.trim();
   const majorValue = document.getElementById('major-select').value;
-  fd.append('field_of_study', [majorValue, facultyOther].filter(Boolean).join(' '));
+  fd.append('field_of_study', [majorValue, facultyOther].filter(Boolean).join(', '));
   fd.append('min_experience', document.getElementById('f-exp').value);
   fd.append('general', document.getElementById('f-general').value);
   fd.append('min_gpa', document.getElementById('f-gpa').value);
@@ -791,24 +861,83 @@ async function runAnalyze(){
   fd.append('require_vehicle', document.getElementById('f-vehicle').checked ? 'on' : '');
   fd.append('require_license', document.getElementById('f-license').checked ? 'on' : '');
   fd.append('min_toeic', document.getElementById('f-toeic').value);
+  return fd;
+}
 
+function showAnalyzeResult(data){
+  lastResults = data.results || [];
+  currentHistoryId = data.history_id;
+  const s = data.summary || {};
+  const countParts = [`<b>${s.total||0}</b> ใบสมัคร`, `ผ่าน <b>${s.passed||0}</b>`, `พิจารณาเพิ่มเติม <b>${s.review||0}</b>`, `ไม่ผ่าน <b>${s.failed||0}</b>`, `คะแนนเต็ม ${s.max_possible_score||100}`].map(x => `<span>${x}</span>`).join('');
+  const notes = [...(s.warnings || []), (s.auto_filled && s.auto_filled.length) ? 'AI เติมเงื่อนไขจาก ' + (s.auto_filled_source || 'Job Description') + ' ให้: ' + s.auto_filled.join(', ') : null]
+    .filter(Boolean).map(n => `<div class="notice">${esc(n)}</div>`).join('');
+  const tokens = s.tokens_used ? `<div class="hint">ใช้ AI ${s.ai_calls || 0} ครั้ง รวม ${Number(s.tokens_used).toLocaleString()} โทเค็น</div>` : '';
+  renderResults(lastResults, `<div class="count-row">${countParts}</div>${notes}${tokens}`);
+}
+
+async function runAnalyze(){
+  if (!resumeFiles.length) {
+    const panel = document.getElementById('docs-panel');
+    panel.open = true;
+    panel.scrollIntoView({behavior: 'smooth', block: 'center'});
+    return alert('กรุณาเลือกไฟล์ใบสมัครอย่างน้อยหนึ่งไฟล์');
+  }
   const btn = document.getElementById('run-btn');
-  btn.disabled = true; btn.textContent = 'กำลังวิเคราะห์...';
-  document.getElementById('results-container').innerHTML = '<div class="empty-state"><div class="spinner"></div>กำลังวิเคราะห์ Resume...</div>';
+  const container = document.getElementById('results-container');
+  btn.disabled = true; btn.textContent = 'กำลังส่งไฟล์...';
+  document.getElementById('result-count').innerHTML = '';
+  container.innerHTML = '<div class="empty-state"><div class="spinner"></div><p id="progress-msg">กำลังส่งไฟล์</p></div>';
   try {
-    const res = await fetch('/analyze', {method:'POST', body: fd});
-    const data = await res.json().catch(() => ({ error: 'เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (HTTP ' + res.status + ')' }));
-    if (data.error) { alert('Error: ' + data.error); return; }
-    lastResults = data.results || [];
-    currentHistoryId = data.history_id;
-    const s = data.summary || {};
-    const countParts = [`<b>${s.total||0}</b> ใบสมัคร`, `ผ่าน <b>${s.passed||0}</b>`, `พิจารณาเพิ่มเติม <b>${s.review||0}</b>`, `ไม่ผ่าน <b>${s.failed||0}</b>`, `คะแนนเต็ม ${s.max_possible_score||100}`].map(x => `<span>${x}</span>`).join('');
-    const notes = [s.ai_warning, s.keyword_warning, (s.auto_filled && s.auto_filled.length) ? 'AI เติมเงื่อนไขจาก ' + (s.auto_filled_source || 'Job Description') + ' ให้: ' + s.auto_filled.join(', ') : null].filter(Boolean).map(n => `<div class="notice">${esc(n)}</div>`).join('');
-    renderResults(lastResults, `<div class="count-row">${countParts}</div>${notes}`);
+    const res = await fetch('/analyze', {method:'POST', body: buildAnalyzeForm()});
+    const start = await res.json().catch(() => ({ error: 'เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (HTTP ' + res.status + ')' }));
+    if (start.error) throw new Error(start.error);
+    while (true) {
+      await new Promise(r => setTimeout(r, 1200));
+      const st = await fetch('/analyze/status/' + start.job_id);
+      const job = await st.json().catch(() => ({ status: 'error', error: 'เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (HTTP ' + st.status + ')' }));
+      if (job.error && job.status !== 'running') throw new Error(job.error);
+      if (job.status === 'done') { showAnalyzeResult(job.result); break; }
+      btn.textContent = `กำลังวิเคราะห์ ${job.done || 0}/${job.total || resumeFiles.length}`;
+      const msg = document.getElementById('progress-msg');
+      if (msg) msg.textContent = job.message || 'กำลังวิเคราะห์';
+    }
   } catch(e) {
-    document.getElementById('results-container').innerHTML = '<div class="empty-state"><p>วิเคราะห์ไม่สำเร็จ: '+e.message+'</p></div>';
+    container.innerHTML = '<div class="empty-state"><p>วิเคราะห์ไม่สำเร็จ: ' + esc(e.message) + '</p></div>';
   } finally {
     btn.disabled = false; btn.textContent = 'วิเคราะห์ใบสมัคร';
+  }
+}
+
+async function extractFromJD(){
+  const fd = new FormData();
+  const jd = document.getElementById('jd-input').files[0], js = document.getElementById('js-input').files[0];
+  if (!jd && !js) return alert('กรุณาเลือกไฟล์ Job Description หรือ Job Specification ก่อน');
+  if (jd) fd.append('jd_file', jd);
+  if (js) fd.append('js_file', js);
+  const btn = document.getElementById('jd-extract-btn');
+  const note = document.getElementById('jd-extract-note');
+  btn.disabled = true; btn.textContent = 'AI กำลังอ่าน Job Description...';
+  try {
+    const res = await fetch('/api/jd/extract', {method:'POST', body: fd});
+    const req = await res.json().catch(() => ({ error: 'เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (HTTP ' + res.status + ')' }));
+    if (req.error) throw new Error(req.error);
+    const existing = new Set(getJobTitles().map(t => t.toLowerCase()));
+    (req.positions || []).forEach(t => { if (!existing.has(t.toLowerCase())) addJobTag(t); });
+    const fill = (id, list) => { const el = document.getElementById(id); if (list && list.length && !el.value.trim()) el.value = list.join(', '); };
+    fill('f-duties', req.duties); fill('f-skills', req.skills);
+    if ((req.fields_of_study || []).length && !document.getElementById('f-field-other').value.trim()) {
+      document.getElementById('faculty-select').value = 'other'; updateMajors();
+      document.getElementById('f-field-other').value = req.fields_of_study.join(', ');
+    }
+    if (req.min_experience_years != null && !document.getElementById('f-exp').value) document.getElementById('f-exp').value = req.min_experience_years;
+    if (req.min_gpa != null && !document.getElementById('f-gpa').value) document.getElementById('f-gpa').value = req.min_gpa;
+    if (req.min_degree_level) document.querySelectorAll('input[name=edu-lvl]').forEach(c => { c.checked = Number(c.value) === Math.min(req.min_degree_level, 3); });
+    note.textContent = 'เติมเงื่อนไขจาก Job Description แล้ว ตรวจและแก้ไขก่อนกดวิเคราะห์' + (req.summary ? ' — ' + req.summary : '');
+    note.style.display = 'block';
+  } catch(e) {
+    note.textContent = 'ดึงเงื่อนไขไม่สำเร็จ: ' + e.message; note.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'ให้ AI ดึงเงื่อนไขจาก Job Description';
   }
 }
 let currentHistoryId = null;
@@ -934,4 +1063,4 @@ function closeHistoryModal(){ document.getElementById('hist-modal').classList.re
 runSearch();
 </script>
 </body>
-</html>
+</html>

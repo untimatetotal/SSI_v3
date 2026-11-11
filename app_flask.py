@@ -26,9 +26,13 @@ from flask_bcrypt import Bcrypt
 import sys
 sys.path.append(".")
 
-from models import (Config, ResumeScreener, extract_jd_profile_via_ai, PDFReader,
-                    extract_gpa, extract_experience_years, extract_age,
-                    extract_gender, extract_salary_expectation)
+from analysis_service import start_job, get_job, get_parsed, has_criteria
+from lexicon import expand_term
+from llm import LLM
+from requirements_ai import extract_requirements
+from resume_parser import PARSER_VERSION, extract_text
+from screening import Matcher, fmt_months
+from storage import (user_dirs, clean_folder, clean_filename, file_sha1, user_pdf_files)
 
 # TODO: สลับเป็น database_postgres เมื่อ Postgres กลับมาใช้ได้
 from database_postgres import (
@@ -46,7 +50,7 @@ except ImportError:
 
 app = Flask(__name__)
 app.secret_key = os.environ["SECRET_KEY"]
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 64 * 1024 * 1024
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
@@ -72,33 +76,6 @@ with app.app_context():
 TOKEN_LIMIT_PER_MIN = int(os.environ.get("GROQ_TPM_LIMIT", "8000"))
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 
-RESULT_ROOT = Path("ResultFile")
-
-
-def user_dirs(user_id):
-    root = RESULT_ROOT / f"user_{int(user_id)}"
-    return root / "Qualified", root / "TalentPool", root / "Uploaded"
-
-
-def clean_folder(name):
-    return "".join(c for c in (name or "") if c.isalnum() or c in " _-").strip()
-
-
-def clean_filename(name):
-    base = (name or "").replace("\\", "/").split("/")[-1].strip()
-    base = "".join(c for c in base if c.isprintable())
-    return "" if base in ("", ".", "..") or base.startswith(".") else base
-
-EDU_MAP = {
-    "1": ["diploma","ปวส","associate","อนุปริญญา",
-          "bachelor","bachalor","ปริญญาตรี","บัณฑิต",
-          "master","ปริญญาโท","graduate","มหาบัณฑิต"],
-    "2": ["bachelor","bachalor","ปริญญาตรี","บัณฑิต","วศ.บ","บธ.บ","วท.บ",
-          "master","ปริญญาโท","graduate","มหาบัณฑิต"],
-    "3": ["master","ปริญญาโท","graduate","มหาบัณฑิต","วศ.ม","วท.ม"],
-}
-
-
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -111,7 +88,9 @@ def login_required(f):
 
 
 def _wants_html():
-    return request.accept_mimetypes.best == "text/html"
+    if request.headers.get("Sec-Fetch-Mode") == "navigate":
+        return True
+    return "text/html" in request.headers.get("Accept", "")
 
 
 @app.errorhandler(500)
@@ -122,410 +101,162 @@ def handle_server_error(e):
     return jsonify({"error": "เกิดข้อผิดพลาดภายในระบบ ลองใหม่อีกครั้ง หากยังเป็นอยู่ให้แจ้งผู้ดูแล"}), 500
 
 
-def sort_resume_file(orig_name, tmp_path, recommendation, jd_label, user_id):
-    """FR-5.3 (ผ่าน→Qualified Candidates) / FR-5.4 (ไม่ผ่าน→Talent Pool) — แยกตาม user"""
-    qualified_dir, talent_pool_dir, _ = user_dirs(user_id)
-    safe_position = clean_folder(jd_label or "unknown")[:50] or "unknown"
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    file_name = clean_filename(orig_name) or "resume.pdf"
-
-    if recommendation == "ผ่าน":
-        dest_dir = qualified_dir / f"{safe_position}_{date_str}"
-    else:
-        dest_dir = talent_pool_dir / safe_position
-
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    try:
-        shutil.copy(tmp_path, dest_dir / file_name)
-    except Exception as e:
-        print(f"[warn] sort_resume_file failed: {e}")
-
-
 @app.route("/")
 @login_required 
 def index():
     return render_template("index.html", username=session.get("username"))
 
 
+def _split_terms(value):
+    out, seen = [], set()
+    for part in re.split(r"[,\n;|、]+", value or ""):
+        t = part.strip()
+        if t and t.lower() not in seen:
+            seen.add(t.lower())
+            out.append(t)
+    return out
+
+
+def _form_number(form, name, low, high, label):
+    raw = (form.get(name) or "").strip()
+    if not raw:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ValueError(f"{label} ต้องเป็นตัวเลข")
+    if not low <= value <= high:
+        raise ValueError(f"{label} ต้องอยู่ระหว่าง {low:g} ถึง {high:g}")
+    return value
+
+
+def _read_analysis_params(form):
+    try:
+        positions = json.loads(form.get("positions") or "[]")
+        positions = [str(p).strip() for p in positions if str(p).strip()] if isinstance(positions, list) else []
+    except ValueError:
+        positions = []
+    if not positions:
+        positions = _split_terms(form.get("required", ""))
+
+    age_min = _form_number(form, "age_min", 15, 100, "อายุตั้งแต่")
+    age_max = _form_number(form, "age_max", 15, 100, "อายุไม่เกิน")
+    sal_min = _form_number(form, "salary_min", 0, 10_000_000, "เงินเดือนตั้งแต่")
+    sal_max = _form_number(form, "salary_max", 0, 10_000_000, "เงินเดือนไม่เกิน")
+    pass_thr = _form_number(form, "pass_threshold", 0, 100, "คะแนนผ่าน")
+    rev_thr = _form_number(form, "review_threshold", 0, 100, "คะแนนพิจารณาเพิ่มเติม")
+    pass_thr = 60 if pass_thr is None else pass_thr
+    rev_thr = 40 if rev_thr is None else rev_thr
+    if rev_thr > pass_thr:
+        raise ValueError("คะแนนพิจารณาเพิ่มเติมต้องไม่มากกว่าคะแนนผ่าน")
+    edu = (form.get("edu") or "").strip()
+    gender = form.get("gender") if form.get("gender") in ("male", "female") else None
+
+    return {
+        "positions": positions,
+        "duties": _split_terms(form.get("duties")),
+        "skills": _split_terms(form.get("bonus")),
+        "fields": _split_terms(form.get("field_of_study")),
+        "general": _split_terms(form.get("general")),
+        "min_gpa": _form_number(form, "min_gpa", 0, 4, "GPA ขั้นต่ำ"),
+        "min_experience": _form_number(form, "min_experience", 0, 60, "ประสบการณ์ขั้นต่ำ"),
+        "min_edu_level": int(edu) if edu in ("1", "2", "3", "4") else None,
+        "age_range": (int(age_min or 15), int(age_max or 100)) if (age_min or age_max) else None,
+        "salary_range": (sal_min or 0, sal_max or 10_000_000) if (sal_min or sal_max) else None,
+        "gender": gender,
+        "enable_special": form.get("enable_special") == "on",
+        "require_vehicle": form.get("require_vehicle") == "on",
+        "require_license": form.get("require_license") == "on",
+        "min_toeic": _form_number(form, "min_toeic", 0, 990, "TOEIC ขั้นต่ำ"),
+        "pass_threshold": pass_thr, "review_threshold": rev_thr,
+        "ai": form.get("ai_mode") == "hybrid",
+    }
+
+
 @app.route("/analyze", methods=["POST"])
 @login_required
 def analyze():
-    jd_tmp_path = None
-    jd_txt_path = None
-    resume_tmp  = []
-    translated_tmp_paths = {}
-
+    """เริ่มงานวิเคราะห์เบื้องหลัง — คืน job_id ให้หน้าเว็บถามความคืบหน้าที่ /analyze/status/<job_id>"""
+    user_id = session["user_id"]
     try:
-        import fitz
+        params = _read_analysis_params(request.form)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
-        # ── รับ JD ────────────────────────────────────────
-        jd_text  = ""
-        jd_label = "Job Description"
-        if "jd_file" in request.files and request.files["jd_file"].filename:
-            jd_file = request.files["jd_file"]
-            jd_label = jd_file.filename
-            if jd_file.filename.lower().endswith(".pdf"):
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f:
-                    jd_file.save(f.name)
-                    jd_tmp_path = f.name
-                doc = fitz.open(jd_tmp_path)
-                jd_text = " ".join(p.get_text() for p in doc).lower()
-                doc.close()
-                doc = None
-                if not jd_text.strip():
-                    try:
-                        import pytesseract
-                        from PIL import Image as PILImage
-                        import io, platform
-                        if platform.system() == 'Windows':
-                            pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-                        doc = fitz.open(jd_tmp_path)
-                        ocr_texts = []
-                        for page in doc:
-                            pix = page.get_pixmap(dpi=200)
-                            img = PILImage.open(io.BytesIO(pix.tobytes('png')))
-                            ocr_texts.append(pytesseract.image_to_string(img, lang='tha+eng'))
-                        doc.close()
-                        jd_text = " ".join(ocr_texts).lower()
-                    except Exception as e:
-                        print(f"[DEBUG JD] OCR error: {e}")
-                try: os.unlink(jd_tmp_path)
-                except: pass
-                jd_tmp_path = None
-            else:
-                jd_text = jd_file.read().decode("utf-8", errors="ignore").lower()
-        elif request.form.get("jd_text"):
-            jd_text = request.form["jd_text"].lower()
-            jd_label = (request.form["jd_text"].strip().splitlines() or ["Job Description"])[0][:60]
+    resume_files = [f for f in request.files.getlist("resumes") if f and f.filename]
+    if not resume_files:
+        return jsonify({"error": "กรุณาเลือกไฟล์ใบสมัครอย่างน้อยหนึ่งไฟล์"}), 400
+    jd_files = [request.files[k] for k in ("jd_file", "js_file") if k in request.files and request.files[k].filename]
+    if not jd_files and not has_criteria(params):
+        return jsonify({"error": "กรุณาเลือกไฟล์ Job Description / Job Specification หรือกรอกเงื่อนไขการคัดกรองอย่างน้อยหนึ่งข้อ"}), 400
 
-        # ── รับ JS ────────────────────────────────────────
-        js_text  = ""
-        js_tmp_path = None
-        if "js_file" in request.files and request.files["js_file"].filename:
-            js_file = request.files["js_file"]
-            if js_file.filename.lower().endswith(".pdf"):
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f:
-                    js_file.save(f.name)
-                    js_tmp_path = f.name
-                doc = fitz.open(js_tmp_path)
-                js_text = " ".join(p.get_text() for p in doc).lower()
-                doc.close()
-                doc = None
-                if not js_text.strip():
-                    try:
-                        import pytesseract
-                        from PIL import Image as PILImage
-                        import io, platform
-                        if platform.system() == 'Windows':
-                            pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-                        doc = fitz.open(js_tmp_path)
-                        ocr_texts = []
-                        for page in doc:
-                            pix = page.get_pixmap(dpi=200)
-                            img = PILImage.open(io.BytesIO(pix.tobytes('png')))
-                            ocr_texts.append(pytesseract.image_to_string(img, lang='tha+eng'))
-                        doc.close()
-                        js_text = " ".join(ocr_texts).lower()
-                    except Exception as e:
-                        print(f"[DEBUG JS] OCR error: {e}")
-                try: os.unlink(js_tmp_path)
-                except: pass
-                js_tmp_path = None
-            else:
-                js_text = js_file.read().decode("utf-8", errors="ignore").lower()
+    work_dir = Path(tempfile.mkdtemp(prefix="cvs_"))
+    jd_paths = []
+    for i, f in enumerate(jd_files):
+        name = clean_filename(f.filename) or f"jd{i}.txt"
+        path = work_dir / f"jd{i}__{name}"
+        f.save(path)
+        jd_paths.append(path)
+    if jd_files:
+        params["jd_label"] = clean_filename(jd_files[0].filename)
+    resumes = []
+    for i, f in enumerate(resume_files):
+        name = clean_filename(f.filename) or f"resume_{i}.pdf"
+        path = work_dir / f"r{i}.pdf"
+        f.save(path)
+        resumes.append((name, path))
 
-        jd_text = f"{jd_text} {js_text}".strip()
-
-        jd_from_criteria = False
-        if not jd_text:
-            has_jd_file = any(request.files.get(k) and request.files[k].filename for k in ("jd_file", "js_file"))
-            if has_jd_file:
-                return jsonify({"error": "อ่านข้อความจากไฟล์ Job Description / Job Specification ไม่ได้ ไฟล์อาจเป็นภาพสแกนและระบบอ่านภาพ (OCR) ไม่สำเร็จ ลองใช้ไฟล์ PDF ที่เลือกข้อความได้ บันทึกเป็น .txt หรือนำไฟล์ออกแล้วคัดกรองตามเงื่อนไขอย่างเดียว"}), 400
-            criteria_text = " ".join(
-                request.form.get(k, "").strip()
-                for k in ("required", "duties", "bonus", "field_of_study", "general")
-                if request.form.get(k, "").strip()
-            )
-            numeric_given = any(
-                request.form.get(k, "").strip()
-                for k in ("min_gpa", "min_experience", "age_min", "age_max", "salary_min", "salary_max", "gender")
-            )
-            if not criteria_text and not numeric_given:
-                return jsonify({"error": "กรุณาเลือกไฟล์ Job Description / Job Specification หรือกรอกเงื่อนไขการคัดกรองอย่างน้อยหนึ่งข้อ"}), 400
-            jd_text = criteria_text.lower()
-            jd_from_criteria = True
-            titles = request.form.get("required", "").strip()
-            jd_label = (f"เงื่อนไข {titles}" if titles else "คัดกรองตามเงื่อนไข")[:60]
-
-        resume_files = request.files.getlist("resumes")
-        if not resume_files or not resume_files[0].filename:
-            return jsonify({"error": "กรุณาอัปโหลด Resume"}), 400
-
-        for rf in resume_files:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                tmp_path = tmp.name
-            rf.save(tmp_path)
-            resume_tmp.append((rf.filename, tmp_path))
-
-        req_kws     = [k.lower() for k in request.form.get("required","").split() if k]
-        bon_kws     = [k.lower() for k in request.form.get("bonus","").split() if k]
-        duties_kws  = [k.lower() for k in request.form.get("duties","").split() if k]
-        field_kws   = [k.lower() for k in request.form.get("field_of_study","").split() if k]
-        general_kws = [k.lower() for k in request.form.get("general","").split() if k]
-        edu_kws     = EDU_MAP.get(request.form.get("edu",""), [])
+    groq_key = ""
+    if params["ai"]:
         try:
-            pass_thr = int(request.form.get("pass_threshold") or 60)
-            rev_thr  = int(request.form.get("review_threshold") or 40)
-        except ValueError:
-            return jsonify({"error": "เกณฑ์ผ่าน/เกณฑ์พิจารณาต้องเป็นตัวเลขจำนวนเต็ม"}), 400
-        ai_mode      = request.form.get("ai_mode", "tfidf")
-
-        groq_key = session.get("groq_api_key", "") or get_user_groq_key(session["user_id"])
-
-        min_gpa_raw = request.form.get("min_gpa", "").strip()
-        min_gpa = float(min_gpa_raw) if min_gpa_raw else None
-
-        # ── FR-3: อ่านค่า filter ใหม่จากฟอร์ม ─────────────────
-        age_min = request.form.get("age_min", type=int)
-        age_max = request.form.get("age_max", type=int)
-        age_range = (age_min, age_max) if age_min and age_max else None
-
-        gender = request.form.get("gender") or None
-
-        salary_min = request.form.get("salary_min", type=float)
-        salary_max = request.form.get("salary_max", type=float)
-        salary_range = (salary_min, salary_max) if salary_min and salary_max else None
-
-        enable_special  = request.form.get("enable_special") == "on"
-        require_vehicle = request.form.get("require_vehicle") == "on"
-        require_license = request.form.get("require_license") == "on"
-        min_toeic       = request.form.get("min_toeic", type=float)
-        min_experience  = request.form.get("min_experience", type=float)
-
-        ai_usage = {"in": 0, "out": 0}
-
-        def has_thai(text: str) -> bool:
-            return any('\u0e00' <= c <= '\u0e7f' for c in text)
-
-        def translate_to_english(text: str, client) -> str:
-            try:
-                resp = client.chat.completions.create(
-                    model=GROQ_MODEL,
-                    messages=[
-                        {"role": "system", "content": (
-                            "You are a professional translator. "
-                            "Translate the Thai text to English accurately. "
-                            "Keep proper nouns, company names, and technical terms as-is. "
-                            "Return ONLY the translated text, no explanations."
-                        )},
-                        {"role": "user", "content": text[:2000]},
-                    ],
-                    temperature=0.1,
-                    max_tokens=2000,
-                    extra_body={"reasoning_effort": "low"},
-                )
-                usage = getattr(resp, "usage", None)
-                ai_usage["in"]  += getattr(usage, "prompt_tokens", 0) or 0
-                ai_usage["out"] += getattr(usage, "completion_tokens", 0) or 0
-                return resp.choices[0].message.content.strip()
-            except Exception as e:
-                print(f"[warn] translate_to_english failed: {e}")
-                return text
-
-        translate_key = groq_key
-        if translate_key:
-            from groq import Groq as GroqClient
-            _trans_client = GroqClient(api_key=translate_key)
-            if has_thai(jd_text):
-                jd_text = translate_to_english(jd_text, _trans_client)
-            if has_thai(js_text):
-                js_text = translate_to_english(js_text, _trans_client)
-
-        combined_jd = f"{jd_text} {js_text}".strip()
-
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8") as jd_tmp:
-            jd_tmp.write(combined_jd)
-            jd_txt_path = jd_tmp.name
-
-        translated_tmp_paths = {}
-
-        if translate_key:
-            if '_trans_client' not in dir():
-                from groq import Groq as GroqClient
-                _trans_client = GroqClient(api_key=translate_key)
-
-            thai_resumes = []
-            for orig_name, tmp_path in resume_tmp:
-                try:
-                    doc = fitz.open(tmp_path)
-                    text = " ".join(page.get_text() for page in doc)
-                    doc.close()
-                    if has_thai(text):
-                        thai_resumes.append((orig_name, tmp_path, text))
-                except Exception:
-                    pass
-
-            BATCH_SIZE = 5
-            for i in range(0, len(thai_resumes), BATCH_SIZE):
-                batch = thai_resumes[i:i + BATCH_SIZE]
-                for orig_name, tmp_path, thai_text in batch:
-                    translated = translate_to_english(thai_text, _trans_client)
-                    with tempfile.NamedTemporaryFile(
-                        delete=False, suffix=".txt", mode="w", encoding="utf-8"
-                    ) as tf:
-                        tf.write(translated)
-                        translated_tmp_paths[orig_name] = tf.name
-
-        effective_paths = []
-        for orig_name, tmp_path in resume_tmp:
-            if orig_name in translated_tmp_paths:
-                effective_paths.append(translated_tmp_paths[orig_name])
-            else:
-                effective_paths.append(tmp_path)
-
-        # ── FR-4.6: สกัด keyword master list จาก JD/JS ด้วย AI (ครั้งเดียว) ──
-        ai_masterlist = []
-        auto_filled = []
-        if ai_mode == "hybrid" and groq_key and combined_jd:
-            from groq import Groq as GroqClient
-            _kw_client = GroqClient(api_key=groq_key)
-            jd_profile = extract_jd_profile_via_ai(combined_jd, _kw_client)
-            ai_masterlist = jd_profile["all"]
-            ai_usage["in"]  += jd_profile.get("usage", {}).get("in", 0)
-            ai_usage["out"] += jd_profile.get("usage", {}).get("out", 0)
-            print(f"[FR-4.6] AI master list: {ai_masterlist}")
-            if not req_kws and jd_profile["position"]:
-                req_kws = jd_profile["position"]
-                auto_filled.append("ตำแหน่งงาน")
-            if not duties_kws and jd_profile["duties"]:
-                duties_kws = jd_profile["duties"]
-                auto_filled.append("ลักษณะงาน")
-            if not bon_kws and jd_profile["skills"]:
-                bon_kws = jd_profile["skills"]
-                auto_filled.append("ทักษะ")
-
-        config = Config(
-            position_keywords=req_kws,
-            duties_keywords=duties_kws,
-            skill_keywords=bon_kws,
-            field_of_study_keywords=field_kws,
-            general_keywords=general_kws,
-            edu_level_keywords=edu_kws,
-            min_gpa=min_gpa,
-            min_experience_years=min_experience,
-            age_range=age_range,
-            gender=gender,
-            salary_range=salary_range,
-            enable_special_score=enable_special,
-            require_vehicle=require_vehicle,
-            require_license=require_license,
-            min_toeic_score=min_toeic,
-            ai_keyword_masterlist=ai_masterlist,
-            pass_threshold=pass_thr,
-            review_threshold=rev_thr,
-        )
-        screener = ResumeScreener(config=config)
-        results  = screener.screen(
-            jd_path=jd_txt_path,
-            resume_paths=effective_paths,
-        )
-
-        path_to_original = {p: orig for orig, p in resume_tmp}
-        for orig_name, trans_path in translated_tmp_paths.items():
-            path_to_original[trans_path] = orig_name
-            path_to_original[Path(trans_path).name] = orig_name
-
-        for r in results:
-            matched = path_to_original.get(r.file)
-            if not matched:
-                for orig, p in resume_tmp:
-                    if Path(p).name == Path(r.file).name:
-                        matched = orig
-                        break
-            if matched:
-                if r.name == Path(r.file).name or r.name == r.file:
-                    r.name = Path(matched).stem
-                r.file = matched
-
-        ai_insights = {}  # เก็บไว้เผื่อ frontend เดิมอ้างถึง (ไม่ใช้จริงแล้ว — AI คำนวณใน models.py แล้ว)
-        total_input_tokens  = ai_usage["in"]
-        total_output_tokens = ai_usage["out"]
-        total_tokens_used   = total_input_tokens + total_output_tokens
-
-        output = []
-        for r in results:
-            if r.error and not r.recommendation:
-                r.recommendation = "ไม่ผ่าน"
-
-        for rank, r in enumerate(results, 1):
-            d = r.to_dict()
-            d["rank"]    = rank
-            d["insight"] = ai_insights.get(r.file, None)
-            output.append(d)
-
-            # FR-5.3/5.4: sort resume ลงโฟลเดอร์
-            tmp_path = next((p for orig, p in resume_tmp if orig == r.file), None)
-            if tmp_path:
-                sort_resume_file(r.file, tmp_path, r.recommendation, jd_label, session["user_id"])
-
-        tokens_remaining = max(0, TOKEN_LIMIT_PER_MIN - total_tokens_used)
-
-        summary = {
-            "total":   len(output),
-            "passed":  sum(1 for r in results if r.recommendation == "ผ่าน"),
-            "review":  sum(1 for r in results if r.recommendation == "พิจารณาเพิ่มเติม"),
-            "failed":  sum(1 for r in results if r.recommendation == "ไม่ผ่าน"),
-            "ai_used": len(output) if ai_masterlist else 0,
-            "ai_warning": ("AI ไม่ทำงาน (ไม่มี Groq key หรือเรียก Groq ไม่สำเร็จ) — คะแนน AI เป็น 0"
-                           if ai_mode == "hybrid" and not ai_masterlist else None),
-            "max_possible_score": 100 if ai_masterlist else 75,
-            "auto_filled": auto_filled,
-            "auto_filled_source": "ตำแหน่งและเงื่อนไขที่กรอก" if jd_from_criteria else "Job Description",
-            "keyword_warning": (None if config.has_keyword_criteria() else
-                                "ยังไม่ได้ตั้งเงื่อนไข Keyword — คะแนนส่วน Keyword เป็น 0 (เปิดโหมด AI เพื่อให้เติมจาก JD อัตโนมัติ)"),
-            "tokens_input":     total_input_tokens,
-            "tokens_output":    total_output_tokens,
-            "tokens_used":      total_tokens_used,
-            "tokens_limit":     TOKEN_LIMIT_PER_MIN,
-            "tokens_remaining": tokens_remaining,
-        }
-
-        history_id = datetime.now().strftime("%Y%m%d_%H%M%S_") + uuid.uuid4().hex[:6]
-        try:
-            save_history(
-                history_id   = history_id,
-                user_id      = session["user_id"],
-                timestamp    = datetime.now().astimezone().isoformat(timespec="seconds"),
-                jd_label     = jd_label,
-                resume_count = len(resume_tmp),
-                summary      = summary,
-                results      = output,
-                ai_mode      = ai_mode,
-            )
+            groq_key = get_user_groq_key(user_id)
         except Exception:
             traceback.print_exc()
+    job_id = start_job(user_id, work_dir, jd_paths, resumes, params, groq_key)
+    _last_sync.pop(user_id, None)
+    return jsonify({"job_id": job_id, "total": len(resumes)}), 202
 
+
+@app.route("/analyze/status/<job_id>", methods=["GET"])
+@login_required
+def analyze_status(job_id):
+    job = get_job(job_id, session["user_id"])
+    if not job:
+        return jsonify({"error": "ไม่พบงานวิเคราะห์นี้ อาจหมดอายุหรือเซิร์ฟเวอร์ถูกรีสตาร์ท"}), 404
+    if job["status"] == "done":
         _last_sync.pop(session["user_id"], None)
-        return jsonify({"results": output, "summary": summary, "history_id": history_id})
+    return jsonify(job)
 
+
+@app.route("/api/jd/extract", methods=["POST"])
+@login_required
+def api_extract_requirements():
+    """ให้ AI อ่าน JD/JS แล้วเสนอเงื่อนไขการคัดกรอง ให้ HR ตรวจและแก้ก่อนวิเคราะห์"""
+    files = [request.files[k] for k in ("jd_file", "js_file") if k in request.files and request.files[k].filename]
+    if not files:
+        return jsonify({"error": "กรุณาเลือกไฟล์ Job Description หรือ Job Specification ก่อน"}), 400
+    groq_key = get_user_groq_key(session["user_id"])
+    if not groq_key:
+        return jsonify({"error": "บัญชีนี้ยังไม่มี Groq API Key จึงใช้ AI ดึงเงื่อนไขไม่ได้"}), 400
+    work_dir = Path(tempfile.mkdtemp(prefix="cvs_jd_"))
+    try:
+        texts = []
+        for i, f in enumerate(files):
+            path = work_dir / f"jd{i}__{clean_filename(f.filename) or 'jd.txt'}"
+            f.save(path)
+            texts.append(extract_text(str(path))[0])
+        text = "\n".join(texts).strip()
+        if not text:
+            return jsonify({"error": "อ่านข้อความจากไฟล์ไม่ได้ ไฟล์อาจเป็นภาพสแกนที่ OCR อ่านไม่สำเร็จ"}), 400
+        llm = LLM(groq_key)
+        req = extract_requirements(llm, text)
+        req["tokens_used"] = llm.usage["in"] + llm.usage["out"]
+        return jsonify(req)
     except Exception:
         traceback.print_exc()
-        return jsonify({"error": "เกิดข้อผิดพลาดภายในระบบ ลองใหม่อีกครั้ง หากยังเป็นอยู่ให้แจ้งผู้ดูแล"}), 500
-
+        return jsonify({"error": "AI ดึงเงื่อนไขไม่สำเร็จ ลองใหม่อีกครั้ง หรือกรอกเงื่อนไขเอง"}), 502
     finally:
-        gc.collect()
-        if jd_tmp_path:
-            try: os.unlink(jd_tmp_path)
-            except: pass
-        if jd_txt_path:
-            try: os.unlink(jd_txt_path)
-            except: pass
-        for _, p in resume_tmp:
-            try: os.unlink(p)
-            except: pass
-        for p in (translated_tmp_paths or {}).values():
-            try: os.unlink(p)
-            except: pass
+        shutil.rmtree(work_dir, ignore_errors=True)
 
 
 @app.route("/history", methods=["GET"])
@@ -569,15 +300,18 @@ def export_excel(history_id):
     ws.title = "ผลการคัดกรอง"
     ws.append(["Rank", "ชื่อไฟล์", "คะแนนรวม", "สถานะ",
                "Keyword Score", "AI Score", "Structure Score",
-               "GPA", "ประสบการณ์", "ขาดคุณสมบัติ", "เหตุผลที่ไม่ผ่าน"])
+               "GPA", "วุฒิสูงสุด", "ประสบการณ์", "ประสบการณ์ตรงสาย", "ขาดคุณสมบัติ",
+               "เหตุผลที่ไม่ผ่าน", "ต้องตรวจสอบ"])
 
     for r in data.get("results", []):
         ws.append([
             r.get("rank"), r.get("file"), r.get("score"), r.get("recommendation"),
             r.get("keyword_score"), r.get("ai_score"), r.get("struct_score"),
-            r.get("gpa"), r.get("experience"),
+            r.get("gpa"), r.get("degree_label"), r.get("experience"),
+            fmt_months(r["related_experience_months"]) if r.get("related_experience_months") is not None else "",
             ", ".join(r.get("missing_keywords", [])),
             "; ".join(r.get("reject_reasons") or []),
+            "; ".join(r.get("review_reasons") or []),
         ])
 
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
@@ -587,65 +321,42 @@ def export_excel(history_id):
                       download_name=f"cvscreener_{safe_id}.xlsx")
 
 
-_hash_cache = {}
-
-
-def _file_sha1(path):
-    st = path.stat()
-    key = (str(path), st.st_mtime, st.st_size)
-    digest = _hash_cache.get(key)
-    if digest is None:
-        digest = hashlib.sha1(path.read_bytes()).hexdigest()
-        _hash_cache[key] = digest
-    return digest, st.st_mtime
-
-
-def _user_pdf_files(user_id):
-    qualified_dir, talent_pool_dir, uploaded_dir = user_dirs(user_id)
-    files = []
-    for base in (qualified_dir, talent_pool_dir):
-        if base.exists():
-            for sub in base.iterdir():
-                if sub.is_dir():
-                    files.extend((sub.name, f) for f in sub.iterdir() if f.suffix.lower() == ".pdf")
-    if uploaded_dir.exists():
-        files.extend(("Uploaded", f) for f in uploaded_dir.iterdir() if f.suffix.lower() == ".pdf")
-    return files
-
-
 _last_sync = {}
 SYNC_INTERVAL_SECONDS = 30
 
 
 def sync_library(user_id, force=False):
-    """อ่านไฟล์ใบสมัครในคลังของ user เข้าตาราง resume_library (เฉพาะไฟล์ใหม่/ย้ายที่/ถูกลบ)"""
+    """อ่านใบสมัครในคลังของ user เข้าตาราง resume_library (เฉพาะไฟล์ใหม่/ย้ายที่/ถูกลบ/อ่านด้วยเวอร์ชันเก่า)"""
     now = datetime.now().timestamp()
     if not force and now - _last_sync.get(user_id, 0) < SYNC_INTERVAL_SECONDS:
         return
     _last_sync[user_id] = now
+
     current = {}
-    for folder, f in _user_pdf_files(user_id):
+    for folder, f in user_pdf_files(user_id):
         try:
-            digest, mtime = _file_sha1(f)
+            digest, mtime = file_sha1(f)
         except OSError:
             continue
         if digest not in current or mtime > current[digest][2]:
             current[digest] = (folder, f, mtime)
 
     existing = library_index(user_id)
-    reader = PDFReader()
     inserts, updates = [], []
     for digest, (folder, f, mtime) in current.items():
         row = existing.get(digest)
-        if row is None:
-            text = reader.read(str(f))
+        stale = row is not None and str(row.get("parser_version") or "") != str(PARSER_VERSION)
+        if row is None or stale:
+            parsed, _ = get_parsed(user_id, f, None, sha1=digest)
+            prof = parsed["profile"]
+            months = prof.get("experience_months")
             inserts.append({
                 "sha1": digest, "folder": folder, "file_name": f.name, "file_mtime": mtime,
-                "text": text, "gpa": extract_gpa(text) if text else None,
-                "experience_years": extract_experience_years(text) if text else None,
-                "age": extract_age(text) if text else None,
-                "gender": extract_gender(text) if text else None,
-                "salary_expectation": extract_salary_expectation(text) if text else None,
+                "text": parsed["text"], "gpa": prof.get("gpa"),
+                "experience_years": round(months / 12, 1) if months is not None else None,
+                "age": prof.get("age"), "gender": prof.get("gender"),
+                "salary_expectation": prof.get("salary_expectation"),
+                "profile": prof,
             })
         elif row["folder"] != folder or row["file_name"] != f.name:
             updates.append((row["id"], folder, f.name, mtime))
@@ -654,19 +365,23 @@ def sync_library(user_id, force=False):
         library_apply(user_id, inserts, updates, deletes)
 
 
-def match_position_terms(text, terms):
-    """คืน (คะแนนความเกี่ยวข้อง, คำที่ตรง) — วลีตรงทั้งก้อนได้น้ำหนักมากกว่าตรงทีละคำ"""
-    text = re.sub(r"\s+", " ", (text or "").lower())
+def match_position_terms(row, terms):
+    """คืน (คะแนนความเกี่ยวข้อง, คำที่ตรง) — รองรับคำพ้องไทย/อังกฤษ และให้น้ำหนักชื่อตำแหน่งงานในประวัติมากกว่า"""
+    if not terms:
+        return 0.0, []
+    prof = row.get("profile") or {}
+    matcher = Matcher({"text": row.get("text") or "", "profile": prof})
+    titles = Matcher({"text": "\n".join(str(t) for t in (prof.get("job_titles") or []) + (prof.get("desired_positions") or [])),
+                      "profile": {}})
     relevance, matched = 0.0, []
     for term in terms:
-        if term in text:
-            relevance += 3 + min(text.count(term), 5) * 0.2
-            matched.append(term)
-        else:
-            words = [w for w in term.split() if len(w) > 1]
-            if len(words) > 1 and all(w in text for w in words):
-                relevance += 1
-                matched.append(term)
+        hit, _ = matcher.find(term)
+        if not hit:
+            continue
+        relevance += 3
+        if titles.find(term)[0]:
+            relevance += 1
+        matched.append(term if hit == term.lower() else f"{term} ({hit})")
     return relevance, matched
 
 
@@ -714,13 +429,27 @@ def api_search_candidates():
              request.args.getlist("position") + request.args.getlist("jd_label_contains") if t.strip()]
     results = []
     for row in library_search(user_id, **filters):
-        relevance, matched = match_position_terms(row.pop("text", ""), terms)
+        relevance, matched = match_position_terms(row, terms)
+        prof = row.pop("profile", None) or {}
+        row.pop("text", None)
+        row["degree_label"] = prof.get("degree_label")
+        if prof.get("experience_months") is not None:
+            row["experience"] = fmt_months(prof["experience_months"])
         if terms and not matched:
             continue
+        unknown = [label for label, key, active in (
+            ("GPA", "gpa", filters["min_gpa"] is not None),
+            ("ประสบการณ์", "experience_years", filters["min_experience"] is not None),
+            ("อายุ", "age", filters["age_min"] is not None or filters["age_max"] is not None),
+            ("เพศ", "gender", filters["gender"] is not None),
+            ("เงินเดือนที่คาดหวัง", "salary_expectation", filters["salary_min"] is not None or filters["salary_max"] is not None),
+        ) if active and row.get(key) is None]
+        row["review_reasons"] = [f"ใบสมัครไม่ระบุ{label} ต้องตรวจสอบ" for label in unknown]
         row["matched_terms"] = matched
         row["relevance"] = relevance
         results.append(row)
-    results.sort(key=lambda r: (-r["relevance"], -(r["score"] if r["score"] is not None else -1)))
+    results.sort(key=lambda r: (-r["relevance"], len(r["review_reasons"]),
+                                -(r["score"] if r["score"] is not None else -1)))
     return jsonify({"candidates": results[:200]})
 
 
@@ -827,4 +556,4 @@ def repository_delete(folder, filename):
 
 
 if __name__ == "__main__":
-    app.run(debug=False, port=5050)
+    app.run(debug=False, port=5050)

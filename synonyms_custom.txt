@@ -1,0 +1,4 @@
+# คำพ้องที่ HR เพิ่มเอง: หนึ่งกลุ่มต่อบรรทัด คั่นด้วย |  (แก้แล้วรีสตาร์ทระบบ)
+# ตัวอย่าง:
+วิศวกรรีดเหล็ก | rolling mill engineer | rolling mill
+เตาหลอม | furnace | electric arc furnace | eaf

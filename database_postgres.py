@@ -218,8 +218,8 @@ def save_history(history_id, user_id, timestamp, jd_label, resume_count, summary
                     (session_id, user_id, name, file_name, score, recommendation,
                      tfidf_score, keyword_score, struct_score, ai_score,
                      gpa, experience_years, jd_label, created_at,
-                     age, gender, salary_expectation, reject_reasons)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     age, gender, salary_expectation, reject_reasons, review_reasons)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 history_id, user_id, clean_name(r.get("name"), r.get("file")), r.get("file"),
                 r.get("score"), r.get("recommendation") or None, None,
@@ -229,6 +229,7 @@ def save_history(history_id, user_id, timestamp, jd_label, resume_count, summary
                 jd_label, timestamp,
                 r.get("age"), r.get("gender"), r.get("salary_expectation"),
                 json.dumps(r.get("reject_reasons") or [], ensure_ascii=False),
+                json.dumps(r.get("review_reasons") or [], ensure_ascii=False),
             ))
 
         conn.commit()
@@ -350,7 +351,7 @@ def search_candidates(user_id, min_score=None, max_score=None, min_gpa=None,
 def library_index(user_id):
     with get_db(readonly=True) as conn:
         c = conn.cursor()
-        c.execute("SELECT id, sha1, folder, file_name, file_mtime FROM resume_library WHERE user_id = %s", (user_id,))
+        c.execute("SELECT id, sha1, folder, file_name, file_mtime, profile->>'parser_version' AS parser_version FROM resume_library WHERE user_id = %s", (user_id,))
         return {row["sha1"].strip(): dict(row) for row in c.fetchall()}
 
 
@@ -361,14 +362,18 @@ def library_apply(user_id, inserts, updates, deletes):
             c.execute("""
                 INSERT INTO resume_library
                     (user_id, sha1, folder, file_name, file_mtime, text,
-                     gpa, experience_years, age, gender, salary_expectation)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     gpa, experience_years, age, gender, salary_expectation, profile)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (user_id, sha1) DO UPDATE
                 SET folder = EXCLUDED.folder, file_name = EXCLUDED.file_name,
-                    file_mtime = EXCLUDED.file_mtime
+                    file_mtime = EXCLUDED.file_mtime, text = EXCLUDED.text, gpa = EXCLUDED.gpa,
+                    experience_years = EXCLUDED.experience_years, age = EXCLUDED.age,
+                    gender = EXCLUDED.gender, salary_expectation = EXCLUDED.salary_expectation,
+                    profile = EXCLUDED.profile, indexed_at = now()
             """, (user_id, r["sha1"], r["folder"], r["file_name"], r["file_mtime"], r["text"],
                   _valid_gpa(r.get("gpa")), r.get("experience_years"), r.get("age"),
-                  r.get("gender"), r.get("salary_expectation")))
+                  r.get("gender"), r.get("salary_expectation"),
+                  json.dumps(r.get("profile") or {}, ensure_ascii=False)))
         for row_id, folder, file_name, mtime in updates:
             c.execute("""UPDATE resume_library SET folder = %s, file_name = %s, file_mtime = %s
                          WHERE id = %s AND user_id = %s""", (folder, file_name, mtime, row_id, user_id))
@@ -386,23 +391,23 @@ def library_search(user_id, min_gpa=None, min_experience=None, age_min=None, age
         conditions.append(sql)
         params.append(value)
 
-    if min_gpa is not None:        add("l.gpa >= %s", min_gpa)
-    if min_experience is not None: add("l.experience_years >= %s", min_experience)
-    if age_min is not None:        add("l.age >= %s", age_min)
-    if age_max is not None:        add("l.age <= %s", age_max)
-    if gender:                     add("l.gender = %s", gender)
-    if salary_min is not None:     add("l.salary_expectation >= %s", salary_min)
-    if salary_max is not None:     add("l.salary_expectation <= %s", salary_max)
+    if min_gpa is not None:        add("(l.gpa >= %s OR l.gpa IS NULL)", min_gpa)
+    if min_experience is not None: add("(l.experience_years >= %s OR l.experience_years IS NULL)", min_experience)
+    if age_min is not None:        add("(l.age >= %s OR l.age IS NULL)", age_min)
+    if age_max is not None:        add("(l.age <= %s OR l.age IS NULL)", age_max)
+    if gender:                     add("(l.gender = %s OR l.gender IS NULL)", gender)
+    if salary_min is not None:     add("(l.salary_expectation >= %s OR l.salary_expectation IS NULL)", salary_min)
+    if salary_max is not None:     add("(l.salary_expectation <= %s OR l.salary_expectation IS NULL)", salary_max)
 
     query = f"""
         SELECT l.id, l.folder, l.file_name, l.text, l.gpa, l.experience_years, l.age, l.gender,
-               l.salary_expectation, l.indexed_at,
+               l.salary_expectation, l.indexed_at, l.profile,
                c.name, c.score, c.recommendation, c.keyword_score, c.ai_score, c.struct_score,
-               c.jd_label, c.reject_reasons, c.created_at
+               c.jd_label, c.reject_reasons, c.review_reasons, c.created_at
         FROM resume_library l
         LEFT JOIN LATERAL (
             SELECT name, score, recommendation, keyword_score, ai_score, struct_score,
-                   jd_label, reject_reasons, created_at
+                   jd_label, reject_reasons, review_reasons, created_at
             FROM candidates
             WHERE user_id = l.user_id AND file_name = l.file_name AND deleted_at IS NULL
             ORDER BY created_at DESC
@@ -428,3 +433,28 @@ def library_search(user_id, min_gpa=None, min_experience=None, age_min=None, age
             d["experience"] = f"{exp:g} ปี" if exp is not None else None
             rows.append(d)
         return rows
+
+
+# ── Resume profile cache (อ่านไฟล์ครั้งเดียว ใช้ซ้ำได้) ─────────────
+
+def get_profile(user_id, sha1):
+    with get_db(readonly=True) as conn:
+        c = conn.cursor()
+        c.execute("""SELECT parser_version, source, text, meta, profile
+                     FROM resume_profiles WHERE user_id = %s AND sha1 = %s""", (user_id, sha1))
+        row = c.fetchone()
+        return dict(row) if row else None
+
+
+def save_profile(user_id, sha1, parser_version, source, text, meta, profile):
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO resume_profiles (user_id, sha1, parser_version, source, text, meta, profile)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (user_id, sha1) DO UPDATE
+            SET parser_version = EXCLUDED.parser_version, source = EXCLUDED.source, text = EXCLUDED.text,
+                meta = EXCLUDED.meta, profile = EXCLUDED.profile, updated_at = now()
+        """, (user_id, sha1, parser_version, source, text,
+              json.dumps(meta or {}, ensure_ascii=False), json.dumps(profile or {}, ensure_ascii=False)))
+        conn.commit()

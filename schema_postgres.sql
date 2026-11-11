@@ -77,3 +77,17 @@ create table if not exists resume_library (
     unique (user_id, sha1)
 );
 create index if not exists idx_resume_library_user on resume_library(user_id);
+
+create table if not exists resume_profiles (
+    user_id integer not null references users(id) on delete cascade,
+    sha1 char(40) not null,
+    parser_version integer not null,
+    source varchar(10) not null,
+    text text,
+    meta jsonb,
+    profile jsonb,
+    updated_at timestamptz not null default now(),
+    primary key (user_id, sha1)
+);
+alter table candidates add column if not exists review_reasons jsonb;
+alter table resume_library add column if not exists profile jsonb;

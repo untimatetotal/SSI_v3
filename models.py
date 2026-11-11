@@ -294,6 +294,7 @@ class Config:
         min_experience_years=None,
         field_of_study_keywords=None, min_gpa=None, general_keywords=None,
         edu_level_keywords=None,
+        min_edu_level=None,
         age_range=None,
         gender=None,
         salary_range=None,
@@ -315,6 +316,7 @@ class Config:
         self.general_keywords         = general_keywords or []
 
         self.edu_level_keywords = edu_level_keywords or []
+        self.min_edu_level      = min_edu_level
         self.age_range           = age_range
         self.gender               = gender
         self.salary_range         = salary_range
@@ -334,7 +336,7 @@ class Config:
             self.position_keywords, self.duties_keywords, self.skill_keywords,
             self.min_experience_years is not None,
             self.field_of_study_keywords, self.min_gpa is not None,
-            self.general_keywords, self.edu_level_keywords,
+            self.general_keywords, self.edu_level_keywords, self.min_edu_level is not None,
             self.age_range is not None, self.gender is not None,
             self.salary_range is not None,
         ])
@@ -588,4 +590,4 @@ class ResumeScreener:
 
     def save_json(self, results, output="results.json"):
         with open(output, "w", encoding="utf-8") as f:
-            json.dump([r.to_dict() for r in results], f, ensure_ascii=False, indent=2)
+            json.dump([r.to_dict() for r in results], f, ensure_ascii=False, indent=2)
