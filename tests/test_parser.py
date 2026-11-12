@@ -57,3 +57,9 @@ def test_scanned_thai_pdf_uses_ocr():
     r = parse_resume(str(FIX / "th_ie_engineer_scanned.pdf"), None, TODAY)
     assert r["meta"]["method"] == "ocr"
     assert r["profile"]["gpa"] == 3.25
+
+
+def test_folder_names_keep_thai_vowels():
+    from storage import clean_folder
+    assert clean_folder("เงื่อนไข Marketing") == "เงื่อนไข Marketing"
+    assert clean_folder("../a/b") == "ab"

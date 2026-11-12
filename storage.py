@@ -3,6 +3,7 @@
 # ============================================================
 
 import hashlib
+import unicodedata
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -16,7 +17,9 @@ def user_dirs(user_id):
 
 
 def clean_folder(name):
-    return "".join(c for c in (name or "") if c.isalnum() or c in " _-").strip()
+    """เก็บตัวอักษร/ตัวเลข/เว้นวรรค/_/- รวมถึงสระและวรรณยุกต์ไทย (ไม่เช่นนั้น 'เงื่อนไข' จะกลายเป็น 'เงอนไข')"""
+    return "".join(c for c in (name or "")
+                   if c.isalnum() or c in " _-" or unicodedata.category(c) == "Mn").strip()
 
 
 def clean_filename(name):

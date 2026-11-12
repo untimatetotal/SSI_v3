@@ -57,3 +57,12 @@ def test_unknown_gpa_needs_review(parsed):
 def test_unreadable_file_is_flagged():
     r = score_candidate({"text": "", "meta": {}, "profile": {}}, cfg(position_keywords=["x"]), "bad.pdf")
     assert r["error"] and r["recommendation"] == "ไม่ผ่าน"
+
+
+def test_ai_score_counts_thai_english_pair_once():
+    from screening import Matcher, ai_requirement_score
+    m = Matcher({"text": "ประสบการณ์ วิศวกรอุตสาหการ ใช้ AutoCAD และ Lean", "profile": {}})
+    score, hits = ai_requirement_score(m, {"positions": ["วิศวกรอุตสาหการ / Industrial Engineer"],
+                                           "skills": ["AutoCAD", "Lean", "Six Sigma", "Minitab"]})
+    assert score == 25.0
+    assert "autocad" in [h.lower() for h in hits]

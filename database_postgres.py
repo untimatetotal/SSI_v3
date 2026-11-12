@@ -384,40 +384,49 @@ def library_apply(user_id, inserts, updates, deletes):
 
 def library_search(user_id, min_gpa=None, min_experience=None, age_min=None, age_max=None,
                    gender=None, salary_min=None, salary_max=None):
-    conditions = ["l.user_id = %s"]
-    params = [user_id]
+    """ค้นคลัง — ใช้ค่าที่ HR กรอกเอง (candidate_notes) แทนค่าที่อ่านจากไฟล์เมื่อมี"""
+    conditions, params = [], []
 
     def add(sql, value):
         conditions.append(sql)
         params.append(value)
 
-    if min_gpa is not None:        add("(l.gpa >= %s OR l.gpa IS NULL)", min_gpa)
-    if min_experience is not None: add("(l.experience_years >= %s OR l.experience_years IS NULL)", min_experience)
-    if age_min is not None:        add("(l.age >= %s OR l.age IS NULL)", age_min)
-    if age_max is not None:        add("(l.age <= %s OR l.age IS NULL)", age_max)
-    if gender:                     add("(l.gender = %s OR l.gender IS NULL)", gender)
-    if salary_min is not None:     add("(l.salary_expectation >= %s OR l.salary_expectation IS NULL)", salary_min)
-    if salary_max is not None:     add("(l.salary_expectation <= %s OR l.salary_expectation IS NULL)", salary_max)
+    if min_gpa is not None:        add("(x.gpa >= %s OR x.gpa IS NULL)", min_gpa)
+    if min_experience is not None: add("(x.experience_years >= %s OR x.experience_years IS NULL)", min_experience)
+    if age_min is not None:        add("(x.age >= %s OR x.age IS NULL)", age_min)
+    if age_max is not None:        add("(x.age <= %s OR x.age IS NULL)", age_max)
+    if gender:                     add("(x.gender = %s OR x.gender IS NULL)", gender)
+    if salary_min is not None:     add("(x.salary_expectation >= %s OR x.salary_expectation IS NULL)", salary_min)
+    if salary_max is not None:     add("(x.salary_expectation <= %s OR x.salary_expectation IS NULL)", salary_max)
 
     query = f"""
-        SELECT l.id, l.folder, l.file_name, l.text, l.gpa, l.experience_years, l.age, l.gender,
-               l.salary_expectation, l.indexed_at, l.profile,
-               c.name, c.score, c.recommendation, c.keyword_score, c.ai_score, c.struct_score,
-               c.jd_label, c.reject_reasons, c.review_reasons, c.created_at
-        FROM resume_library l
-        LEFT JOIN LATERAL (
-            SELECT name, score, recommendation, keyword_score, ai_score, struct_score,
-                   jd_label, reject_reasons, review_reasons, created_at
-            FROM candidates
-            WHERE user_id = l.user_id AND file_name = l.file_name AND deleted_at IS NULL
-            ORDER BY created_at DESC
-            LIMIT 1
-        ) c ON true
-        WHERE {" AND ".join(conditions)}
+        SELECT * FROM (
+            SELECT l.id, l.sha1, l.folder, l.file_name, l.text, l.indexed_at, l.profile,
+                   COALESCE((n.data->>'gpa')::numeric, l.gpa) AS gpa,
+                   COALESCE((n.data->>'experience_years')::numeric, l.experience_years) AS experience_years,
+                   COALESCE((n.data->>'age')::int, l.age) AS age,
+                   COALESCE(n.data->>'gender', l.gender) AS gender,
+                   COALESCE((n.data->>'salary_expectation')::numeric, l.salary_expectation) AS salary_expectation,
+                   n.data AS hr_data,
+                   c.name, c.score, c.recommendation, c.keyword_score, c.ai_score, c.struct_score,
+                   c.jd_label, c.reject_reasons, c.review_reasons, c.created_at
+            FROM resume_library l
+            LEFT JOIN candidate_notes n ON n.user_id = l.user_id AND n.sha1 = l.sha1
+            LEFT JOIN LATERAL (
+                SELECT name, score, recommendation, keyword_score, ai_score, struct_score,
+                       jd_label, reject_reasons, review_reasons, created_at
+                FROM candidates
+                WHERE user_id = l.user_id AND file_name = l.file_name AND deleted_at IS NULL
+                ORDER BY created_at DESC
+                LIMIT 1
+            ) c ON true
+            WHERE l.user_id = %s
+        ) x
+        {"WHERE " + " AND ".join(conditions) if conditions else ""}
     """
     with get_db(readonly=True) as conn:
         c = conn.cursor()
-        c.execute(query, params)
+        c.execute(query, [user_id] + params)
         rows = []
         for row in c.fetchall():
             d = dict(row)
@@ -427,12 +436,49 @@ def library_search(user_id, min_gpa=None, min_experience=None, age_min=None, age
             for key in ("created_at", "indexed_at"):
                 if d.get(key) is not None:
                     d[key] = d[key].isoformat(timespec="seconds")
+            d["sha1"] = (d.get("sha1") or "").strip()
             d["name"] = clean_name(d.get("name"), d.get("file_name"))
             d["file"] = d.get("file_name")
             exp = d.get("experience_years")
             d["experience"] = f"{exp:g} ปี" if exp is not None else None
             rows.append(d)
         return rows
+
+
+# ── ข้อมูลที่ HR กรอกเองต่อใบสมัคร ─────────────────────────────
+
+def get_notes(user_id, sha1_list):
+    sha1_list = [s for s in sha1_list if s]
+    if not sha1_list:
+        return {}
+    with get_db(readonly=True) as conn:
+        c = conn.cursor()
+        c.execute("SELECT sha1, data, updated_at FROM candidate_notes WHERE user_id = %s AND sha1 = ANY(%s)",
+                  (user_id, sha1_list))
+        return {row["sha1"].strip(): dict(row["data"] or {}, updated_at=row["updated_at"].isoformat(timespec="seconds"))
+                for row in c.fetchall()}
+
+
+def owns_resume(user_id, sha1):
+    with get_db(readonly=True) as conn:
+        c = conn.cursor()
+        c.execute("""SELECT 1 FROM resume_profiles WHERE user_id = %s AND sha1 = %s
+                     UNION SELECT 1 FROM resume_library WHERE user_id = %s AND sha1 = %s LIMIT 1""",
+                  (user_id, sha1, user_id, sha1))
+        return c.fetchone() is not None
+
+
+def save_note(user_id, sha1, data):
+    with get_db() as conn:
+        c = conn.cursor()
+        if data:
+            c.execute("""
+                INSERT INTO candidate_notes (user_id, sha1, data) VALUES (%s, %s, %s)
+                ON CONFLICT (user_id, sha1) DO UPDATE SET data = EXCLUDED.data, updated_at = now()
+            """, (user_id, sha1, json.dumps(data, ensure_ascii=False)))
+        else:
+            c.execute("DELETE FROM candidate_notes WHERE user_id = %s AND sha1 = %s", (user_id, sha1))
+        conn.commit()
 
 
 # ── Resume profile cache (อ่านไฟล์ครั้งเดียว ใช้ซ้ำได้) ─────────────

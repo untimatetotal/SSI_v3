@@ -32,6 +32,10 @@ def app_client(monkeypatch, tmp_path):
         (u, s), {"parser_version": v, "source": src, "text": t, "meta": m, "profile": p}))
     monkeypatch.setattr(db, "save_history", lambda **kw: history.__setitem__(kw["history_id"], kw))
     monkeypatch.setattr(db, "get_user_groq_key", lambda u: "gsk_test")
+    notes = {}
+    monkeypatch.setattr(db, "get_notes", lambda u, lst: {k: v for k, v in notes.items() if k in lst})
+    monkeypatch.setattr(db, "save_note", lambda u, sha, data: notes.__setitem__(sha, data) if data else notes.pop(sha, None))
+    monkeypatch.setattr(db, "owns_resume", lambda u, sha: True)
     monkeypatch.setenv("SECRET_KEY", "test")
     monkeypatch.chdir(tmp_path)
     import importlib
@@ -46,6 +50,7 @@ def app_client(monkeypatch, tmp_path):
     with client.session_transaction() as s:
         s["user_id"] = 1
         s["username"] = "tester"
+    client.notes = notes
     return client, history, store
 
 
@@ -135,3 +140,37 @@ def test_library_position_match_cross_language():
     rel, matched = match_position_terms(row, ["industrial engineer"])
     assert matched and rel >= 3
     assert match_position_terms(row, ["accountant"])[1] == []
+
+
+def test_library_keyword_filter(app_client, monkeypatch):
+    client, *_ = app_client
+    import app_flask
+    rows = [
+        {"id": 1, "file_name": "a.pdf", "text": "Bachelor, Chiang Mai University", "profile": {}, "score": 70.0,
+         "gpa": None, "experience_years": None, "age": None, "gender": None, "salary_expectation": None},
+        {"id": 2, "file_name": "b.pdf", "text": "มหาวิทยาลัยเกษตรศาสตร์", "profile": {}, "score": 80.0,
+         "gpa": None, "experience_years": None, "age": None, "gender": None, "salary_expectation": None},
+    ]
+    monkeypatch.setattr(app_flask, "sync_library", lambda *a, **k: None)
+    monkeypatch.setattr(app_flask, "library_search", lambda *a, **k: [dict(r) for r in rows])
+    data = client.get("/api/candidates/search?keyword=" + "ม.เชียงใหม่").get_json()
+    assert [c["file_name"] for c in data["candidates"]] == ["a.pdf"]
+    assert data["candidates"][0]["matched_keywords"]
+
+
+def test_hr_data_overrides_extracted_values(app_client):
+    client, history, store = app_client
+    import hashlib
+    sha = hashlib.sha1((FIX / "th_sales.pdf").read_bytes()).hexdigest()
+    r = client.post(f"/api/notes/{sha}", json={"gpa": "abc"})
+    assert r.status_code == 400
+    r = client.post(f"/api/notes/{sha}", json={"gpa": "3.40", "salary_expectation": "22,000", "tags": "โทรคัดกรองแล้ว", "note": "สนใจงานกะ"})
+    assert r.status_code == 200 and client.notes[sha]["salary_expectation"] == 22000
+    r = client.post("/analyze", data={"positions": '["sales"]', "min_gpa": "3.0", "salary_min": "20000", "salary_max": "25000",
+                                      "ai_mode": "tfidf", "resumes": files("th_sales.pdf")}, content_type="multipart/form-data")
+    res = wait(client, r.get_json()["job_id"])["result"]["results"][0]
+    assert res["sha1"] == sha and res["gpa"] == 3.4 and not res["reject_reasons"]
+    assert res["keyword_breakdown"]["เงินเดือน"] == 2 and "ข้อมูลจาก HR" in res["evidence"]
+    assert res["hr_data"]["tags"] == ["โทรคัดกรองแล้ว"]
+    r = client.post(f"/api/notes/{sha}", json={})
+    assert sha not in client.notes

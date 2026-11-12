@@ -4,6 +4,7 @@
 #   ทุกหมวดเก็บหลักฐานจากใบสมัคร และแยกเหตุผล "ไม่ผ่าน" กับ "ต้องตรวจสอบ"
 # ============================================================
 
+import math
 from pathlib import Path
 
 from lexicon import expand_term, LEVEL_LABEL
@@ -36,11 +37,12 @@ class Matcher:
         self.doc = MatchText((parsed.get("text") or "") + "\n" + "\n".join(extra))
 
     def find(self, term: str):
-        """คืน (คำที่ตรง, หลักฐาน) โดยลองคำพ้องด้วย"""
-        for t in expand_term(term):
-            snippet = self.doc.find(t)
-            if snippet:
-                return t, snippet
+        """คืน (คำที่ตรง, หลักฐาน) โดยลองคำพ้องด้วย — "ไทย / English" นับเป็นข้อกำหนดเดียว"""
+        for alt in [a.strip() for a in str(term).split(" / ") if a.strip()]:
+            for t in expand_term(alt):
+                snippet = self.doc.find(t)
+                if snippet:
+                    return t, snippet
         return None, None
 
     def coverage(self, terms):
@@ -50,6 +52,30 @@ class Matcher:
             if snippet:
                 hits.append((term, t, snippet))
         return hits
+
+
+AI_WEIGHTS = {"positions": 4, "duties": 8, "skills": 9, "fields_of_study": 4}
+AI_ANY_HIT = ("positions", "fields_of_study")
+
+
+def ai_requirement_score(matcher, master):
+    """คะแนน AI 25: ตำแหน่ง/สาขาตรง 1 ข้อได้เต็มหมวด, หน้าที่/ทักษะตรงครึ่งหนึ่งของรายการได้เต็มหมวด"""
+    if not master:
+        return 0.0, []
+    groups = master if isinstance(master, dict) else {"skills": list(master)}
+    earned = total = 0.0
+    names = []
+    for key, terms in groups.items():
+        terms = [t for t in terms or [] if str(t).strip()]
+        if not terms:
+            continue
+        weight = AI_WEIGHTS.get(key, 5)
+        hits = matcher.coverage(terms)
+        need = 1 if key in AI_ANY_HIT else max(1, math.ceil(len(terms) * 0.5))
+        earned += weight * min(1.0, len(hits) / need)
+        total += weight
+        names.extend(h[1] for h in hits)
+    return (round(earned / total * 25, 1) if total else 0.0), names
 
 
 def related_experience_months(profile: dict, positions) -> "int | None":
@@ -146,13 +172,12 @@ def score_candidate(parsed: dict, config, file_name: str) -> dict:
                f"คาดหวัง {salary:,.0f} บาท" if salary else None)
 
     keyword_score = round(earned / active_max * 60, 2) if active_max else 0.0
+    if p.get("hr_fields"):
+        evidence["ข้อมูลจาก HR"] = ", ".join(p["hr_fields"])
 
-    ai_score = 0.0
-    if c.ai_keyword_masterlist:
-        hits = m.coverage(c.ai_keyword_masterlist)
-        ai_score = round(len(hits) / len(c.ai_keyword_masterlist) * 25, 1)
-        if hits:
-            evidence["AI: ข้อกำหนดจาก JD"] = ", ".join(h[0] for h in hits[:8])
+    ai_score, ai_hits = ai_requirement_score(m, c.ai_keyword_masterlist)
+    if ai_hits:
+        evidence["AI: ข้อกำหนดจาก JD"] = ", ".join(ai_hits[:8])
 
     checks = {
         "พบข้อมูลการศึกษา": bool(p.get("education")) or level is not None,

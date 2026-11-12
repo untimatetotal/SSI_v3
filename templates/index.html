@@ -87,13 +87,15 @@ b{font-weight:600}
 .drop-chip{font-size:13px;background:var(--steel-soft);border:1px solid #cfd7de;border-radius:3px;padding:2px 4px 2px 10px;display:flex;align-items:center;gap:4px;max-width:100%}
 .drop-chip button{background:none;border:0;color:var(--muted);cursor:pointer;width:22px;height:22px}
 
-.docs-summary{cursor:pointer;list-style:none;align-items:center}
+.docs-summary{cursor:pointer;list-style:none;align-items:center;flex-wrap:nowrap}
 .docs-summary::-webkit-details-marker{display:none}
 .docs-summary::after{content:'';width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-left:auto;transition:transform .15s}
 .docs-panel[open] .docs-summary::after{transform:rotate(-135deg)}
 .docs-panel:not([open]) .docs-summary{border-bottom:0}
 .docs-summary:hover .panel-title{color:var(--focus)}
-.docs-status{font-size:13.5px;color:var(--muted);flex:1;text-align:right;margin-right:12px}
+.docs-status{font-size:13.5px;color:var(--muted);flex:1;text-align:right;margin-right:12px;white-space:nowrap}
+#resume-panel{margin-bottom:12px}
+#resume-panel .docs-status{margin-right:0}
 .docs-status.is-empty{color:var(--brand)}
 .threshold-summary{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none;font-size:14.5px;font-weight:600}
 .threshold-summary::-webkit-details-marker{display:none}
@@ -119,9 +121,7 @@ b{font-weight:600}
 .opt-row{display:flex;gap:6px 16px;flex-wrap:wrap}
 .opt-label{display:inline-flex;align-items:center;gap:7px;font-size:14.5px;cursor:pointer}
 .opt-label input{width:16px;height:16px;accent-color:var(--steel)}
-.only-new-field.is-disabled{opacity:.45}
-.only-new-field.is-disabled input,.only-new-field.is-disabled select{background:#f3f5f7;cursor:not-allowed}
-.only-new-note{font-size:13px;color:var(--faint);padding:0 18px 14px}
+.only-new-field.is-disabled{display:none!important}
 
 .special-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
 .switch{position:relative;width:38px;height:22px;background:#c3cbd2;border-radius:11px;flex-shrink:0}
@@ -187,6 +187,16 @@ b{font-weight:600}
 .ai-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;padding:12px 14px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-ctl)}
 .ai-summary ul{padding-left:18px;font-size:14px}
 .jd-extract{margin-top:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.hr-tag{background:#e8f0fb;color:#1f4f8a;border-radius:3px;padding:1px 8px;font-size:13px;font-weight:500}
+.hr-note{margin-top:4px;font-size:13.5px;color:var(--muted)}
+.hr-box{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-ctl);padding:12px 14px}
+.hr-form{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.hr-form label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.hr-form input,.hr-form select,.hr-form textarea{height:36px;padding:0 8px;border:1px solid var(--line);border-radius:var(--r-ctl);font-size:14px;background:var(--paper);color:var(--ink);font-family:inherit}
+.hr-form textarea{height:auto;padding:6px 8px;resize:vertical}
+.hr-wide{grid-column:1/-1}
+.hr-actions{display:flex;align-items:center;gap:12px}
+@media(max-width:720px){.hr-form{grid-template-columns:1fr 1fr}}
 .reject-reasons{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px}
 .reject-tag{background:var(--bad-bg);color:var(--bad);border-radius:3px;padding:1px 8px;font-size:13px;font-weight:500}
 .match-detail{display:none;border-top:1px solid var(--line-soft);background:#f7f9fa}
@@ -338,13 +348,24 @@ b{font-weight:600}
         <div id="mode-body-existing"></div>
 
         <div id="mode-body-new" style="display:none">
+          <div class="panel" id="resume-panel">
+            <div class="panel-head">
+              <span class="panel-title">ใบสมัคร (PDF) <span class="req">*</span></span>
+              <span class="docs-status is-empty" id="resume-status">ยังไม่ได้เลือกใบสมัคร</span>
+            </div>
+            <div class="panel-body">
+              <input type="file" id="resume-input" accept=".pdf" multiple hidden>
+              <div class="upload-box" id="resume-drop" role="button" tabindex="0"><p><b>เลือกไฟล์ใบสมัคร</b>คลิกหรือลากไฟล์ PDF มาวาง เลือกได้หลายไฟล์</p></div>
+              <div class="resume-drop-list" id="resume-list"></div>
+            </div>
+          </div>
+
           <details class="panel docs-panel" id="docs-panel">
             <summary class="panel-head docs-summary">
-              <span class="panel-title">เอกสารประกอบ</span>
-              <span class="docs-status" id="docs-status">ยังไม่ได้เลือกใบสมัคร</span>
+              <span class="panel-title">Job Description / Job Specification</span>
+              <span class="docs-status" id="docs-status">ไม่บังคับ</span>
             </summary>
             <div class="panel-body">
-              <span class="f-label">Job Description หรือ Job Specification</span>
               <div class="upload-grid">
                 <div>
                   <input type="file" id="jd-input" accept=".txt,.pdf" hidden>
@@ -356,15 +377,10 @@ b{font-weight:600}
                 </div>
               </div>
               <p class="hint">ไม่บังคับ ถ้าไม่ใส่ ระบบจะคัดกรองตามตำแหน่งและเงื่อนไขที่กรอก</p>
-              <div class="jd-extract" style="margin-bottom:16px">
+              <div class="jd-extract">
                 <button type="button" class="action-btn" id="jd-extract-btn" onclick="extractFromJD()">ให้ AI ดึงเงื่อนไขจาก Job Description</button>
                 <p class="hint" id="jd-extract-note" style="display:none;margin-top:0"></p>
               </div>
-
-              <span class="f-label">ใบสมัคร (PDF) <span class="req">*</span></span>
-              <input type="file" id="resume-input" accept=".pdf" multiple hidden>
-              <div class="upload-box" id="resume-drop" role="button" tabindex="0"><p><b>เลือกไฟล์ใบสมัคร</b>คลิกหรือลากไฟล์ PDF มาวาง เลือกได้หลายไฟล์</p></div>
-              <div class="resume-drop-list" id="resume-list"></div>
             </div>
           </details>
         </div>
@@ -376,7 +392,7 @@ b{font-weight:600}
           </div>
           <div class="adv-filters" id="adv-filters">
             <div class="adv-block">
-              <div class="adv-block-label">เงื่อนไขหลัก <span>60 คะแนน</span></div>
+              <div class="adv-block-label">เงื่อนไขหลัก <span class="only-new-field">60 คะแนน</span></div>
               <div class="adv-grid">
                 <div class="only-new-field f-field f-wide"><label class="f-label" for="f-duties">ลักษณะงานที่เคยทำ</label><input type="text" id="f-duties" placeholder="คั่นด้วยจุลภาค เช่น ควบคุมการผลิต, ซ่อมบำรุงเครื่องจักร"></div>
                 <div class="only-new-field f-field f-wide"><label class="f-label" for="f-skills">ทักษะ</label><input type="text" id="f-skills" placeholder="คั่นด้วยจุลภาค เช่น AutoCAD, PLC, Excel"></div>
@@ -385,20 +401,16 @@ b{font-weight:600}
                 <div class="only-new-field f-field"><label class="f-label" for="faculty-select">คณะ</label>
                   <select id="faculty-select" onchange="updateMajors()">
                     <option value="">ไม่ระบุ</option>
-                    <option value="eng">วิศวกรรมศาสตร์</option>
-                    <option value="biz">บริหารธุรกิจ</option>
-                    <option value="sci">วิทยาศาสตร์</option>
-                    <option value="other">อื่น ๆ (ระบุเอง)</option>
                   </select>
                 </div>
                 <div class="only-new-field f-field"><label class="f-label" for="major-select">สาขาวิชา</label><select id="major-select"><option value="">เลือกคณะก่อน</option></select></div>
-                <div class="f-field f-wide" id="faculty-other" style="display:none"><label class="f-label" for="f-field-other">คณะหรือสาขาที่ต้องการ</label><input type="text" id="f-field-other" placeholder="พิมพ์ชื่อคณะหรือสาขา"></div>
-                <div class="only-new-field f-field f-wide"><label class="f-label" for="f-general">คำค้นหาอื่น</label><input type="text" id="f-general" placeholder="เช่น ม.เชียงใหม่, ม.เกษตรศาสตร์"></div>
+                <div class="only-new-field f-field f-wide" id="faculty-other" style="display:none"><label class="f-label" for="f-field-other">คณะหรือสาขาที่ต้องการ</label><input type="text" id="f-field-other" placeholder="พิมพ์ชื่อคณะหรือสาขา"></div>
+                <div class="f-field f-wide"><label class="f-label" for="f-general">คำค้นหาอื่น</label><input type="text" id="f-general" placeholder="คั่นด้วยจุลภาค เช่น ม.เชียงใหม่, สจล, TOEIC"></div>
               </div>
             </div>
 
             <div class="adv-block">
-              <div class="adv-block-label">ข้อมูลพื้นฐาน <span>8 คะแนน</span></div>
+              <div class="adv-block-label">ข้อมูลพื้นฐาน <span class="only-new-field">8 คะแนน</span></div>
               <div class="adv-grid">
                 <div class="only-new-field f-field f-wide"><span class="f-label">วุฒิการศึกษา</span>
                   <div class="opt-row">
@@ -421,7 +433,7 @@ b{font-weight:600}
               </div>
             </div>
 
-            <div class="adv-block">
+            <div class="adv-block only-new-field">
               <div class="special-toggle" onclick="toggleSpecial()">
                 <div><div class="adv-block-label" style="margin-bottom:0">เงื่อนไขพิเศษ <span></span></div><div class="hint" style="margin-top:0">คะแนนเสริม 15 คะแนน สำหรับตำแหน่งที่ต้องใช้รถหรือภาษา</div></div>
                 <div class="switch" id="special-switch" role="switch" aria-label="เปิดเงื่อนไขพิเศษ"></div>
@@ -441,7 +453,6 @@ b{font-weight:600}
               </div>
             </div>
           </div>
-          <p class="only-new-note">ช่องสีจางใช้ได้เฉพาะเมื่อวิเคราะห์ชุดใหม่</p>
         </div>
 
         <div id="mode-new-runbox" style="display:none">
@@ -559,12 +570,11 @@ function setMode(m){
   document.getElementById('mode-body-new').style.display = m==='new' ? 'block' : 'none';
   document.getElementById('mode-new-runbox').style.display = m==='new' ? 'block' : 'none';
   currentMode = m;
-  document.querySelectorAll('.only-new-note').forEach(n => { n.style.display = m === 'existing' ? '' : 'none'; });
   document.querySelectorAll('.only-new-field').forEach(el => {
     el.classList.toggle('is-disabled', m === 'existing');
     el.querySelectorAll('input,select').forEach(i => { i.disabled = m === 'existing'; });
   });
-  document.getElementById('results-container').innerHTML = '<div class="empty-state"><p>ค้นหาหรือวิเคราะห์เพื่อดูผลลัพธ์</p></div>';
+  document.getElementById('results-container').innerHTML = '<div class="empty-state"><p>' + (m === 'existing' ? 'พิมพ์ตำแหน่งงานหรือตั้งเงื่อนไขทางซ้ายเพื่อค้นหาผู้สมัครในคลัง' : 'เลือกใบสมัครและตั้งเงื่อนไข แล้วกด "วิเคราะห์ใบสมัคร"') + '</p></div>';
   document.getElementById('result-count').textContent = '';
 }
 
@@ -575,7 +585,9 @@ function updateThresholdStatus(){
 }
 ['f-pass', 'f-review'].forEach(id => document.getElementById(id).addEventListener('input', updateThresholdStatus));
 setTimeout(updateDocsStatus, 0);
-document.querySelector('input[name=gender][value=""]').checked = true;
+function resetGender(){ document.querySelector('input[name=gender][value=""]').checked = true; }
+resetGender();
+window.addEventListener('pageshow', () => setTimeout(resetGender, 0));
 document.querySelectorAll('input[name=gender]').forEach(r => r.setAttribute('autocomplete', 'off'));
 document.querySelectorAll('#adv-filters input, #jobtitle-input, #repo-search').forEach(i => i.setAttribute('autocomplete', 'off'));
 setMode('existing');
@@ -615,17 +627,93 @@ function getJobTitles(){
 
 // ═══════════════ CASCADING FACULTY/MAJOR ═══════════════
 const facultyMajors = {
-  eng: ['วิศวกรรมโยธา','วิศวกรรมไฟฟ้า','วิศวกรรมเครื่องกล','วิศวกรรมคอมพิวเตอร์'],
-  biz: ['การตลาด','การเงิน','การจัดการ','บัญชี'],
-  sci: ['วิทยาการคอมพิวเตอร์','เคมี','ชีววิทยา'],
+  eng: ['คณะวิศวกรรมศาสตร์', 'Engineering', [
+    ['วิศวกรรมอุตสาหการ', 'Industrial Engineering'], ['วิศวกรรมเครื่องกล', 'Mechanical Engineering'],
+    ['วิศวกรรมไฟฟ้า', 'Electrical Engineering'], ['วิศวกรรมโยธา', 'Civil Engineering'],
+    ['วิศวกรรมโลหการ', 'Metallurgical Engineering'], ['วิศวกรรมวัสดุ', 'Materials Engineering'],
+    ['วิศวกรรมเคมี', 'Chemical Engineering'], ['วิศวกรรมการผลิต', 'Manufacturing Engineering'],
+    ['วิศวกรรมเมคคาทรอนิกส์', 'Mechatronics Engineering'], ['วิศวกรรมระบบควบคุมและเครื่องมือวัด', 'Control and Instrumentation Engineering'],
+    ['วิศวกรรมอิเล็กทรอนิกส์และโทรคมนาคม', 'Electronics and Telecommunication Engineering'], ['วิศวกรรมคอมพิวเตอร์', 'Computer Engineering'],
+    ['วิศวกรรมความปลอดภัย', 'Safety Engineering'], ['วิศวกรรมสิ่งแวดล้อม', 'Environmental Engineering'],
+    ['วิศวกรรมโลจิสติกส์', 'Logistics Engineering'], ['วิศวกรรมยานยนต์', 'Automotive Engineering'],
+    ['วิศวกรรมเหมืองแร่', 'Mining Engineering'], ['วิศวกรรมพลังงาน', 'Energy Engineering'],
+    ['วิศวกรรมเกษตร', 'Agricultural Engineering'], ['วิศวกรรมหุ่นยนต์และระบบอัตโนมัติ', 'Robotics and Automation Engineering'],
+  ]],
+  tech: ['คณะเทคโนโลยีอุตสาหกรรม / ครุศาสตร์อุตสาหกรรม', 'Industrial Technology', [
+    ['เทคโนโลยีการผลิต', 'Production Technology'], ['เทคโนโลยีไฟฟ้า', 'Electrical Technology'],
+    ['เทคโนโลยีเครื่องกล', 'Mechanical Technology'], ['เทคโนโลยีอุตสาหการ', 'Industrial Technology'],
+    ['เทคโนโลยีการเชื่อม', 'Welding Technology'], ['เทคโนโลยีแม่พิมพ์', 'Die and Mold Technology'],
+    ['เทคโนโลยีอิเล็กทรอนิกส์', 'Electronics Technology'], ['การจัดการอุตสาหกรรม', 'Industrial Management'],
+  ]],
+  sci: ['คณะวิทยาศาสตร์', 'Science', [
+    ['เคมี', 'Chemistry'], ['เคมีอุตสาหกรรม', 'Industrial Chemistry'], ['ฟิสิกส์', 'Physics'],
+    ['วัสดุศาสตร์', 'Materials Science'], ['คณิตศาสตร์', 'Mathematics'], ['สถิติ', 'Statistics'],
+    ['วิทยาการคอมพิวเตอร์', 'Computer Science'], ['วิทยาศาสตร์สิ่งแวดล้อม', 'Environmental Science'],
+    ['อาชีวอนามัยและความปลอดภัย', 'Occupational Health and Safety'], ['ชีววิทยา', 'Biology'],
+  ]],
+  it: ['คณะเทคโนโลยีสารสนเทศ', 'Information Technology', [
+    ['เทคโนโลยีสารสนเทศ', 'Information Technology'], ['วิศวกรรมซอฟต์แวร์', 'Software Engineering'],
+    ['วิทยาการข้อมูล', 'Data Science'], ['ความมั่นคงปลอดภัยไซเบอร์', 'Cyber Security'],
+    ['ระบบสารสนเทศ', 'Information Systems'],
+  ]],
+  biz: ['คณะบริหารธุรกิจ / พาณิชยศาสตร์และการบัญชี', 'Business Administration', [
+    ['การบัญชี', 'Accounting'], ['การเงิน', 'Finance'], ['การตลาด', 'Marketing'],
+    ['การจัดการ', 'Management'], ['การจัดการทรัพยากรมนุษย์', 'Human Resource Management'],
+    ['การจัดการโลจิสติกส์และโซ่อุปทาน', 'Logistics and Supply Chain Management'],
+    ['ระบบสารสนเทศทางธุรกิจ', 'Business Information Systems'], ['ธุรกิจระหว่างประเทศ', 'International Business'],
+    ['การจัดการการผลิตและการดำเนินงาน', 'Operations Management'],
+  ]],
+  econ: ['คณะเศรษฐศาสตร์', 'Economics', [['เศรษฐศาสตร์', 'Economics'], ['เศรษฐศาสตร์ธุรกิจ', 'Business Economics']]],
+  law: ['คณะนิติศาสตร์', 'Law', [['นิติศาสตร์', 'Law']]],
+  pol: ['คณะรัฐศาสตร์ / รัฐประศาสนศาสตร์', 'Political Science', [
+    ['รัฐศาสตร์', 'Political Science'], ['รัฐประศาสนศาสตร์', 'Public Administration'],
+  ]],
+  arts: ['คณะศิลปศาสตร์ / มนุษยศาสตร์', 'Liberal Arts', [
+    ['ภาษาอังกฤษ', 'English'], ['ภาษาจีน', 'Chinese'], ['ภาษาญี่ปุ่น', 'Japanese'],
+    ['จิตวิทยา', 'Psychology'], ['จิตวิทยาอุตสาหกรรมและองค์การ', 'Industrial and Organizational Psychology'],
+  ]],
+  comm: ['คณะนิเทศศาสตร์ / วารสารศาสตร์', 'Communication Arts', [
+    ['การประชาสัมพันธ์', 'Public Relations'], ['การโฆษณา', 'Advertising'], ['สื่อดิจิทัล', 'Digital Media'],
+  ]],
+  edu: ['คณะครุศาสตร์ / ศึกษาศาสตร์', 'Education', [['ครุศาสตร์อุตสาหกรรม', 'Industrial Education'], ['ศึกษาศาสตร์', 'Education']]],
+  arch: ['คณะสถาปัตยกรรมศาสตร์', 'Architecture', [['สถาปัตยกรรม', 'Architecture'], ['การออกแบบอุตสาหกรรม', 'Industrial Design']]],
+  agro: ['คณะเกษตรศาสตร์ / อุตสาหกรรมเกษตร', 'Agriculture', [['เกษตรศาสตร์', 'Agriculture'], ['อุตสาหกรรมเกษตร', 'Agro-Industry']]],
+  health: ['คณะสาธารณสุขศาสตร์ / สหเวชศาสตร์', 'Public Health', [
+    ['สาธารณสุขศาสตร์', 'Public Health'], ['อาชีวอนามัย', 'Occupational Health'], ['พยาบาลศาสตร์', 'Nursing'],
+  ]],
+  voc: ['สายอาชีวะ (ปวช. / ปวส.)', 'Vocational', [
+    ['ช่างกลโรงงาน', 'Machine Shop'], ['ช่างยนต์', 'Auto Mechanics'], ['ช่างไฟฟ้ากำลัง', 'Electrical Power'],
+    ['ช่างอิเล็กทรอนิกส์', 'Electronics'], ['ช่างเชื่อมโลหะ', 'Welding'], ['ช่างเทคนิคการผลิต', 'Production Technician'],
+    ['เมคคาทรอนิกส์', 'Mechatronics'], ['ช่างซ่อมบำรุง', 'Maintenance Technician'], ['ช่างก่อสร้าง', 'Construction'],
+    ['การบัญชี', 'Accounting'], ['การตลาด', 'Marketing'], ['คอมพิวเตอร์ธุรกิจ', 'Business Computer'],
+    ['เทคโนโลยีสารสนเทศ', 'Information Technology'], ['การจัดการโลจิสติกส์', 'Logistics Management'],
+  ]],
 };
+(function fillFaculties(){
+  const sel = document.getElementById('faculty-select');
+  Object.entries(facultyMajors).forEach(([key, [label]]) => {
+    const opt = document.createElement('option'); opt.value = key; opt.textContent = label; sel.appendChild(opt);
+  });
+  const other = document.createElement('option'); other.value = 'other'; other.textContent = 'อื่น ๆ (ระบุเอง)'; sel.appendChild(other);
+})();
 function updateMajors(){
   const f = document.getElementById('faculty-select').value;
   const majorSel = document.getElementById('major-select');
   document.getElementById('faculty-other').style.display = f === 'other' ? 'flex' : 'none';
-  majorSel.innerHTML = facultyMajors[f]
-    ? '<option value="">เลือกสาขา</option>' + facultyMajors[f].map(m => `<option>${m}</option>`).join('')
+  const entry = facultyMajors[f];
+  majorSel.innerHTML = entry
+    ? '<option value="">ทุกสาขาในคณะนี้</option>' + entry[2].map(([th, en]) => `<option value="${esc(th + '|' + en)}">${esc(th)} (${esc(en)})</option>`).join('')
     : '<option value="">เลือกคณะก่อน</option>';
+}
+function selectedFieldTerms(){
+  const f = document.getElementById('faculty-select').value;
+  const major = document.getElementById('major-select').value;
+  const other = document.getElementById('f-field-other').value.trim();
+  const terms = [];
+  if (major) terms.push(...major.split('|'));
+  else if (facultyMajors[f]) facultyMajors[f][2].forEach(([th, en]) => terms.push(th, en));
+  if (other) terms.push(other);
+  return terms;
 }
 
 // ═══════════════ FILE UPLOAD (โหมดวิเคราะห์ใหม่) ═══════════════
@@ -683,14 +771,13 @@ function downloadSelected(){
 // ═══ จบส่วนที่เพิ่มใหม่ ═══
 
 function updateDocsStatus(){
-  const el = document.getElementById('docs-status');
-  if (!el) return;
+  const docs = document.getElementById('docs-status');
+  const resume = document.getElementById('resume-status');
+  if (!docs || !resume) return;
   const jdCount = ['jd-input', 'js-input'].filter(id => document.getElementById(id).files.length).length;
-  const parts = [];
-  if (resumeFiles.length) parts.push(`ใบสมัคร ${resumeFiles.length} ไฟล์`);
-  if (jdCount) parts.push(`JD/JS ${jdCount} ไฟล์`);
-  el.textContent = parts.length ? parts.join(', ') : 'ยังไม่ได้เลือกใบสมัคร';
-  el.classList.toggle('is-empty', !resumeFiles.length);
+  docs.textContent = jdCount ? `เลือกแล้ว ${jdCount} ไฟล์` : 'ไม่บังคับ';
+  resume.textContent = resumeFiles.length ? `เลือกแล้ว ${resumeFiles.length} ไฟล์` : 'ยังไม่ได้เลือกใบสมัคร';
+  resume.classList.toggle('is-empty', !resumeFiles.length);
 }
 function renderResumeList(){
   document.getElementById('resume-list').innerHTML = resumeFiles.map((f, i) =>
@@ -714,6 +801,23 @@ function esc(v){
   return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
 function jsq(v){ return encodeURIComponent(String(v ?? '')).replace(/'/g, '%27'); }
+async function saveHrData(event, sha1){
+  event.preventDefault();
+  const form = event.target;
+  const status = form.querySelector('.hr-status');
+  const payload = Object.fromEntries(new FormData(form).entries());
+  status.textContent = 'กำลังบันทึก...';
+  try {
+    const res = await fetch('/api/notes/' + sha1, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+    const data = await res.json().catch(() => ({ error: 'เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง (HTTP ' + res.status + ')' }));
+    if (data.error) throw new Error(data.error);
+    lastResults.forEach(r => { if (r.sha1 === sha1) r.hr_data = data.data; });
+    status.textContent = currentMode === 'existing' ? 'บันทึกแล้ว กำลังค้นหาใหม่...' : 'บันทึกแล้ว จะใช้ในการค้นหาและการวิเคราะห์ครั้งถัดไป';
+    if (currentMode === 'existing') setTimeout(() => runSearch(true), 600);
+  } catch(e) {
+    status.textContent = 'บันทึกไม่สำเร็จ: ' + e.message;
+  }
+}
 function fmtMonths(m){
   if (m == null) return 'ไม่ระบุ';
   const y = Math.floor(m / 12), r = m % 12;
@@ -741,6 +845,23 @@ function renderMatchCard(c, idx){
   const evidenceHtml = evidence.length ? `<ul class="evidence-list">${evidence.map(([k, v]) => `<li><b>${esc(k)}</b> ${esc(v)}</li>`).join('')}</ul>` : '<span class="hint">ไม่มีหลักฐานที่บันทึกไว้</span>';
   const sm = c.ai_summary || null;
   const summaryHtml = sm ? `<div class="ai-summary">${[['จุดเด่น', sm.strengths], ['ข้อควรพิจารณา', sm.concerns], ['คำถามสัมภาษณ์', sm.interview_questions]].filter(([, l]) => l && l.length).map(([t, l]) => `<div><div class="dd-label">${t}</div><ul>${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>` : '';
+  const hr = c.hr_data || {};
+  const hrTags = (hr.tags || []).map(t => `<span class="hr-tag">${esc(t)}</span>`).join('');
+  const hrNote = hr.note ? `<div class="hr-note">หมายเหตุ HR: ${esc(hr.note)}</div>` : '';
+  const hrForm = c.sha1 ? `
+      <div class="detail-wide hr-box">
+        <div class="dd-label">ข้อมูลที่ HR กรอกเอง <span class="hint" style="font-weight:400">ใช้แทนค่าที่ระบบอ่านจากใบสมัคร</span></div>
+        <form class="hr-form" onsubmit="saveHrData(event, '${esc(c.sha1)}')">
+          <label>เงินเดือนที่ต้องการ<input name="salary_expectation" type="number" min="0" value="${hr.salary_expectation ?? ''}" placeholder="${c.salary_expectation ?? ''}"></label>
+          <label>อายุ<input name="age" type="number" min="15" max="75" value="${hr.age ?? ''}" placeholder="${c.age ?? ''}"></label>
+          <label>GPA<input name="gpa" type="number" step="0.01" min="0" max="4" value="${hr.gpa ?? ''}" placeholder="${c.gpa != null ? fmtGpa(c.gpa) : ''}"></label>
+          <label>ประสบการณ์ (ปี)<input name="experience_years" type="number" step="0.5" min="0" value="${hr.experience_years ?? ''}"></label>
+          <label>เพศ<select name="gender"><option value="">ไม่ระบุ</option><option value="male" ${hr.gender === 'male' ? 'selected' : ''}>ชาย</option><option value="female" ${hr.gender === 'female' ? 'selected' : ''}>หญิง</option></select></label>
+          <label class="hr-wide">แท็ก (คั่นด้วยจุลภาค)<input name="tags" type="text" value="${esc((hr.tags || []).join(', '))}" placeholder="เช่น นัดสัมภาษณ์แล้ว, ผ่านโทรคัดกรอง"></label>
+          <label class="hr-wide">หมายเหตุ<textarea name="note" rows="2" maxlength="1000">${esc(hr.note || '')}</textarea></label>
+          <div class="hr-wide hr-actions"><button type="submit" class="action-btn">บันทึกข้อมูล</button><span class="hint hr-status"></span></div>
+        </form>
+      </div>` : '';
   const relatedText = c.related_experience_months != null ? ` (ตรงสาย ${fmtMonths(c.related_experience_months)})` : '';
   const fileName = c.file || c.file_name || '';
   const displayName = c.name || fileName || 'ไม่ทราบชื่อ';
@@ -764,7 +885,9 @@ function renderMatchCard(c, idx){
         ${c.jd_label ? `<span>วิเคราะห์กับ ${esc(c.jd_label)}</span>` : ''}
       </div>
       ${matchedTerms.length ? `<div class="match-terms">ตรงกับตำแหน่ง: ${matchedTerms.map(esc).join(', ')}</div>` : ''}
+      ${(c.matched_keywords || []).length ? `<div class="match-terms">ตรงกับคำค้น: ${c.matched_keywords.map(esc).join(', ')}</div>` : ''}
       ${rejectHtml}${reviewHtml}
+      ${hrTags ? `<div class="reject-reasons">${hrTags}</div>` : ''}${hrNote}
     </div>
     <div class="match-bars">
       <div class="mbar-row"><span class="mbar-lbl">Keyword</span><div class="mbar-track"><div class="mbar-fill" style="width:${keyword/60*100}%;background:var(--search)"></div></div></div>
@@ -780,6 +903,7 @@ function renderMatchCard(c, idx){
     <div class="match-detail-inner">
       ${summaryHtml ? `<div class="detail-wide">${summaryHtml}</div>` : ''}
       <div class="detail-wide"><div class="dd-label">หลักฐานจากใบสมัคร</div>${evidenceHtml}</div>
+      ${hrForm}
       <div><div class="dd-label">เงื่อนไขที่ไม่ตรง</div><div class="missing-tags">${missing}</div></div>
       <div><div class="dd-label">รายละเอียดคะแนน</div>
         <div class="dd-preview">Keyword ${keyword}/60, AI ${ai}/25, ความครบถ้วนของข้อมูล ${struct}/15${c.special_score ? ', คะแนนพิเศษ '+c.special_score+'/15' : ''}</div>
@@ -802,7 +926,7 @@ function toggleSelectAll(box){ document.querySelectorAll('.match-row .match-chec
 
 // ═══════════════ ค้นหาจากคลัง ═══════════════
 let lastResults = [];
-async function runSearch(){
+async function runSearch(showAll){
   if (currentMode !== 'existing') return;
   const params = new URLSearchParams();
   const titles = getJobTitles();
@@ -814,9 +938,16 @@ async function runSearch(){
   addParam('age_max', 'f-age-max');
   addParam('salary_min', 'f-salary-min');
   addParam('salary_max', 'f-salary-max');
+  document.getElementById('f-general').value.split(/[,\n;|]+/).map(t => t.trim()).filter(Boolean).forEach(t => params.append('keyword', t));
   const genderValue = (document.querySelector('input[name=gender]:checked') || {}).value;
   if (genderValue === 'male' || genderValue === 'female') params.set('gender', genderValue);
 
+  if (!params.toString() && showAll !== true) {
+    lastResults = [];
+    document.getElementById('result-count').innerHTML = '';
+    document.getElementById('results-container').innerHTML = '<div class="empty-state"><p>พิมพ์ตำแหน่งงานหรือตั้งเงื่อนไขทางซ้ายเพื่อค้นหาผู้สมัครในคลัง</p><button type="button" class="action-btn" style="margin-top:12px" onclick="runSearch(true)">แสดงใบสมัครทั้งหมดในคลัง</button></div>';
+    return;
+  }
   document.getElementById('results-container').innerHTML = '<div class="empty-state"><div class="spinner"></div>กำลังค้นหา...</div>';
   try {
     const res = await fetch('/api/candidates/search?' + params.toString());
@@ -828,8 +959,8 @@ async function runSearch(){
     document.getElementById('results-container').innerHTML = '<div class="empty-state"><p>ค้นหาไม่สำเร็จ: '+esc(e.message)+'</p></div>';
   }
 }
-['f-gpa','f-exp','f-age-min','f-age-max','f-salary-min','f-salary-max'].forEach(id => document.getElementById(id).addEventListener('change', runSearch));
-document.querySelectorAll('input[name=gender]').forEach(r => r.addEventListener('change', runSearch));
+['f-gpa','f-exp','f-age-min','f-age-max','f-salary-min','f-salary-max','f-general'].forEach(id => document.getElementById(id).addEventListener('change', () => runSearch()));
+document.querySelectorAll('input[name=gender]').forEach(r => r.addEventListener('change', () => runSearch()));
 
 // ═══════════════ อัปโหลด + วิเคราะห์ใหม่ ═══════════════
 function buildAnalyzeForm(){
@@ -840,9 +971,7 @@ function buildAnalyzeForm(){
   fd.append('positions', JSON.stringify(getJobTitles()));
   fd.append('duties', document.getElementById('f-duties').value);
   fd.append('bonus', document.getElementById('f-skills').value);
-  const facultyOther = document.getElementById('f-field-other').value.trim();
-  const majorValue = document.getElementById('major-select').value;
-  fd.append('field_of_study', [majorValue, facultyOther].filter(Boolean).join(', '));
+  fd.append('field_of_study', selectedFieldTerms().join(', '));
   fd.append('min_experience', document.getElementById('f-exp').value);
   fd.append('general', document.getElementById('f-general').value);
   fd.append('min_gpa', document.getElementById('f-gpa').value);
@@ -877,8 +1006,7 @@ function showAnalyzeResult(data){
 
 async function runAnalyze(){
   if (!resumeFiles.length) {
-    const panel = document.getElementById('docs-panel');
-    panel.open = true;
+    const panel = document.getElementById('resume-panel');
     panel.scrollIntoView({behavior: 'smooth', block: 'center'});
     return alert('กรุณาเลือกไฟล์ใบสมัครอย่างน้อยหนึ่งไฟล์');
   }

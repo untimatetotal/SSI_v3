@@ -14,10 +14,10 @@ import fitz
 
 from lexicon import degree_level, LEVEL_LABEL
 from llm import LLMError, mask_pii
-from thai_text import (normalize_text, text_quality, find_date_ranges, merge_month_spans,
+from thai_text import (normalize_text, fix_ocr_thai, text_quality, find_date_ranges, merge_month_spans,
                        months_between, parse_birthdate, age_on, to_ce_year, has_thai)
 
-PARSER_VERSION = 2
+PARSER_VERSION = 6
 MIN_TEXT_CHARS = 80
 MIN_QUALITY = 0.85
 
@@ -106,7 +106,7 @@ def extract_text(path: str):
     meta = {"method": "text", "quality": round(quality, 3), "title_line": title_line}
     if len(text) < MIN_TEXT_CHARS or quality < MIN_QUALITY:
         ocr_raw = _ocr(path)
-        ocr_text = normalize_text(ocr_raw)
+        ocr_text = fix_ocr_thai(normalize_text(ocr_raw))
         if len(ocr_text) > len(text) * 0.6 and len(ocr_text) >= MIN_TEXT_CHARS:
             return ocr_text, {"method": "ocr", "quality": round(text_quality(ocr_raw), 3),
                               "text_quality_before_ocr": round(quality, 3)}

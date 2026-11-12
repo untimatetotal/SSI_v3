@@ -23,6 +23,7 @@ THAI_CHAR = re.compile("[\u0e00-\u0e7f]")
 THAI_MARK = "\u0e31\u0e34-\u0e3a\u0e47-\u0e4e"
 LEADING_MARK = re.compile(f"(?:^|[\\s(\\[])[{THAI_MARK}]")
 PUA_ANY = re.compile("[\ue000-\uf8ff]")
+DECOR = re.compile("[\u2022\u2023\u2043\u2219\u25a0-\u25ff\u2600-\u27bf\u2b00-\u2bff\ue000-\uf8ff\U0001f300-\U0001faff\ufe0f]")
 
 
 def has_thai(text: str) -> bool:
@@ -40,8 +41,10 @@ def normalize_text(text: str) -> str:
     t = t.replace("\u0e4d\u0e32", "\u0e33")
     t = t.replace("\u0e40\u0e40", "\u0e41")
     t = t.translate(THAI_DIGITS)
+    t = DECOR.sub(" ", t)
     t = t.replace("\u00a0", " ")
     t = re.sub(r"[ \t]+", " ", t)
+    t = re.sub(r" ?\n ?", "\n", t)
     t = re.sub(r"\n\s*\n+", "\n", t)
     return t.strip()
 
@@ -152,11 +155,11 @@ def merge_month_spans(spans):
     return total
 
 
-BIRTH_LABEL = r"(?:วันเดือนปีเกิด|วัน\s*เดือน\s*ปี\s*เกิด|วันเกิด|เกิดวันที่|เกิด|date\s*of\s*birth|birth\s*date|birth\s*of\s*date|birthday|d\.?o\.?b\.?)"
+BIRTH_LABEL = r"(?:born(?:\s+on)?|วันเดือนปีเกิด|วัน\s*เดือน\s*ปี\s*เกิด|วันเกิด|เกิดวันที่|เกิด|date\s*of\s*birth|birth\s*date|birth\s*of\s*date|birthday|d\.?o\.?b\.?)"
 BIRTH_RE = re.compile(
     rf"{BIRTH_LABEL}\s*[:：]?\s*"
-    rf"(?:(\d{{1,2}})\s+({_MONTH_ALT})\.?\s*,?\s*{_YEAR}"
-    rf"|({_MONTH_ALT})\.?\s+(\d{{1,2}}),?\s*{_YEAR}"
+    rf"(?:(\d{{1,2}})(?:st|nd|rd|th)?\s+(?:of\s+)?({_MONTH_ALT})\.?\s*,?\s*{_YEAR}"
+    rf"|({_MONTH_ALT})\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?,?\s*{_YEAR}"
     rf"|{_YEAR}\s*[-/.]\s*(\d{{1,2}})\s*[-/.]\s*(\d{{1,2}})"
     rf"|(\d{{1,2}})\s*[-/.]\s*(\d{{1,2}})\s*[-/.]\s*{_YEAR}"
     rf"|(?:พ\.?ศ\.?|ค\.?ศ\.?)?\s*{_YEAR})",
@@ -164,10 +167,33 @@ BIRTH_RE = re.compile(
 )
 
 
+BIRTH_SHORT_RE = re.compile(rf"{BIRTH_LABEL}\s*[:：]?\s*(\d{{1,2}})\s*[-/.]\s*(\d{{1,2}})\s*[-/.]\s*(\d{{2}})(?!\d)", re.IGNORECASE)
+
+
+def _short_year_birthdate(text: str, today: Optional[date] = None) -> Optional[date]:
+    """ปีสองหลัก เช่น 15/02/43 — ลองตีความเป็น พ.ศ. (25xx) และ ค.ศ. (19xx/20xx) แล้วเลือกแบบที่ได้อายุสมเหตุสมผล"""
+    m = BIRTH_SHORT_RE.search(text or "")
+    if not m:
+        return None
+    today = today or date.today()
+    day, month, yy = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    candidates = [2500 + yy - 543, 2000 + yy, 1900 + yy]
+    if not has_thai(text):
+        candidates = [2000 + yy, 1900 + yy, 2500 + yy - 543]
+    for year in candidates:
+        try:
+            d = date(year, month, day)
+        except ValueError:
+            return None
+        if age_on(d, today):
+            return d
+    return None
+
+
 def parse_birthdate(text: str) -> Optional[date]:
     m = BIRTH_RE.search(text or "")
     if not m:
-        return None
+        return _short_year_birthdate(text)
     g = m.groups()
     try:
         if g[0]:
@@ -234,7 +260,9 @@ class MatchText:
             pattern = r"(?<![a-z0-9])" + r"\s*".join(re.escape(p) for p in term.split()) + r"(?![a-z0-9])"
             m = re.search(pattern, self.lower)
             return self._snippet(m.start()) if m else None
-        if len(term) <= 3 and self.tokens and not any(
+        if len(term) <= 2 and self.tokens and term not in self.tokens:
+            return None
+        if len(term) == 3 and self.tokens and not any(
                 tok == term or tok.startswith(term) or tok.endswith(term) for tok in self.tokens):
             return None
         idx = self.lower.find(term)
@@ -249,3 +277,70 @@ class MatchText:
             rel = pos - start
             line = ("…" if rel > 60 else "") + line[max(0, rel - 60):rel + 80] + "…"
         return line
+
+
+# ── แก้คำที่ OCR อ่านผิดบ่อยในใบสมัคร (ผิด 1 ตัวอักษร เช่น "เคียรตินิยม" → "เกียรตินิยม") ──
+
+OCR_LEXICON = sorted({
+    "เกียรตินิยม", "ปริญญาตรี", "ปริญญาโท", "ปริญญาเอก", "ประสบการณ์", "ประวัติการศึกษา",
+    "ประวัติการทำงาน", "มหาวิทยาลัย", "วิศวกรรมศาสตร์", "วิศวกรรม", "วิทยาศาสตร์", "บริหารธุรกิจ",
+    "เกรดเฉลี่ยสะสม", "เกรดเฉลี่ย", "คะแนนเฉลี่ย", "เฉลี่ยสะสม", "ความสามารถ", "ภาษาอังกฤษ", "ข้อมูลส่วนตัว",
+    "วันเกิด", "ตำแหน่ง", "รับผิดชอบ", "สหกิจศึกษา", "อุตสาหการ", "เครื่องกล", "คอมพิวเตอร์",
+    "ควบคุมคุณภาพ", "ซ่อมบำรุง", "การผลิต", "ปัจจุบัน", "กุมภาพันธ์", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "พฤศจิกายน", "ธันวาคม", "มกราคม", "มีนาคม", "เมษายน", "ตุลาคม",
+    "เทคโนโลยี", "วิทยาลัย", "การศึกษา", "การทำงาน", "ทักษะการ", "โปรแกรม", "นักศึกษา",
+}, key=len, reverse=True)
+
+
+def fix_ocr_thai(text: str) -> str:
+    """แก้คำในพจนานุกรมที่ OCR อ่านผิด 1 ตัวอักษร (เฉพาะคำยาว 7 ตัวขึ้นไป เพื่อไม่แก้คำอื่นผิด)"""
+    if not text or not has_thai(text):
+        return text
+    chars = list(text)
+    n = len(chars)
+    for word in OCR_LEXICON:
+        L = len(word)
+        if L < 7:
+            continue
+        i = 0
+        while i <= n - L:
+            if not ("\u0e00" <= chars[i] <= "\u0e7f"):
+                i += 1
+                continue
+            diff = 0
+            for a, b in zip(chars[i:i + L], word):
+                if a != b:
+                    diff += 1
+                    if diff > 1:
+                        break
+            if diff == 1:
+                chars[i:i + L] = list(word)
+                i += L
+            elif diff == 0:
+                i += L
+            else:
+                i += 1
+    fixed = "".join(chars)
+    for variant, word in _MISSING_MARK_VARIANTS:
+        if variant in fixed:
+            fixed = re.sub(rf"{re.escape(variant)}(?![\u0e31\u0e34-\u0e3a\u0e47-\u0e4e])", word, fixed)
+    return fixed
+
+
+def _missing_mark_variants():
+    """คำในพจนานุกรมที่ขาดสระบน/ล่างหรือวรรณยุกต์ไป 1 ตัว เช่น "เฉลีย" ← "เฉลี่ย" """
+    marks = set("\u0e31\u0e34\u0e35\u0e36\u0e37\u0e38\u0e39\u0e47\u0e48\u0e49\u0e4a\u0e4b\u0e4c\u0e4d")
+    lexicon = set(OCR_LEXICON)
+    out = {}
+    for word in OCR_LEXICON:
+        if len(word) < 6:
+            continue
+        for i, ch in enumerate(word):
+            if ch in marks:
+                variant = word[:i] + word[i + 1:]
+                if variant not in lexicon and len(variant) >= 6:
+                    out.setdefault(variant, word)
+    return sorted(out.items(), key=lambda kv: len(kv[0]), reverse=True)
+
+
+_MISSING_MARK_VARIANTS = _missing_mark_variants()

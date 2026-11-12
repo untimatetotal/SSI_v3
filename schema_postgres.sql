@@ -91,3 +91,11 @@ create table if not exists resume_profiles (
 );
 alter table candidates add column if not exists review_reasons jsonb;
 alter table resume_library add column if not exists profile jsonb;
+
+create table if not exists candidate_notes (
+    user_id integer not null references users(id) on delete cascade,
+    sha1 char(40) not null,
+    data jsonb not null default '{}'::jsonb,
+    updated_at timestamptz not null default now(),
+    primary key (user_id, sha1)
+);

@@ -10,7 +10,8 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from database_postgres import get_profile, save_profile, save_history
+from database_postgres import get_profile, save_profile, save_history, get_notes
+from hr_data import apply_hr_data
 from llm import LLM
 from models import Config
 from requirements_ai import extract_requirements
@@ -140,7 +141,7 @@ def run_analysis(job_id, user_id, jd_paths, resumes, params, groq_key):
         _update(job_id, message="AI กำลังสรุปข้อกำหนดตำแหน่ง")
         try:
             requirements = extract_requirements(llm, requirement_source)
-            masterlist = requirements["all_terms"]
+            masterlist = requirements["groups"] or requirements["all_terms"]
             for label, current, key in (("ตำแหน่งงาน", positions, "positions"), ("ลักษณะงาน", duties, "duties"),
                                         ("ทักษะ", skills, "skills"), ("สาขาวิชา", fields, "fields_of_study")):
                 if not current and requirements[key]:
@@ -168,17 +169,34 @@ def run_analysis(job_id, user_id, jd_paths, resumes, params, groq_key):
         warnings.append("ยังไม่ได้ตั้งเงื่อนไข คะแนนส่วน Keyword เป็น 0 (เปิดโหมด AI หรือใส่ Job Description เพื่อให้เติมเงื่อนไขอัตโนมัติ)")
 
     results, parsed_by_file, ai_extract_failed = [], {}, 0
+    sha_by_name = {}
+    for orig_name, path in resumes:
+        try:
+            sha_by_name[orig_name] = file_sha1(path)[0]
+        except OSError:
+            sha_by_name[orig_name] = None
+    try:
+        notes = get_notes(user_id, list(sha_by_name.values()))
+    except Exception:
+        traceback.print_exc()
+        notes = {}
     for i, (orig_name, path) in enumerate(resumes, 1):
         _update(job_id, done=i - 1, message=f"กำลังอ่านใบสมัคร {i}/{len(resumes)}: {orig_name}")
+        sha1 = sha_by_name.get(orig_name)
         try:
-            parsed, _ = get_parsed(user_id, path, llm)
+            parsed, _ = get_parsed(user_id, path, llm, sha1=sha1)
         except Exception:
             traceback.print_exc()
             parsed = {"text": "", "meta": {"method": "error"}, "profile": {}}
+        hr = notes.get(sha1) if sha1 else None
+        parsed = apply_hr_data(parsed, hr)
         if llm and (parsed.get("meta") or {}).get("ai_error"):
             ai_extract_failed += 1
         parsed_by_file[orig_name] = parsed
-        results.append(score_candidate(parsed, config, orig_name))
+        result = score_candidate(parsed, config, orig_name)
+        result["sha1"] = sha1
+        result["hr_data"] = hr
+        results.append(result)
     _update(job_id, done=len(resumes), message="กำลังจัดอันดับ")
     if ai_extract_failed:
         warnings.append(f"AI อ่านใบสมัครไม่สำเร็จ {ai_extract_failed} ฉบับ จึงใช้การอ่านแบบกฎสำรองสำหรับฉบับนั้น")

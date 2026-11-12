@@ -27,6 +27,7 @@ import sys
 sys.path.append(".")
 
 from analysis_service import start_job, get_job, get_parsed, has_criteria
+from hr_data import clean_hr_data
 from lexicon import expand_term
 from llm import LLM
 from requirements_ai import extract_requirements
@@ -39,6 +40,7 @@ from database_postgres import (
     init_db, save_history, get_history_list, get_history_by_id,
     delete_history, get_user_groq_key, search_candidates,
     library_index, library_apply, library_search,
+    get_notes, owns_resume, save_note,
 )
 
 from auth import auth
@@ -226,6 +228,23 @@ def analyze_status(job_id):
     if job["status"] == "done":
         _last_sync.pop(session["user_id"], None)
     return jsonify(job)
+
+
+@app.route("/api/notes/<sha1>", methods=["GET", "POST"])
+@login_required
+def api_candidate_notes(sha1):
+    """ข้อมูลที่ HR กรอกเองต่อใบสมัคร (เงินเดือนที่ต้องการ อายุ ฯลฯ) — ใช้แทนค่าที่อ่านจากไฟล์"""
+    user_id = session["user_id"]
+    if not re.fullmatch(r"[0-9a-f]{40}", sha1 or "") or not owns_resume(user_id, sha1):
+        return jsonify({"error": "ไม่พบใบสมัครนี้ในคลังของคุณ"}), 404
+    if request.method == "GET":
+        return jsonify({"data": get_notes(user_id, [sha1]).get(sha1, {})})
+    try:
+        data = clean_hr_data(request.get_json(silent=True) or {})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    save_note(user_id, sha1, data)
+    return jsonify({"data": data, "saved": True})
 
 
 @app.route("/api/jd/extract", methods=["POST"])
@@ -427,13 +446,19 @@ def api_search_candidates():
 
     terms = [t.strip().lower() for t in
              request.args.getlist("position") + request.args.getlist("jd_label_contains") if t.strip()]
+    keywords = [t for raw in request.args.getlist("keyword") for t in _split_terms(raw)]
     results = []
     for row in library_search(user_id, **filters):
         relevance, matched = match_position_terms(row, terms)
+        kw_relevance, kw_matched = match_position_terms(row, keywords)
+        if keywords and not kw_matched:
+            continue
+        relevance += kw_relevance
+        row["matched_keywords"] = kw_matched
         prof = row.pop("profile", None) or {}
         row.pop("text", None)
         row["degree_label"] = prof.get("degree_label")
-        if prof.get("experience_months") is not None:
+        if prof.get("experience_months") is not None and "experience_years" not in (row.get("hr_data") or {}):
             row["experience"] = fmt_months(prof["experience_months"])
         if terms and not matched:
             continue

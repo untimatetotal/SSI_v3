@@ -49,3 +49,34 @@ def test_match_english_word_boundary_and_thai():
     assert doc.find("plc")
     assert not doc.find("cad")
     assert doc.find("ขาย")
+
+
+def test_more_birthdate_formats():
+    assert parse_birthdate("วันเกิด 15/02/43") == date(2000, 2, 15)
+    assert parse_birthdate("Born: 15 Feb 2000") == date(2000, 2, 15)
+    assert parse_birthdate("Date of birth 15th February 2000") == date(2000, 2, 15)
+    assert parse_birthdate("เกิดวันที่ 15 ก.พ. 2543") == date(2000, 2, 15)
+    assert parse_birthdate("DOB: 07/02/2544") == date(2001, 2, 7)
+
+
+def test_short_thai_abbreviation_needs_whole_word():
+    assert MatchText("จบจาก มอ. วิทยาเขตหาดใหญ่").find("มอ")
+    assert not MatchText("มอบหมายงานให้ทีมผลิต").find("มอ")
+
+
+def test_ocr_fixes_one_letter_mistakes():
+    from thai_text import fix_ocr_thai
+    assert fix_ocr_thai("(เคียรตินิยมอันดับ2)") == "(เกียรตินิยมอันดับ2)"
+    assert fix_ocr_thai("มหาวิทยาลับเชียงใหม่") == "มหาวิทยาลัยเชียงใหม่"
+    assert fix_ocr_thai("บริษัท จำกัด") == "บริษัท จำกัด"
+
+
+def test_ocr_restores_missing_tone_mark():
+    from thai_text import fix_ocr_thai
+    assert fix_ocr_thai("เกรดเฉลีย : 3.47") == "เกรดเฉลี่ย : 3.47"
+    assert fix_ocr_thai("เกรดเฉลี่ยสะสม 3.10") == "เกรดเฉลี่ยสะสม 3.10"
+
+
+def test_normalize_removes_decorative_bullets():
+    from thai_text import normalize_text
+    assert normalize_text("♡ AutoCAD\n• Excel ● Lean") == "AutoCAD\nExcel Lean"
